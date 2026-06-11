@@ -1,0 +1,17 @@
+fastapi
+uvicorn
+sqlalchemy
+asyncpg
+alembic
+pydantic
+pydantic-settings
+redis
+celery
+pytest
+pytest-asyncio
+httpx
+ruff
+black
+isort
+pyjwt
+bcrypt
