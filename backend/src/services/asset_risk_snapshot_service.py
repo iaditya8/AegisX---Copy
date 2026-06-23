@@ -99,6 +99,7 @@ class AssetRiskSnapshotService:
 
         if changed:
             from src.services.report_cache_service import ReportCacheService
+
             ReportCacheService.invalidate_for_asset(asset_id)
 
         return snapshot

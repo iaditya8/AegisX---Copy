@@ -151,9 +151,9 @@ class FindingService:
                         "epss": None,
                         "closed_by_scan": False,
                         "last_scan_missing": False,
-                        "last_detected_scan_run_id": str(scan_run_id)
-                        if scan_run_id
-                        else None,
+                        "last_detected_scan_run_id": (
+                            str(scan_run_id) if scan_run_id else None
+                        ),
                     },
                 )
                 db.add(finding)
@@ -383,6 +383,7 @@ class FindingService:
             # Recompute snapshot on creation/reopen/severity change
             await FindingSnapshotService.update_finding_snapshot(db, asset.id)
             from src.services.report_cache_service import ReportCacheService
+
             ReportCacheService.invalidate_for_asset(asset.id)
 
         return processed_fingerprints
@@ -482,6 +483,7 @@ class FindingService:
         # Recompute snapshot
         await FindingSnapshotService.update_finding_snapshot(db, finding.asset_id)
         from src.services.report_cache_service import ReportCacheService
+
         ReportCacheService.invalidate_for_asset(finding.asset_id)
 
         return finding

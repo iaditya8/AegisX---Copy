@@ -461,19 +461,31 @@ async def _execute_workflow_async(
                 await asyncio.sleep(0.01)
 
             # Automatically refresh snapshots after successful step completion
-            if step_type in ["discovery", "port-scan", "service-enum", "vulnerability-scan"]:
+            if step_type in [
+                "discovery",
+                "port-scan",
+                "service-enum",
+                "vulnerability-scan",
+            ]:
                 try:
                     from sqlalchemy import select
                     from src.infrastructure.database.models import Asset
-                    from src.services.asset_intelligence_service import AssetIntelligenceService
-                    from src.services.correlation_snapshot_service import CorrelationSnapshotService
-                    from src.services.asset_risk_snapshot_service import AssetRiskSnapshotService
+                    from src.services.asset_intelligence_service import (
+                        AssetIntelligenceService,
+                    )
+                    from src.services.asset_risk_snapshot_service import (
+                        AssetRiskSnapshotService,
+                    )
+                    from src.services.correlation_snapshot_service import (
+                        CorrelationSnapshotService,
+                    )
                     from src.services.dashboard_service import DashboardService
-                    from src.services.executive_report_service import ExecutiveReportService
+                    from src.services.executive_report_service import (
+                        ExecutiveReportService,
+                    )
 
                     q_assets = select(Asset).where(
-                        Asset.scope_id == scope_id,
-                        Asset.deleted_at.is_(None)
+                        Asset.scope_id == scope_id, Asset.deleted_at.is_(None)
                     )
                     res_assets = await db.execute(q_assets)
                     assets = res_assets.scalars().all()
@@ -481,18 +493,36 @@ async def _execute_workflow_async(
                     for asset in assets:
                         try:
                             # 1. Update AssetIntelligenceService
-                            await AssetIntelligenceService.update_asset_snapshot(db, asset.id)
+                            await AssetIntelligenceService.update_asset_snapshot(
+                                db, asset.id
+                            )
                             # 2. Update CorrelationSnapshotService
                             await CorrelationSnapshotService.update_snapshot(
-                                db, asset.id, scan_run_id=scan_run_id, workflow_id=workflow_id
+                                db,
+                                asset.id,
+                                scan_run_id=scan_run_id,
+                                workflow_id=workflow_id,
                             )
                             # 3. Update AssetRiskSnapshotService
                             await AssetRiskSnapshotService.update_snapshot(
-                                db, asset.id, scan_run_id=scan_run_id, workflow_id=workflow_id
+                                db,
+                                asset.id,
+                                scan_run_id=scan_run_id,
+                                workflow_id=workflow_id,
                             )
+                            # 4. Invalidate report and AI caches for asset
+                            from src.services.report_cache_service import (
+                                ReportCacheService,
+                            )
+
+                            ReportCacheService.invalidate_for_asset(asset.id)
                         except Exception as asset_err:
                             import logging
-                            logging.error(f"Failed to update snapshots for asset {asset.id}: {asset_err}")
+
+                            logging.error(
+                                "Failed to update snapshots for asset "
+                                f"{asset.id}: {asset_err}"
+                            )
 
                     # 4. Refresh Dashboard and Executive report caches
                     try:
@@ -501,19 +531,33 @@ async def _execute_workflow_async(
                         )
                     except Exception as dash_err:
                         import logging
-                        logging.error(f"Failed to refresh DashboardService cache: {dash_err}")
+
+                        logging.error(
+                            f"Failed to refresh DashboardService cache: {dash_err}"
+                        )
 
                     try:
                         await ExecutiveReportService.refresh_cache(
                             db, scan_run_id=scan_run_id, workflow_id=workflow_id
                         )
+                        from src.services.ai_cache_service import AICacheService
+
+                        AICacheService.invalidate_for_asset("executive")
                     except Exception as exec_err:
                         import logging
-                        logging.error(f"Failed to refresh ExecutiveReportService cache: {exec_err}")
+
+                        logging.error(
+                            "Failed to refresh ExecutiveReportService cache: "
+                            f"{exec_err}"
+                        )
 
                 except Exception as scope_err:
                     import logging
-                    logging.error(f"Failed to fetch assets for snapshot updates in scope {scope_id}: {scope_err}")
+
+                    logging.error(
+                        "Failed to fetch assets for snapshot updates in "
+                        f"scope {scope_id}: {scope_err}"
+                    )
 
             # Log step.completed event
             step_completed_evt = WorkflowEvent(
