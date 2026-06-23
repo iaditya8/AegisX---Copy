@@ -98,6 +98,12 @@ class AssetRiskSnapshotService:
         )
 
         if changed:
+            from src.services.recommendation_snapshot_service import (
+                RecommendationSnapshotService,
+            )
+
+            await RecommendationSnapshotService.update_snapshot(db, asset_id)
+
             from src.services.report_cache_service import ReportCacheService
 
             ReportCacheService.invalidate_for_asset(asset_id)

@@ -20,6 +20,13 @@ class AIPromptBuilder:
             "Do not include markdown code block formatting\n"
             "(e.g., do not wrap in ```json or ```), "
             "conversational text, or prefixes.\n\n"
+            "CRITICAL CONSTRAINT: You must act strictly as an explanation layer "
+            "for the deterministic recommendations provided in the context under "
+            "the 'recommendations' key. Do not generate, suggest, or speculate "
+            "on any custom remediation actions, priorities, or posturing adjustments "
+            "that are not explicitly present in the recommendations context. "
+            "Your priority reasons and risk analysis must strictly align with the "
+            "deterministic recommendation priorities and supporting factors.\n\n"
             f"Context:\n{json.dumps(context, indent=2)}"
         )
 
@@ -43,6 +50,12 @@ class AIPromptBuilder:
             "Do not include markdown code block formatting\n"
             "(e.g., do not wrap in ```json or ```), "
             "conversational text, or prefixes.\n\n"
+            "CRITICAL CONSTRAINT: You must act strictly as an explanation layer "
+            "for the deterministic recommendations provided in the context under "
+            "the 'recommendations' key. Do not suggest or generate custom "
+            "remediation actions or prioritize them differently. Align your summary, "
+            "impact, priority, and investigation guidance strictly with the "
+            "deterministic recommendations and guidance provided in the context.\n\n"
             f"Context:\n{json.dumps(context, indent=2)}"
         )
 
@@ -64,5 +77,10 @@ class AIPromptBuilder:
             "Do not include markdown code block formatting\n"
             "(e.g., do not wrap in ```json or ```), "
             "conversational text, or prefixes.\n\n"
+            "CRITICAL CONSTRAINT: You must base your analysis, risks, and changes "
+            "strictly on the deterministic priority rankings provided in the context "
+            "under the 'priorities' key. Do not generate, suggest, or speculate "
+            "on any risk ratings, priority metrics, or rankings that are not "
+            "explicitly present in the context priorities.\n\n"
             f"Context:\n{json.dumps(context, indent=2)}"
         )

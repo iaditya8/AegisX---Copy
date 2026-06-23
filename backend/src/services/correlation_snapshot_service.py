@@ -60,6 +60,12 @@ class CorrelationSnapshotService:
         snapshot = await cls.generate_snapshot(db, asset_id)
         cls._snapshots[asset_id] = snapshot
 
+        from src.services.recommendation_snapshot_service import (
+            RecommendationSnapshotService,
+        )
+
+        await RecommendationSnapshotService.update_snapshot(db, asset_id)
+
         # Emit correlation.generated workflow event
         if workflow_id:
             event_id = uuid.uuid4()

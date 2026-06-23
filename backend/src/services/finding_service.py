@@ -382,6 +382,11 @@ class FindingService:
 
             # Recompute snapshot on creation/reopen/severity change
             await FindingSnapshotService.update_finding_snapshot(db, asset.id)
+            from src.services.recommendation_snapshot_service import (
+                RecommendationSnapshotService,
+            )
+
+            await RecommendationSnapshotService.update_snapshot(db, asset.id)
             from src.services.report_cache_service import ReportCacheService
 
             ReportCacheService.invalidate_for_asset(asset.id)
@@ -482,6 +487,11 @@ class FindingService:
 
         # Recompute snapshot
         await FindingSnapshotService.update_finding_snapshot(db, finding.asset_id)
+        from src.services.recommendation_snapshot_service import (
+            RecommendationSnapshotService,
+        )
+
+        await RecommendationSnapshotService.update_snapshot(db, finding.asset_id)
         from src.services.report_cache_service import ReportCacheService
 
         ReportCacheService.invalidate_for_asset(finding.asset_id)

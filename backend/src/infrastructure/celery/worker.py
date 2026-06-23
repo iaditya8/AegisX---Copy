@@ -510,6 +510,14 @@ async def _execute_workflow_async(
                                 scan_run_id=scan_run_id,
                                 workflow_id=workflow_id,
                             )
+                            # 3.5. Update RecommendationSnapshotService
+                            from src.services.recommendation_snapshot_service import (
+                                RecommendationSnapshotService,
+                            )
+
+                            await RecommendationSnapshotService.update_snapshot(
+                                db, asset.id
+                            )
                             # 4. Invalidate report and AI caches for asset
                             from src.services.report_cache_service import (
                                 ReportCacheService,

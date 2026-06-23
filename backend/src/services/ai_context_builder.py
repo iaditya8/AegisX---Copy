@@ -21,6 +21,14 @@ class AIContextBuilder:
         if not report:
             raise ValueError(f"Asset {asset_id} not found or deleted")
 
+        from src.services.recommendation_service import RecommendationService
+        from src.services.recommendation_snapshot_service import (
+            RecommendationSnapshotService,
+        )
+
+        recs = await RecommendationService.generate_asset_recommendations(db, asset_id)
+        rec_snapshot = RecommendationSnapshotService.get_snapshot(asset_id)
+
         return {
             "context_version": CONTEXT_VERSION,
             "asset": {
@@ -28,10 +36,12 @@ class AIContextBuilder:
                 "ports": report.get("ports", []),
                 "services": report.get("services", []),
                 "technologies": report.get("technologies", []),
+                "recommendation_snapshot": rec_snapshot,
             },
             "risk": report["risk"],
             "findings": report["findings"],
             "correlation": report["exposure"],
+            "recommendations": [r.model_dump() for r in recs],
         }
 
     @classmethod
@@ -93,6 +103,16 @@ class AIContextBuilder:
                 f"{finding_id} not found"
             )
 
+        from src.services.recommendation_service import RecommendationService
+        from src.services.recommendation_snapshot_service import (
+            RecommendationSnapshotService,
+        )
+
+        recs = await RecommendationService.generate_finding_recommendations(
+            db, finding_id
+        )
+        rec_snapshot = RecommendationSnapshotService.get_snapshot(finding.asset_id)
+
         return {
             "context_version": CONTEXT_VERSION,
             "asset": {
@@ -100,10 +120,12 @@ class AIContextBuilder:
                 "ports": report.get("ports", []),
                 "services": report.get("services", []),
                 "technologies": report.get("technologies", []),
+                "recommendation_snapshot": rec_snapshot,
             },
             "risk": report["risk"],
             "findings": [finding_dict],
             "correlation": report["exposure"],
+            "recommendations": [r.model_dump() for r in recs],
         }
 
     @classmethod
@@ -111,6 +133,15 @@ class AIContextBuilder:
         """Aggregate organization-wide security posture and trend context."""
         report = await ExecutiveReportService.get_executive_report(db)
         trends = await DashboardTrendService.generate_trends(db, days=30)
+
+        from src.services.prioritization_service import PrioritizationService
+
+        top_assets = await PrioritizationService.get_top_assets(db, limit=10)
+        top_findings = await PrioritizationService.get_top_findings(db, limit=20)
+        top_technologies = await PrioritizationService.get_top_technologies(
+            db, limit=20
+        )
+        top_products = await PrioritizationService.get_top_products(db, limit=20)
 
         return {
             "context_version": CONTEXT_VERSION,
@@ -124,5 +155,11 @@ class AIContextBuilder:
             "correlation": {
                 "summary": report.get("summary", {}),
                 "exposure_distribution": report.get("exposure_distribution", {}),
+            },
+            "priorities": {
+                "top_assets": [ta.model_dump() for ta in top_assets],
+                "top_findings": [tf.model_dump() for tf in top_findings],
+                "top_technologies": [tt.model_dump() for tt in top_technologies],
+                "top_products": [tp.model_dump() for tp in top_products],
             },
         }
