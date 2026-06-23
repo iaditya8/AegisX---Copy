@@ -14,8 +14,10 @@ class AssetBase(BaseModel):
     )
     fingerprint: Optional[str] = Field(None, max_length=255)
 
+
 class AssetCreate(AssetBase):
     pass
+
 
 class AssetUpdate(BaseModel):
     host: Optional[str] = Field(None, max_length=255)
@@ -23,6 +25,7 @@ class AssetUpdate(BaseModel):
     asset_type: Optional[str] = Field(None, max_length=50)
     metadata_json: Optional[Dict[str, Any]] = None
     fingerprint: Optional[str] = Field(None, max_length=255)
+
 
 class AssetResponse(BaseModel):
     id: uuid.UUID
@@ -37,15 +40,14 @@ class AssetResponse(BaseModel):
     deleted_at: Optional[datetime] = None
     deleted_by: Optional[uuid.UUID] = None
 
-    model_config = ConfigDict(
-        from_attributes=True,
-        populate_by_name=True
-    )
+    model_config = ConfigDict(from_attributes=True, populate_by_name=True)
+
 
 class AssetRelationshipCreate(BaseModel):
     target_asset_id: uuid.UUID
     relationship_type: str = Field(..., min_length=1, max_length=100)
     metadata_json: Optional[Dict[str, Any]] = Field(default_factory=dict)
+
 
 class AssetRelationshipResponse(BaseModel):
     id: uuid.UUID
@@ -55,10 +57,8 @@ class AssetRelationshipResponse(BaseModel):
     metadata_json: Optional[Dict[str, Any]] = Field(None, alias="metadata_json")
     created_at: datetime
 
-    model_config = ConfigDict(
-        from_attributes=True,
-        populate_by_name=True
-    )
+    model_config = ConfigDict(from_attributes=True, populate_by_name=True)
+
 
 class AssetHistoryResponse(BaseModel):
     id: uuid.UUID

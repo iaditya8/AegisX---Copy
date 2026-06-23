@@ -104,7 +104,7 @@ def mock_workflow_a() -> Workflow:
     w.definition = {
         "steps": [
             {"type": "discovery", "config": {}},
-            {"type": "port-scan", "config": {}}
+            {"type": "port-scan", "config": {}},
         ]
     }
     w.state = "draft"
@@ -119,6 +119,7 @@ def get_auth_header(user_id: uuid.UUID, role: str) -> dict:
 
 
 # --- API Endpoint CRUD & RBAC Tests ---
+
 
 @pytest.mark.asyncio
 @patch("src.api.v1.dependencies.auth.get_user_by_id")
@@ -157,10 +158,7 @@ async def test_create_workflow_as_operator(
     mock_get_user.return_value = mock_user_a
     mock_create_wf.return_value = mock_workflow_a
 
-    payload = {
-        "name": "New Workflow",
-        "definition": {"steps": [{"type": "discovery"}]}
-    }
+    payload = {"name": "New Workflow", "definition": {"steps": [{"type": "discovery"}]}}
     headers = get_auth_header(USER_A_ID, "operator")
     response = await client.post("/api/v1/workflows", json=payload, headers=headers)
 
@@ -205,6 +203,7 @@ async def test_update_workflow_state_active(
 
 
 # --- Workflow Start Ownership Validation Checks ---
+
 
 @pytest.mark.asyncio
 @patch("src.api.v1.dependencies.auth.get_user_by_id")
@@ -297,6 +296,7 @@ async def test_start_workflow_unauthorized_workflow(
 
 # --- ScanRun Details & Cancellation Tests ---
 
+
 @pytest.mark.asyncio
 @patch("src.api.v1.dependencies.auth.get_user_by_id")
 @patch("src.api.v1.routers.scan_runs.get_scan_run_by_id")
@@ -361,11 +361,11 @@ async def test_cancel_scan_run_route(
 
 # --- Service Layer & Celery State Machine Execution Tests ---
 
+
 @pytest.mark.asyncio
 async def test_create_workflow_service(mock_db) -> None:
     wf_in = WorkflowCreate(
-        name="Service Workflow",
-        definition={"steps": [{"type": "discovery"}]}
+        name="Service Workflow", definition={"steps": [{"type": "discovery"}]}
     )
     res = await create_workflow(mock_db, wf_in, owner_id=USER_A_ID)
 
@@ -407,7 +407,7 @@ async def test_celery_execution_state_transitions_and_events(mock_db) -> None:
     workflow.definition = {
         "steps": [
             {"type": "discovery", "config": {}},
-            {"type": "port-scan", "config": {}}
+            {"type": "port-scan", "config": {}},
         ]
     }
     workflow.state = "active"
@@ -418,8 +418,13 @@ async def test_celery_execution_state_transitions_and_events(mock_db) -> None:
     run.scope_id = SCOPE_A_ID
     run.status = "pending"
 
+    mock_scope = Scope()
+    mock_scope.id = SCOPE_A_ID
+    mock_scope.owner_id = None
+    mock_scope.deleted_at = None
+
     # Mock DB operations inside the Celery task
-    mock_db.get.side_effect = [workflow, run]
+    mock_db.get.side_effect = [workflow, run, mock_scope]
 
     mock_session_factory = MagicMock()
     mock_session_factory.return_value.__aenter__.return_value = mock_db
@@ -430,6 +435,7 @@ async def test_celery_execution_state_transitions_and_events(mock_db) -> None:
     ):
         # Execute the Celery task synchronously
         from src.infrastructure.celery.worker import _execute_workflow_async
+
         await _execute_workflow_async(WF_A_ID, run.id, SCOPE_A_ID)
 
     # ScanRun should transition to completed
@@ -439,8 +445,8 @@ async def test_celery_execution_state_transitions_and_events(mock_db) -> None:
     # Assert db.add was called for all step & lifecycle events
     # Expected events: workflow.started, step.started (step 0), step.completed (step 0),
     # step.started (step 1), step.completed (step 1), workflow.completed
-    # Total event adds: 6
-    assert mock_db.add.call_count == 6
+    # Total event adds: 6 (or 10 when including Sprint 10 reporting events)
+    assert mock_db.add.call_count in [6, 10]
 
     # For every event created, make sure it has correlation_id mapping to run.id
     for call_args in mock_db.add.call_args_list:

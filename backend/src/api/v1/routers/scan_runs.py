@@ -17,9 +17,7 @@ from src.services.workflow_service import (
 router = APIRouter(prefix="/scan_runs", tags=["scan_runs"])
 
 
-async def check_scan_run_ownership(
-    db: AsyncSession, scan_run, current_user: User
-):
+async def check_scan_run_ownership(db: AsyncSession, scan_run, current_user: User):
     """Verify that a non-admin user owns either the parent workflow or scope."""
     if current_user.role == "admin":
         return

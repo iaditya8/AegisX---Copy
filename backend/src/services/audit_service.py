@@ -12,7 +12,7 @@ async def create_audit_entry(
     action: str,
     target_type: str,
     target_id: uuid.UUID,
-    metadata: Optional[dict] = None
+    metadata: Optional[dict] = None,
 ) -> AuditLog:
     """Create and persist a system or user audit log entry."""
     db_entry = AuditLog(
@@ -21,7 +21,7 @@ async def create_audit_entry(
         target_type=target_type,
         target_id=target_id,
         metadata_json=metadata,
-        timestamp=datetime.now(timezone.utc)
+        timestamp=datetime.now(timezone.utc),
     )
     db.add(db_entry)
     await db.commit()

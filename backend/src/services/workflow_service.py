@@ -39,10 +39,40 @@ async def list_workflows(
     return workflows, total
 
 
+async def check_deprecated_plugins(db: AsyncSession, definition: dict) -> None:
+    if not isinstance(definition, dict):
+        return
+    steps = definition.get("steps", [])
+    if not isinstance(steps, list):
+        return
+    for step in steps:
+        if not isinstance(step, dict):
+            continue
+        config = step.get("config", {})
+        if not isinstance(config, dict):
+            continue
+        tools = config.get("tools", [])
+        if isinstance(tools, str):
+            tools = [tools]
+        if not isinstance(tools, list):
+            continue
+        for tool in tools:
+            if not isinstance(tool, str):
+                continue
+            from src.services.plugin_service import get_plugin_by_name
+
+            plugin = await get_plugin_by_name(db, tool)
+            if plugin and plugin.state == "deprecated":
+                raise ValueError(
+                    f"Cannot attach deprecated plugin '{tool}' to workflow"
+                )
+
+
 async def create_workflow(
     db: AsyncSession, workflow_in: WorkflowCreate, owner_id: uuid.UUID
 ) -> Workflow:
     """Create a new workflow definition with 'draft' state."""
+    await check_deprecated_plugins(db, workflow_in.definition)
     db_wf = Workflow(
         owner_id=owner_id,
         name=workflow_in.name,
@@ -64,6 +94,9 @@ async def update_workflow(
     db_wf = await get_workflow_by_id(db, workflow_id)
     if not db_wf:
         return None
+
+    if workflow_in.definition is not None:
+        await check_deprecated_plugins(db, workflow_in.definition)
 
     update_data = workflow_in.model_dump(exclude_unset=True)
     for field, value in update_data.items():
@@ -113,9 +146,7 @@ async def start_workflow(
     await db.refresh(scan_run)
 
     # Trigger Celery background task
-    execute_workflow_task.delay(
-        str(workflow_id), str(scan_run.id), str(scope_id)
-    )
+    execute_workflow_task.delay(str(workflow_id), str(scan_run.id), str(scope_id))
 
     return scan_run
 

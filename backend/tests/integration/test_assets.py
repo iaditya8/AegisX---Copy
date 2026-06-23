@@ -28,6 +28,7 @@ SCOPE_B_ID = uuid.UUID("66666666-6666-6666-6666-666666666666")
 ASSET_A_ID = uuid.UUID("77777777-7777-7777-7777-777777777777")
 ASSET_B_ID = uuid.UUID("88888888-8888-8888-8888-888888888888")
 
+
 @pytest.fixture
 def mock_admin() -> User:
     user = User()
@@ -37,6 +38,7 @@ def mock_admin() -> User:
     user.deleted_at = None
     user.created_at = datetime.now(timezone.utc)
     return user
+
 
 @pytest.fixture
 def mock_user_a() -> User:
@@ -48,6 +50,7 @@ def mock_user_a() -> User:
     user.created_at = datetime.now(timezone.utc)
     return user
 
+
 @pytest.fixture
 def mock_user_b() -> User:
     user = User()
@@ -57,6 +60,7 @@ def mock_user_b() -> User:
     user.deleted_at = None
     user.created_at = datetime.now(timezone.utc)
     return user
+
 
 @pytest.fixture
 def mock_scope_a() -> Scope:
@@ -70,6 +74,7 @@ def mock_scope_a() -> Scope:
     s.deleted_at = None
     return s
 
+
 @pytest.fixture
 def mock_scope_b() -> Scope:
     s = Scope()
@@ -81,6 +86,7 @@ def mock_scope_b() -> Scope:
     s.created_at = datetime.now(timezone.utc)
     s.deleted_at = None
     return s
+
 
 @pytest.fixture
 def mock_asset_a() -> Asset:
@@ -97,6 +103,7 @@ def mock_asset_a() -> Asset:
     a.deleted_at = None
     return a
 
+
 @pytest.fixture
 def mock_asset_b() -> Asset:
     a = Asset()
@@ -112,12 +119,14 @@ def mock_asset_b() -> Asset:
     a.deleted_at = None
     return a
 
+
 def get_auth_header(user_id: uuid.UUID, role: str) -> dict:
     token = create_access_token(data={"sub": str(user_id), "roles": [role]})
     return {"Authorization": f"Bearer {token}"}
 
 
 # --- API Endpoint Integration Tests ---
+
 
 @pytest.mark.asyncio
 @patch("src.api.v1.dependencies.auth.get_user_by_id")
@@ -140,7 +149,7 @@ async def test_list_assets_filtered(
     headers = get_auth_header(USER_A_ID, "operator")
     response = await client.get(
         f"/api/v1/scopes/{SCOPE_A_ID}/assets?page=1&page_size=10&host=hosta&ip=192.168.1.1",
-        headers=headers
+        headers=headers,
     )
 
     assert response.status_code == 200
@@ -290,6 +299,7 @@ async def test_get_asset_history_route(
 
 # --- Service Layer Business Logic & Revision History / Auditing Tests ---
 
+
 @pytest.mark.asyncio
 async def test_create_asset_service(mock_db) -> None:
     """Verify that mock asset writes trigger history persistence and audit logging."""
@@ -298,14 +308,11 @@ async def test_create_asset_service(mock_db) -> None:
         ip="10.0.0.1",
         asset_type="host",
         metadata_json={"os": "linux"},
-        fingerprint="fp-service"
+        fingerprint="fp-service",
     )
 
     res = await create_asset(
-        db=mock_db,
-        asset_in=asset_in,
-        scope_id=SCOPE_A_ID,
-        actor_id=USER_A_ID
+        db=mock_db, asset_in=asset_in, scope_id=SCOPE_A_ID, actor_id=USER_A_ID
     )
 
     assert res.host == "service-asset.com"
@@ -331,10 +338,7 @@ async def test_update_asset_service(mock_get_asset_by_id, mock_db) -> None:
 
     asset_update = AssetUpdate(host="newhost.com")
     res = await update_asset(
-        db=mock_db,
-        asset_id=ASSET_A_ID,
-        asset_in=asset_update,
-        actor_id=USER_A_ID
+        db=mock_db, asset_id=ASSET_A_ID, asset_in=asset_update, actor_id=USER_A_ID
     )
 
     assert res.host == "newhost.com"
@@ -378,6 +382,7 @@ async def test_get_asset_by_id_parent_scope_deleted_service(mock_db) -> None:
     mock_db.execute.side_effect = [mock_asset_result, mock_scope_result]
 
     from src.services.asset_service import get_asset_by_id
+
     res = await get_asset_by_id(mock_db, ASSET_A_ID)
 
     assert res is None

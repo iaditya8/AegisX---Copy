@@ -7,11 +7,15 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from src.api.v1.routers.assets import router as assets_router
 from src.api.v1.routers.auth import router as auth_router
+from src.api.v1.routers.findings import router as findings_router
 from src.api.v1.routers.health import router as health_router
+from src.api.v1.routers.plugins import router as plugins_router
 from src.api.v1.routers.scan_runs import router as scan_runs_router
 from src.api.v1.routers.scopes import router as scopes_router
 from src.api.v1.routers.users import router as users_router
 from src.api.v1.routers.workflows import router as workflows_router
+from src.api.v1.routers.correlations import router as correlations_router
+from src.api.v1.routers.reports import router as reports_router
 from src.core.config import settings
 from src.core.logging import setup_logging
 from starlette.exceptions import HTTPException as StarletteHTTPException
@@ -44,8 +48,12 @@ app.include_router(auth_router, prefix=settings.API_V1_STR)
 app.include_router(users_router, prefix=settings.API_V1_STR)
 app.include_router(scopes_router, prefix=settings.API_V1_STR)
 app.include_router(assets_router, prefix=settings.API_V1_STR)
+app.include_router(findings_router, prefix=settings.API_V1_STR)
 app.include_router(workflows_router, prefix=settings.API_V1_STR)
 app.include_router(scan_runs_router, prefix=settings.API_V1_STR)
+app.include_router(plugins_router, prefix=settings.API_V1_STR)
+app.include_router(correlations_router, prefix=settings.API_V1_STR)
+app.include_router(reports_router, prefix=settings.API_V1_STR)
 
 
 # Global Exception Handlers for standardizing error shapes

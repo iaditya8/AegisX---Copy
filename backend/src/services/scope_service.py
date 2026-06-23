@@ -16,6 +16,7 @@ async def get_scope_by_id(db: AsyncSession, scope_id: uuid.UUID) -> Optional[Sco
     )
     return result.scalar_one_or_none()
 
+
 async def get_scopes_by_owner(
     db: AsyncSession, owner_id: uuid.UUID, page: int = 1, page_size: int = 50
 ) -> Tuple[List[Scope], int]:
@@ -37,6 +38,7 @@ async def get_scopes_by_owner(
     scopes = list(result.scalars().all())
     return scopes, total
 
+
 async def get_all_scopes(
     db: AsyncSession, page: int = 1, page_size: int = 50
 ) -> Tuple[List[Scope], int]:
@@ -56,6 +58,7 @@ async def get_all_scopes(
     scopes = list(result.scalars().all())
     return scopes, total
 
+
 async def create_scope(
     db: AsyncSession, scope_in: ScopeCreate, owner_id: uuid.UUID, actor_id: uuid.UUID
 ) -> Scope:
@@ -65,7 +68,7 @@ async def create_scope(
         name=scope_in.name,
         type=scope_in.type,
         definition=scope_in.definition,
-        created_at=datetime.now(timezone.utc)
+        created_at=datetime.now(timezone.utc),
     )
     db.add(db_scope)
     await db.commit()
@@ -77,9 +80,10 @@ async def create_scope(
         action="create_scope",
         target_type="scope",
         target_id=db_scope.id,
-        metadata={"name": db_scope.name, "type": db_scope.type}
+        metadata={"name": db_scope.name, "type": db_scope.type},
     )
     return db_scope
+
 
 async def update_scope(
     db: AsyncSession, scope_id: uuid.UUID, scope_in: ScopeUpdate, actor_id: uuid.UUID
@@ -102,9 +106,10 @@ async def update_scope(
         action="update_scope",
         target_type="scope",
         target_id=db_scope.id,
-        metadata={"fields_updated": list(update_data.keys())}
+        metadata={"fields_updated": list(update_data.keys())},
     )
     return db_scope
+
 
 async def delete_scope(
     db: AsyncSession, scope_id: uuid.UUID, actor_id: uuid.UUID
@@ -124,6 +129,6 @@ async def delete_scope(
         action="delete_scope",
         target_type="scope",
         target_id=scope_id,
-        metadata={"name": db_scope.name}
+        metadata={"name": db_scope.name},
     )
     return True

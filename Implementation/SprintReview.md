@@ -61,4 +61,34 @@ This document records the results, tests, risks, and lessons learned for each sp
 - **Lessons Learned**:
   - Running async database code inside synchronous Celery worker threads is safest when executing in separate, dedicated threads. This prevents asyncio event loop conflicts during unit/integration tests.
 
+---
 
+## Sprint 5
+
+- **Status**: Approved
+- **Date**: 2026-06-12
+- **Tests**:
+  - 15 new integration and unit tests covering Plugin registration, manifest Pydantic checks, SemVer formatting validation, lifecycle state transitions (draft -> approved -> disabled/deprecated), validation engine verification of required interface hooks, dynamic module loading (`importlib`), timeout boundaries (`asyncio.wait_for`), and Celery worker workflow runner integration.
+  - Total test suite counts 67 passed tests.
+  - Automated formatting and lint verification (`ruff`).
+- **Risks**:
+  - Dynamic loading of arbitrary modules via `importlib` can expose the host to code-injection if plugin registries are not strictly restricted to administrators.
+- **Lessons Learned**:
+  - Encapsulating plugin execution within try-except error boundaries and standard timeout blocks prevents bad scanner code or tool hangs from destabilizing Celery worker processes.
+
+---
+
+## Sprint 6
+
+- **Status**: Approved
+- **Date**: 2026-06-12
+- **Tests**:
+  - 15 new integration and unit tests covering the `ToolExecutor` command abstraction, standard plugins (`SubfinderPlugin`, `AmassPlugin`, `AssetfinderPlugin`, and `TheHarvesterPlugin`), `DiscoveryNormalizationService` parsing, validation of target/scope ownership before execution, asset deduplication/max confidence aggregation in `AssetService`, and event log logging.
+  - Total test suite counts 82 passed tests.
+  - Automated formatting and lint verification (`ruff`).
+- **Risks**:
+  - Subprocess execution introduces command injection risks if the target domain contains shell escape sequences. Since target values come from Scope database fields, these must be strictly sanitized/validated.
+  - The worker host must have the required CLI tools installed and in its system PATH. Failure to find the tools causes execution failures, although this is handled gracefully by `health_check` and state transitions.
+- **Lessons Learned**:
+  - Standardizing tool execution via a `ToolExecutor` abstraction allows caching, timeout logic, and safety configurations to be centralized.
+  - Decoupling plugin outputs from database storage via the `DiscoveryNormalizationService` ensures clean parsing logic and simplifies schema migrations.

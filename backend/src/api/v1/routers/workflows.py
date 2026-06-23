@@ -51,15 +51,11 @@ async def list_user_workflows(
     """List workflows with pagination. Admin gets all; Operator/Reader gets owned."""
     if current_user.role == "admin":
         if owner_id:
-            workflows, total = await list_workflows(
-                db, owner_id, page, page_size
-            )
+            workflows, total = await list_workflows(db, owner_id, page, page_size)
         else:
             workflows, total = await list_workflows(db, None, page, page_size)
     else:
-        workflows, total = await list_workflows(
-            db, current_user.id, page, page_size
-        )
+        workflows, total = await list_workflows(db, current_user.id, page, page_size)
 
     return StandardResponse(
         data=[WorkflowResponse.model_validate(w) for w in workflows],
@@ -79,9 +75,12 @@ async def create_new_workflow(
     current_user: User = Depends(RoleChecker(["admin", "operator"])),
 ) -> StandardResponse[WorkflowResponse]:
     """Create a new workflow definition. Admin and Operator roles only."""
-    new_wf = await create_workflow(db, workflow_in, owner_id=current_user.id)
-    response.headers["Location"] = f"/api/v1/workflows/{new_wf.id}"
-    return StandardResponse(data=WorkflowResponse.model_validate(new_wf))
+    try:
+        new_wf = await create_workflow(db, workflow_in, owner_id=current_user.id)
+        response.headers["Location"] = f"/api/v1/workflows/{new_wf.id}"
+        return StandardResponse(data=WorkflowResponse.model_validate(new_wf))
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
 
 @router.get("/{id}", response_model=StandardResponse[WorkflowResponse])
@@ -114,8 +113,11 @@ async def update_existing_workflow(
             status_code=status.HTTP_404_NOT_FOUND, detail="Workflow not found"
         )
     check_workflow_ownership(workflow, current_user)
-    updated = await update_workflow(db, id, workflow_in)
-    return StandardResponse(data=WorkflowResponse.model_validate(updated))
+    try:
+        updated = await update_workflow(db, id, workflow_in)
+        return StandardResponse(data=WorkflowResponse.model_validate(updated))
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
 
 @router.delete("/{id}", response_model=StandardResponse[bool])
@@ -168,9 +170,7 @@ async def start_workflow_execution(
             detail="Forbidden: You do not own the scope required for this workflow",
         )
 
-    scan_run = await start_workflow(
-        db, id, payload.scope_id, actor_id=current_user.id
-    )
+    scan_run = await start_workflow(db, id, payload.scope_id, actor_id=current_user.id)
     return StandardResponse(
         data=WorkflowStartResponse(
             workflow_id=id, run_id=scan_run.id, status="accepted"

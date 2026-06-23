@@ -332,6 +332,9 @@ def upgrade() -> None:
         ),
         sa.Column("plugin_id", postgresql.UUID(as_uuid=True), nullable=False),
         sa.Column("event_type", sa.String(), nullable=False),
+        sa.Column("correlation_id", postgresql.UUID(as_uuid=True), nullable=True),
+        sa.Column("workflow_id", postgresql.UUID(as_uuid=True), nullable=True),
+        sa.Column("scan_run_id", postgresql.UUID(as_uuid=True), nullable=True),
         sa.Column("payload", postgresql.JSONB(astext_type=sa.Text()), nullable=True),
         sa.Column(
             "timestamp",

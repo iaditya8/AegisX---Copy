@@ -8,6 +8,7 @@ from sqlalchemy import (
     ForeignKey,
     Numeric,
     String,
+    UniqueConstraint,
     text,
 )
 from sqlalchemy.dialects.postgresql import INET, JSONB, UUID
@@ -188,19 +189,95 @@ class Finding(Base):
     asset_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("assets.id", ondelete="CASCADE"), nullable=False
     )
-    scan_run_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+    asset_port_id: Mapped[Optional[uuid.UUID]] = mapped_column(
         UUID(as_uuid=True),
-        ForeignKey("scan_runs.id", ondelete="SET NULL"),
+        ForeignKey("asset_ports.id", ondelete="SET NULL"),
         nullable=True,
     )
-    scanner: Mapped[str] = mapped_column(String, nullable=False)
-    severity: Mapped[Optional[str]] = mapped_column(String, nullable=True)
-    title: Mapped[Optional[str]] = mapped_column(String, nullable=True)
-    details: Mapped[Optional[Dict[str, Any]]] = mapped_column(JSONB, nullable=True)
-    evidence: Mapped[Optional[Dict[str, Any]]] = mapped_column(JSONB, nullable=True)
-    fingerprint: Mapped[str] = mapped_column(String, unique=True, nullable=False)
+    asset_service_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("asset_services.id", ondelete="SET NULL"),
+        nullable=True,
+    )
+    title: Mapped[str] = mapped_column(String, nullable=False)
+    description: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    severity: Mapped[str] = mapped_column(String, nullable=False)
+    status: Mapped[str] = mapped_column(String, server_default="open", nullable=False)
+    template_id: Mapped[str] = mapped_column(String, nullable=False)
+    template_name: Mapped[str] = mapped_column(String, nullable=False)
+    source_plugin: Mapped[str] = mapped_column(String, nullable=False)
+    first_seen: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=text("now()"), nullable=False
+    )
+    last_seen: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=text("now()"), nullable=False
+    )
     created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=text("now()")
+        DateTime(timezone=True), server_default=text("now()"), nullable=False
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=text("now()"), nullable=False
+    )
+    fingerprint: Mapped[str] = mapped_column(String, unique=True, nullable=False)
+    metadata_json: Mapped[Dict[str, Any]] = mapped_column(
+        JSONB,
+        nullable=False,
+        default=lambda: {
+            "cves": [],
+            "cvss": None,
+            "epss": None,
+            "closed_by_scan": False,
+            "last_scan_missing": False,
+            "last_detected_scan_run_id": None,
+        },
+    )
+
+
+class FindingEvidence(Base):
+    __tablename__ = "finding_evidence"
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, server_default=text("gen_random_uuid()")
+    )
+    finding_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("findings.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    evidence_type: Mapped[str] = mapped_column(String, nullable=False)
+    raw_request: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    raw_response: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    matched_at: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    matcher_name: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    matcher_value: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    metadata_json: Mapped[Optional[Dict[str, Any]]] = mapped_column(
+        JSONB, nullable=True
+    )
+    evidence_hash: Mapped[str] = mapped_column(String, unique=True, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=text("now()"), nullable=False
+    )
+
+
+class FindingHistory(Base):
+    __tablename__ = "finding_history"
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, server_default=text("gen_random_uuid()")
+    )
+    finding_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("findings.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    change_type: Mapped[str] = mapped_column(String, nullable=False)
+    old_value: Mapped[Optional[Dict[str, Any]]] = mapped_column(JSONB, nullable=True)
+    new_value: Mapped[Optional[Dict[str, Any]]] = mapped_column(JSONB, nullable=True)
+    changed_by: Mapped[Optional[uuid.UUID]] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=text("now()"), nullable=False
     )
 
 
@@ -297,6 +374,15 @@ class PluginEvent(Base):
         UUID(as_uuid=True), ForeignKey("plugins.id", ondelete="CASCADE"), nullable=False
     )
     event_type: Mapped[str] = mapped_column(String, nullable=False)
+    correlation_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        UUID(as_uuid=True), nullable=True
+    )
+    workflow_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        UUID(as_uuid=True), nullable=True
+    )
+    scan_run_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        UUID(as_uuid=True), nullable=True
+    )
     payload: Mapped[Optional[Dict[str, Any]]] = mapped_column(JSONB, nullable=True)
     timestamp: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=text("now()")
@@ -333,11 +419,17 @@ class AssetHistory(Base):
     asset_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("assets.id", ondelete="CASCADE"), nullable=False
     )
+    entity_type: Mapped[str] = mapped_column(
+        String, server_default="asset", nullable=False
+    )
     change_type: Mapped[str] = mapped_column(String, nullable=False)
     old_value: Mapped[Optional[Dict[str, Any]]] = mapped_column(JSONB, nullable=True)
     new_value: Mapped[Optional[Dict[str, Any]]] = mapped_column(JSONB, nullable=True)
     timestamp: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=text("now()")
+    )
+    changed_by: Mapped[Optional[uuid.UUID]] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True
     )
 
 
@@ -375,4 +467,70 @@ class RiskScore(Base):
     explanation: Mapped[Optional[str]] = mapped_column(String, nullable=True)
     calculated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=text("now()")
+    )
+
+
+class AssetPort(Base):
+    __tablename__ = "asset_ports"
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, server_default=text("gen_random_uuid()")
+    )
+    asset_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("assets.id", ondelete="CASCADE"), nullable=False
+    )
+    port: Mapped[int] = mapped_column(BigInteger, nullable=False)
+    protocol: Mapped[str] = mapped_column(String, nullable=False)
+    state: Mapped[str] = mapped_column(String, nullable=False)
+    evidence: Mapped[Optional[Dict[str, Any]]] = mapped_column(JSONB, nullable=True)
+    first_seen: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=text("now()")
+    )
+    last_seen: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=text("now()")
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=text("now()")
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=text("now()")
+    )
+
+    __table_args__ = (
+        UniqueConstraint("asset_id", "port", "protocol", name="uq_asset_port_protocol"),
+    )
+
+
+class AssetService(Base):
+    __tablename__ = "asset_services"
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, server_default=text("gen_random_uuid()")
+    )
+    asset_port_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("asset_ports.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    service_name: Mapped[str] = mapped_column(String, nullable=False)
+    product: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    version: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    banner: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    confidence: Mapped[float] = mapped_column(Numeric(5, 2), nullable=False)
+    evidence: Mapped[Optional[Dict[str, Any]]] = mapped_column(JSONB, nullable=True)
+    first_seen: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=text("now()")
+    )
+    last_seen: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=text("now()")
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=text("now()")
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=text("now()")
+    )
+
+    __table_args__ = (
+        UniqueConstraint("asset_port_id", "service_name", name="uq_asset_port_service"),
     )

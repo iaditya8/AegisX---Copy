@@ -15,6 +15,7 @@ OPERATOR_ID = uuid.UUID("22222222-2222-2222-2222-222222222222")
 READER_ID = uuid.UUID("33333333-3333-3333-3333-333333333333")
 OTHER_ID = uuid.UUID("44444444-4444-4444-4444-444444444444")
 
+
 @pytest.fixture
 def mock_admin() -> User:
     user = User()
@@ -24,6 +25,7 @@ def mock_admin() -> User:
     user.deleted_at = None
     user.created_at = datetime.now(timezone.utc)
     return user
+
 
 @pytest.fixture
 def mock_operator() -> User:
@@ -35,6 +37,7 @@ def mock_operator() -> User:
     user.created_at = datetime.now(timezone.utc)
     return user
 
+
 @pytest.fixture
 def mock_reader() -> User:
     user = User()
@@ -44,6 +47,7 @@ def mock_reader() -> User:
     user.deleted_at = None
     user.created_at = datetime.now(timezone.utc)
     return user
+
 
 @pytest.fixture
 def mock_scope() -> Scope:
@@ -58,12 +62,14 @@ def mock_scope() -> Scope:
     s.deleted_by = None
     return s
 
+
 def get_auth_header(user_id: uuid.UUID, role: str) -> dict:
     token = create_access_token(data={"sub": str(user_id), "roles": [role]})
     return {"Authorization": f"Bearer {token}"}
 
 
 # --- API Endpoint Integration Tests ---
+
 
 @pytest.mark.asyncio
 @patch("src.api.v1.dependencies.auth.get_user_by_id")
@@ -128,7 +134,7 @@ async def test_create_scope_as_operator(
     payload = {
         "name": "New Scope",
         "type": "domain",
-        "definition": {"domains": ["test.com"]}
+        "definition": {"domains": ["test.com"]},
     }
     headers = get_auth_header(OPERATOR_ID, "operator")
     response = await client.post("/api/v1/scopes", json=payload, headers=headers)
@@ -151,7 +157,7 @@ async def test_create_scope_as_reader_forbidden(
     payload = {
         "name": "New Scope",
         "type": "domain",
-        "definition": {"domains": ["test.com"]}
+        "definition": {"domains": ["test.com"]},
     }
     headers = get_auth_header(READER_ID, "reader")
     response = await client.post("/api/v1/scopes", json=payload, headers=headers)
@@ -278,20 +284,16 @@ async def test_get_scope_not_found(
 
 # --- Service Layer Business Logic & Auditing Tests ---
 
+
 @pytest.mark.asyncio
 async def test_create_scope_service(mock_db) -> None:
     scope_in = ScopeCreate(
-        name="Service Scope",
-        type="domain",
-        definition={"domains": ["service.local"]}
+        name="Service Scope", type="domain", definition={"domains": ["service.local"]}
     )
 
     # Execute service call
     res = await create_scope(
-        db=mock_db,
-        scope_in=scope_in,
-        owner_id=OPERATOR_ID,
-        actor_id=OPERATOR_ID
+        db=mock_db, scope_in=scope_in, owner_id=OPERATOR_ID, actor_id=OPERATOR_ID
     )
 
     assert res.name == "Service Scope"
@@ -315,10 +317,7 @@ async def test_update_scope_service(mock_get_scope_by_id, mock_db) -> None:
 
     scope_update = ScopeUpdate(name="New Name")
     res = await update_scope(
-        db=mock_db,
-        scope_id=existing.id,
-        scope_in=scope_update,
-        actor_id=OPERATOR_ID
+        db=mock_db, scope_id=existing.id, scope_in=scope_update, actor_id=OPERATOR_ID
     )
 
     assert res.name == "New Name"
@@ -334,11 +333,7 @@ async def test_delete_scope_service(mock_get_scope_by_id, mock_db) -> None:
     existing.deleted_at = None
     mock_get_scope_by_id.return_value = existing
 
-    success = await delete_scope(
-        db=mock_db,
-        scope_id=existing.id,
-        actor_id=OPERATOR_ID
-    )
+    success = await delete_scope(db=mock_db, scope_id=existing.id, actor_id=OPERATOR_ID)
 
     assert success is True
     assert existing.deleted_at is not None

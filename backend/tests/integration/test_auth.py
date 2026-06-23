@@ -132,4 +132,3 @@ async def test_api_key_stored_as_hash(test_user: User, mock_db: AsyncMock) -> No
         # Ensure only the SHA-256 hash is stored, not the raw key
         assert test_user.api_key_hash == hash_api_key(raw_key)
         assert test_user.api_key_hash != raw_key
-
