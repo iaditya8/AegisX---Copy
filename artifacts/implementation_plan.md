@@ -1,83 +1,87 @@
-# Implementation Plan — Sprint 16: SOC Operations & Alert Management
+# Implementation Plan — Sprint 17: Incident Management & Investigation Workflows
 
-AegisX will be transformed from a Continuous Monitoring Platform into a SOC Operations Intelligence Platform. Sprint 16 introduces an operational alert management layer that acts upon continuous monitoring events, governance drift events, SLA breaches, and risk acceptance expirations to generate, deduplicate, escalate, and assign alerts to analysts.
+AegisX will be transformed from a SOC Operations Platform into an Incident Management & Investigation Workflow Platform. Sprint 17 introduces structured incidents, deterministic tracking, analyst-driven investigation workflows, timeline auditing, evidence correlation, and advisor-only AI context builder integration.
 
 ## User Review Required
 
 > [!IMPORTANT]
-> **Advisory-Only AI**: The AI Security Copilot is strictly advisory. It can explain alert details, reasons, and severities, but is physically blocked from mutating alert states (creating, updating, assigning, closing, or suppressing alerts).
+> **Advisory-Only AI**: The AI Security Copilot remains strictly advisory. It can explain incidents, summarize investigations, and explain evidence, but is physically blocked from mutating incident states (creating, updating, assigning, closing, or approving investigations).
 > 
-> **In-Memory Operations**: Alert management utilizes in-memory registries and stores to avoid database migrations, mirroring the patterns established in prior sprints (remediations, risk acceptances, and snapshots).
+> **In-Memory Operations**: Incident and investigation management utilizes in-memory registries and stores to avoid database migrations, mirroring the patterns established in prior sprints (remediations, alerts, and snapshots).
 > 
-> **Dynamic Rebuild Pattern**: Alert snapshots and statistics are cache-only. If lost, they are fully reconstructed dynamically by traversing past monitoring events and alerts.
+> **Scope Filtering & RBAC**: Standard operators are restricted to incidents where all linked assets are within their allowed scopes. Incident mutations will require the `operator` or `admin` role, and standard `reader` roles will be limited to read-only retrieval.
+> 
+> **Closed Incident Enforcement**: The `CLOSED` state is strictly terminal. Once closed, an incident cannot be reopened, updated, or otherwise mutated.
 
 ## Open Questions
 
 > [!NOTE]
-> **Question 1**: Do you approve the default alert severity mappings and escalation aging thresholds (CRITICAL -> 1 day, HIGH -> 3 days, MEDIUM -> 7 days, LOW -> 14 days)?
+> **Question 1**: Do you approve the default incident severity mapping rule (any critical alert -> critical incident; multiple high alerts -> high incident)?
 
 ## Proposed Changes
 
-### [NEW] [alert.py](file:///c:/Users/Aditya/Desktop/AegisX%20-%20Copy/backend/src/domain/entities/alert.py)
-Domain models and schema definitions for alert modeling:
-- Enums: `AlertSeverity` (`LOW`, `MEDIUM`, `HIGH`, `CRITICAL`), `AlertStatus` (`OPEN`, `ACKNOWLEDGED`, `IN_PROGRESS`, `ESCALATED`, `RESOLVED`, `SUPPRESSED`), and `AlertType` (`ASSET_DRIFT`, `FINDING_DRIFT`, `RISK_DRIFT`, `COMPLIANCE_DRIFT`, `RISK_ACCEPTANCE_EXPIRATION`, `SLA_BREACH`, `CRITICAL_FINDING`).
-- Schemas: `AlertResponse` containing alert details and state.
+### [NEW] [incident.py](file:///c:/Users/Aditya/Desktop/AegisX%20-%20Copy/backend/src/domain/entities/incident.py)
+Domain models and schema definitions for incident and investigation tracking:
+- Enums: `IncidentSeverity` (`LOW`, `MEDIUM`, `HIGH`, `CRITICAL`), `IncidentStatus` (`OPEN`, `TRIAGED`, `INVESTIGATING`, `ESCALATED`, `CONTAINED`, `RESOLVED`, `CLOSED`), and `InvestigationStatus` (`OPEN`, `ACTIVE`, `COMPLETED`).
+- Schemas: `IncidentResponse`, `InvestigationEntry`, and `IncidentHistoryEntry` Pydantic models.
 
-### [NEW] [alert_severity_registry.py](file:///c:/Users/Aditya/Desktop/AegisX%20-%20Copy/backend/src/services/alert_severity_registry.py)
-- Maps `AlertType` dynamically to their corresponding `AlertSeverity`.
+### [NEW] [incident_severity_registry.py](file:///c:/Users/Aditya/Desktop/AegisX%20-%20Copy/backend/src/services/incident_severity_registry.py)
+- Maps alert severity combinations to incident severity level deterministically (e.g., if any alert is CRITICAL -> incident is CRITICAL).
 
-### [NEW] [alert_fingerprint_service.py](file:///c:/Users/Aditya/Desktop/AegisX%20-%20Copy/backend/src/services/alert_fingerprint_service.py)
-- Generates stable, deterministic fingerprints to prevent duplicates: `SHA256(alert_type, asset_id, finding_id, recommendation_id, remediation_id)`.
+### [NEW] [incident_fingerprint_service.py](file:///c:/Users/Aditya/Desktop/AegisX%20-%20Copy/backend/src/services/incident_fingerprint_service.py)
+- Generates stable, deterministic fingerprints to prevent duplicate incidents: `SHA256(alert_ids, asset_ids, finding_ids)`. Fingerprints survive transitions and ownership changes.
 
-### [NEW] [alert_generation_service.py](file:///c:/Users/Aditya/Desktop/AegisX%20-%20Copy/backend/src/services/alert_generation_service.py)
-- Consumes monitoring events, governance drift, SLA breaches, and expirations to generate alerts and deduplicate them.
-- Emits `alert.created` workflow events and logs audit entries.
+### [NEW] [incident_history_service.py](file:///c:/Users/Aditya/Desktop/AegisX%20-%20Copy/backend/src/services/incident_history_service.py)
+- Tracks state transitions and appends immutable history records that persist across synchronization and snapshot rebuilds.
 
-### [NEW] [alert_lifecycle_service.py](file:///c:/Users/Aditya/Desktop/AegisX%20-%20Copy/backend/src/services/alert_lifecycle_service.py)
-- Implements alert state machine transitions and enforces terminal status for `RESOLVED` and `SUPPRESSED` (alerts in terminal states cannot be reopened).
+### [NEW] [incident_evidence_service.py](file:///c:/Users/Aditya/Desktop/AegisX%20-%20Copy/backend/src/services/incident_evidence_service.py)
+- Correlates read-only evidence references (alerts, assets, findings, recommendations, remediations) dynamically, ensuring they survive incident closure.
 
-### [NEW] [alert_queue_service.py](file:///c:/Users/Aditya/Desktop/AegisX%20-%20Copy/backend/src/services/alert_queue_service.py)
-- Tracks alert assignments, analyst workloads, and aggregates queue stats.
+### [NEW] [incident_service.py](file:///c:/Users/Aditya/Desktop/AegisX%20-%20Copy/backend/src/services/incident_service.py)
+- Manages the core incident state machine (OPEN -> TRIAGED -> INVESTIGATING -> CONTAINED -> RESOLVED -> CLOSED) and synchronizes/deduplicates alerts into unified incidents. Enforces Closed Incident rule and emits workflow events.
 
-### [NEW] [alert_escalation_registry.py](file:///c:/Users/Aditya/Desktop/AegisX%20-%20Copy/backend/src/services/alert_escalation_registry.py)
-- Maps `AlertSeverity` to escalation aging thresholds.
+### [NEW] [investigation_service.py](file:///c:/Users/Aditya/Desktop/AegisX%20-%20Copy/backend/src/services/investigation_service.py)
+- Supports starting/completing investigations, tracking analyst notes, and writing to timeline structures.
 
-### [NEW] [alert_escalation_service.py](file:///c:/Users/Aditya/Desktop/AegisX%20-%20Copy/backend/src/services/alert_escalation_service.py)
-- Scans open/acknowledged/in-progress alerts, auto-escalates aging alerts based on thresholds, and emits `alert.escalated` workflow events.
+### [NEW] [incident_escalation_service.py](file:///c:/Users/Aditya/Desktop/AegisX%20-%20Copy/backend/src/services/incident_escalation_service.py)
+- Implements manual escalations (to team, owner, or management) and emits `incident.escalated` workflow events.
 
-### [NEW] [alert_snapshot_service.py](file:///c:/Users/Aditya/Desktop/AegisX%20-%20Copy/backend/src/services/alert_snapshot_service.py)
-- Caches platform-wide status metrics in-memory, supporting dynamic reconstruction from alert history.
+### [NEW] [incident_snapshot_service.py](file:///c:/Users/Aditya/Desktop/AegisX%20-%20Copy/backend/src/services/incident_snapshot_service.py)
+- Caches incident statistics in-memory and supports dynamic reconstruction from incident service records if lost or cleared.
 
-### [NEW] [alerts.py](file:///c:/Users/Aditya/Desktop/AegisX%20-%20Copy/backend/src/api/v1/routers/alerts.py)
-- Exposes REST endpoints for alert management with full RBAC and scope check validations.
+### [NEW] [incidents.py](file:///c:/Users/Aditya/Desktop/AegisX%20-%20Copy/backend/src/api/v1/routers/incidents.py)
+- Exposes REST endpoints for incident management, timeline retrieving, and evidence list. Includes RBAC and operator scope constraints.
 
 ### [MODIFY] [main.py](file:///c:/Users/Aditya/Desktop/AegisX%20-%20Copy/backend/src/main.py)
-- Mount the new alerts router.
+- Mount the new incidents router.
 
 ### [MODIFY] [worker.py](file:///c:/Users/Aditya/Desktop/AegisX%20-%20Copy/backend/src/infrastructure/celery/worker.py)
-- At the end of workflow scan steps, invoke `AlertGenerationService.generate_alerts(db)` and `AlertEscalationService.process_escalations(db)` gracefully.
+- Stages alert synchronization `IncidentService.sync_alerts(db)` and `IncidentEscalationService.process_escalations(db)` at the end of scan tasks.
 
 ### [MODIFY] [ai_context_builder.py](file:///c:/Users/Aditya/Desktop/AegisX%20-%20Copy/backend/src/services/ai_context_builder.py)
-- Inject alert summary details into the prompt context payloads.
+- Inject incident context attributes (summary, status, owner, timeline, evidence) into context builder prompts.
 
 ### [MODIFY] [ai_prompt_builder.py](file:///c:/Users/Aditya/Desktop/AegisX%20-%20Copy/backend/src/services/ai_prompt_builder.py)
-- Embed system constraints on AI advisor-only alert role in prompts.
+- Enforce advisor-only incident constraints to block the AI Security Copilot from performing mutations on incidents.
 
 ---
 
 ## Verification Plan
 
 ### Automated Tests
-- Create `backend/tests/integration/test_alerts.py` to verify:
-  - Alert creation, state machine transitions, and assignment.
-  - Snapshot reconstruction and queue statistics.
-  - SLA breach and risk acceptance expiration alert triggers.
+- Create `backend/tests/integration/test_incidents.py` to verify:
+  - Incident creation, fingerprinting stability, state transitions, and assignment.
+  - Snapshot reconstruction and timeline retrieves.
+  - History preservation and evidence visibility after incident closure.
   - Copilot advisory prompt enforcements.
-  - RBAC permission boundaries and scope boundaries.
-  - Fingerprint deduplication and terminal state rules.
+  - RBAC boundaries and operator scope boundaries.
 - Execute integration tests:
   ```powershell
-  .venv\Scripts\pytest backend/tests/integration/test_alerts.py
+  .venv\Scripts\pytest backend/tests/integration/test_incidents.py
+  ```
+- Execute regression tests:
+  ```powershell
+  .venv\Scripts\pytest
   ```
 - Formatting & Linting checks:
   ```powershell
@@ -86,4 +90,4 @@ Domain models and schema definitions for alert modeling:
   ```
 
 ### Manual Verification
-- None required; verified entirely via integration tests.
+- Verify that standard operators are restricted from retrieving or mutating incidents involving assets outside their allowed scopes.
