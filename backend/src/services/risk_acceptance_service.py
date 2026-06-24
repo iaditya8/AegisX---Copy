@@ -1,13 +1,13 @@
 import uuid
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Dict, List, Optional
 
 from sqlalchemy.ext.asyncio import AsyncSession
 from src.domain.entities.governance import RiskAcceptanceStatus
 from src.domain.entities.remediation import RemediationStatus
 from src.services.audit_service import create_audit_entry
-from src.services.workflow_event_service import WorkflowEventService
 from src.services.risk_acceptance_registry import RISK_ACCEPTANCE_DAYS
+from src.services.workflow_event_service import WorkflowEventService
 
 
 class RiskAcceptanceRecord:
@@ -77,7 +77,9 @@ class RiskAcceptanceService:
         ]
 
     @classmethod
-    def get_acceptances_by_asset(cls, asset_id: uuid.UUID) -> List[RiskAcceptanceRecord]:
+    def get_acceptances_by_asset(
+        cls, asset_id: uuid.UUID
+    ) -> List[RiskAcceptanceRecord]:
         """Retrieve all acceptances associated with an asset."""
         return [a for a in cls._acceptances.values() if a.asset_id == asset_id]
 
@@ -94,9 +96,9 @@ class RiskAcceptanceService:
         actor_id: Optional[uuid.UUID] = None,
     ) -> RiskAcceptanceRecord:
         """Formally accept risk for a recommendation footprint."""
-        from src.services.remediation_service import RemediationService
         from src.services.exception_service import ExceptionService
         from src.services.governance_snapshot_service import GovernanceSnapshotService
+        from src.services.remediation_service import RemediationService
 
         # 1. Determine severity
         severity = "MEDIUM"
@@ -137,7 +139,9 @@ class RiskAcceptanceService:
 
         remediation = RemediationService.get_remediation(rem_id)
         if not remediation:
-            raise ValueError(f"Remediation record not found for fingerprint {recommendation_fingerprint}")
+            raise ValueError(
+                f"Remediation record not found for fingerprint {recommendation_fingerprint}"
+            )
 
         # 4. Apply exception to remediation
         await ExceptionService.apply_exception(
@@ -153,7 +157,10 @@ class RiskAcceptanceService:
         existing_ids = cls._fingerprint_acceptances.get(recommendation_fingerprint, [])
         for old_id in existing_ids:
             old_acc = cls._acceptances.get(old_id)
-            if old_acc and old_acc.status in [RiskAcceptanceStatus.ACTIVE, RiskAcceptanceStatus.EXPIRING]:
+            if old_acc and old_acc.status in [
+                RiskAcceptanceStatus.ACTIVE,
+                RiskAcceptanceStatus.EXPIRING,
+            ]:
                 old_acc.status = RiskAcceptanceStatus.REVOKED
 
         # 6. Create Risk Acceptance Record
@@ -214,20 +221,27 @@ class RiskAcceptanceService:
         actor_id: Optional[uuid.UUID] = None,
     ) -> RiskAcceptanceRecord:
         """Revoke an active risk acceptance."""
-        from src.services.remediation_service import RemediationService
         from src.services.governance_snapshot_service import GovernanceSnapshotService
+        from src.services.remediation_service import RemediationService
 
         record = cls.get_acceptance(acceptance_id)
         if not record:
             raise ValueError(f"Risk acceptance {acceptance_id} not found")
 
-        if record.status not in [RiskAcceptanceStatus.ACTIVE, RiskAcceptanceStatus.EXPIRING]:
-            raise ValueError(f"Cannot revoke risk acceptance in status {record.status.value}")
+        if record.status not in [
+            RiskAcceptanceStatus.ACTIVE,
+            RiskAcceptanceStatus.EXPIRING,
+        ]:
+            raise ValueError(
+                f"Cannot revoke risk acceptance in status {record.status.value}"
+            )
 
         record.status = RiskAcceptanceStatus.REVOKED
 
         # Revert remediation status back to OPEN
-        rem_id = RemediationService._fingerprint_lookup.get(record.recommendation_fingerprint)
+        rem_id = RemediationService._fingerprint_lookup.get(
+            record.recommendation_fingerprint
+        )
         if rem_id:
             await RemediationService.update_status(
                 db=db,
@@ -275,8 +289,8 @@ class RiskAcceptanceService:
         actor_id: Optional[uuid.UUID] = None,
     ) -> RiskAcceptanceRecord:
         """Force expire a risk acceptance."""
-        from src.services.remediation_service import RemediationService
         from src.services.governance_snapshot_service import GovernanceSnapshotService
+        from src.services.remediation_service import RemediationService
 
         record = cls.get_acceptance(acceptance_id)
         if not record:
@@ -285,7 +299,9 @@ class RiskAcceptanceService:
         record.status = RiskAcceptanceStatus.EXPIRED
 
         # Revert remediation status back to OPEN
-        rem_id = RemediationService._fingerprint_lookup.get(record.recommendation_fingerprint)
+        rem_id = RemediationService._fingerprint_lookup.get(
+            record.recommendation_fingerprint
+        )
         if rem_id:
             await RemediationService.update_status(
                 db=db,
@@ -332,12 +348,15 @@ class RiskAcceptanceService:
         actor_id: Optional[uuid.UUID] = None,
     ) -> None:
         """Evaluate all risk acceptances, update states for expiring and expired policies."""
-        from src.services.remediation_service import RemediationService
         from src.services.governance_snapshot_service import GovernanceSnapshotService
+        from src.services.remediation_service import RemediationService
 
         now = datetime.now(timezone.utc)
         for record in list(cls._acceptances.values()):
-            if record.status not in [RiskAcceptanceStatus.ACTIVE, RiskAcceptanceStatus.EXPIRING]:
+            if record.status not in [
+                RiskAcceptanceStatus.ACTIVE,
+                RiskAcceptanceStatus.EXPIRING,
+            ]:
                 continue
 
             time_remaining = record.expiration_date - now
@@ -347,7 +366,9 @@ class RiskAcceptanceService:
                 record.status = RiskAcceptanceStatus.EXPIRED
 
                 # Revert remediation status back to OPEN
-                rem_id = RemediationService._fingerprint_lookup.get(record.recommendation_fingerprint)
+                rem_id = RemediationService._fingerprint_lookup.get(
+                    record.recommendation_fingerprint
+                )
                 if rem_id:
                     await RemediationService.update_status(
                         db=db,
@@ -382,7 +403,10 @@ class RiskAcceptanceService:
                 )
                 await GovernanceSnapshotService.update_snapshot(db, record.asset_id)
 
-            elif time_remaining <= timedelta(days=7) and record.status == RiskAcceptanceStatus.ACTIVE:
+            elif (
+                time_remaining <= timedelta(days=7)
+                and record.status == RiskAcceptanceStatus.ACTIVE
+            ):
                 # Transitioning from ACTIVE to EXPIRING
                 record.status = RiskAcceptanceStatus.EXPIRING
 

@@ -6,17 +6,18 @@ from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 from src.api.v1.dependencies.auth import RoleChecker
 from src.domain.entities.governance import (
-    GovernanceStatus,
-    RiskAcceptanceResponse,
-    ComplianceControlResponse,
     GovernanceSnapshotResponse,
+    RiskAcceptanceResponse,
 )
 from src.domain.entities.user import StandardResponse
 from src.infrastructure.database.models import Asset, Finding, User
 from src.infrastructure.database.session import get_db
 from src.services.governance_service import GovernanceService
-from src.services.risk_acceptance_service import RiskAcceptanceService, RiskAcceptanceRecord
 from src.services.governance_snapshot_service import GovernanceSnapshotService
+from src.services.risk_acceptance_service import (
+    RiskAcceptanceRecord,
+    RiskAcceptanceService,
+)
 from src.services.scope_service import get_scope_by_id
 
 router = APIRouter(tags=["governance"])
@@ -166,12 +167,14 @@ async def list_non_compliant_assets(
     for asset in assets:
         try:
             await check_asset_ownership(db, asset, current_user)
-            filtered.append({
-                "id": str(asset.id),
-                "host": asset.host,
-                "ip": asset.ip,
-                "asset_type": asset.asset_type,
-            })
+            filtered.append(
+                {
+                    "id": str(asset.id),
+                    "host": asset.host,
+                    "ip": asset.ip,
+                    "asset_type": asset.asset_type,
+                }
+            )
         except HTTPException:
             # Skip assets user does not own
             continue
@@ -199,13 +202,15 @@ async def list_non_compliant_findings(
             continue
         try:
             await check_asset_ownership(db, asset, current_user)
-            filtered.append({
-                "id": str(f.id),
-                "asset_id": str(f.asset_id),
-                "title": f.title,
-                "severity": f.severity,
-                "status": f.status,
-            })
+            filtered.append(
+                {
+                    "id": str(f.id),
+                    "asset_id": str(f.asset_id),
+                    "title": f.title,
+                    "severity": f.severity,
+                    "status": f.status,
+                }
+            )
         except HTTPException:
             continue
     return StandardResponse[List[Any]](

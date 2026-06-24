@@ -219,7 +219,9 @@ class RemediationService:
                 RemediationStatus.DEFERRED,
             ]:
                 if not reason or not approved_by:
-                    raise ValueError("Reason and approved_by required for exception status")
+                    raise ValueError(
+                        "Reason and approved_by required for exception status"
+                    )
                 from src.services.exception_service import ExceptionService
 
                 await ExceptionService.apply_exception(

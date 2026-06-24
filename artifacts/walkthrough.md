@@ -172,3 +172,41 @@ All 218 test cases pass successfully:
 ```
 - Integration tests in [test_governance.py](file:///c:/Users/Aditya/Desktop/AegisX%20-%20Copy/backend/tests/integration/test_governance.py) fully verify risk acceptance logic, automatic expiration, revocation, SLA breach transitions, compliance control mappings, drift detection, AI context injection, and role-based access control.
 - Compliance checks with Ruff and Black pass cleanly.
+
+---
+
+# Walkthrough — Sprint 15: Continuous Monitoring & Posture Drift Intelligence
+
+In this sprint, we implemented the passive, in-memory **Continuous Monitoring & Posture Drift Intelligence** platform capabilities. This introduces monitoring and drift detection layers that track live security state changes (asset additions/modifications/removals, finding lifecycle transitions, risk score fluctuations, compliance/governance state transitions) over time.
+
+## Changes Made
+
+### 1. Domain Entities & Schemas
+- Created [monitoring.py](file:///c:/Users/Aditya/Desktop/AegisX%20-%20Copy/backend/src/domain/entities/monitoring.py) defining:
+  - `MonitoringEvent` in-memory object schema tracking event metadata and fingerprints.
+  - `MonitoringEventResponse` Pydantic model for API serialization.
+  - `MonitoringSnapshotResponse` Pydantic model tracking platform-wide counts of drift categories.
+
+### 2. Core Service Layer & Drift Engines
+- Created [monitoring_fingerprint_service.py](file:///c:/Users/Aditya/Desktop/AegisX%20-%20Copy/backend/src/services/monitoring_fingerprint_service.py): Computes idempotent, duplicate-resistant SHA-256 fingerprints to ensure stability and deduplication across scan executions.
+- Created [baseline_state_service.py](file:///c:/Users/Aditya/Desktop/AegisX%20-%20Copy/backend/src/services/baseline_state_service.py): Manages passive baseline caches for asset details, finding attributes, risk thresholds, and compliance statuses. Implements standard dynamic rebuild rules to reconstruct baseline caches on-demand by traversing historical monitoring event logs.
+- Created [continuous_refresh_service.py](file:///c:/Users/Aditya/Desktop/AegisX%20-%20Copy/backend/src/services/continuous_refresh_service.py): Compares live scanner and workflow data against captured baselines. Emits monitoring events on asset drift (`ASSET_ADDED`, `ASSET_MODIFIED`, `ASSET_REMOVED`), finding drift (`FINDING_ADDED`, `FINDING_RESOLVED`, `FINDING_REDISCOVERED`), risk drift (fluctuations of $\ge 15.0$ or crossing the critical $75.0$ boundary), and compliance failures/restorations.
+- Created [monitoring_snapshot_service.py](file:///c:/Users/Aditya/Desktop/AegisX%20-%20Copy/backend/src/services/monitoring_snapshot_service.py): Caches platform-wide cumulative monitoring metrics in-memory, supporting dynamic reconstruction from event logs.
+
+### 3. Routing & Integrations
+- Created [monitoring.py](file:///c:/Users/Aditya/Desktop/AegisX%20-%20Copy/backend/src/api/v1/routers/monitoring.py) exposing:
+  - `GET /api/v1/monitoring/events` - Retrieve monitoring events.
+  - `GET /api/v1/monitoring/assets/{id}` - Retrieve asset specific drift.
+  - `GET /api/v1/monitoring/findings/{id}` - Retrieve finding specific drift.
+  - `GET /api/v1/monitoring/summary` - Platform-wide monitoring count stats.
+- Registered the router in [main.py](file:///c:/Users/Aditya/Desktop/AegisX%20-%20Copy/backend/src/main.py).
+- Integrated Celery worker scan tasks in [worker.py](file:///c:/Users/Aditya/Desktop/AegisX%20-%20Copy/backend/src/infrastructure/celery/worker.py) to trigger monitoring refreshes (`ContinuousRefreshService.refresh_all(db)`) dynamically at the end of each scan pipeline execution.
+- Integrated `AIContextBuilder` to inject monitoring events, asset drift, finding drift, risk drift, and compliance drift lists into LLM prompts.
+
+## Testing & Verification (Sprint 15)
+All 227 test cases pass successfully:
+```powershell
+====================== 227 passed, 67 warnings in 11.43s ======================
+```
+- Integration tests in [test_monitoring.py](file:///c:/Users/Aditya%20-%20Copy/backend/tests/integration/test_monitoring.py) fully verify asset, finding, risk, and compliance drift detection, baseline dynamic regeneration, AI context injection, worker task integration, event fingerprinting deduplication, and role-based scope checks.
+- Code formatting and style standards with Ruff and Black are verified.

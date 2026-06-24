@@ -1,20 +1,24 @@
 import uuid
 from datetime import datetime, timezone
-from typing import List, Dict, Any
+from typing import Dict, List
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from src.domain.entities.governance import ComplianceControlResponse
-from src.infrastructure.database.models import Asset, Finding, AssetPort
-from src.services.compliance_control_registry import CONTROL_MAPPINGS, CONTROL_DETAILS
+from src.infrastructure.database.models import Asset, AssetPort, Finding
+from src.services.compliance_control_registry import CONTROL_DETAILS
 from src.services.remediation_service import RemediationService
-from src.services.risk_acceptance_service import RiskAcceptanceService, RiskAcceptanceStatus
-from src.services.sla_monitoring_service import SLAMonitoringService
+from src.services.risk_acceptance_service import (
+    RiskAcceptanceService,
+    RiskAcceptanceStatus,
+)
 
 
 class ComplianceMappingService:
     @classmethod
-    async def get_compliance_controls(cls, db: AsyncSession) -> List[ComplianceControlResponse]:
+    async def get_compliance_controls(
+        cls, db: AsyncSession
+    ) -> List[ComplianceControlResponse]:
         """Evaluate all compliance controls and map assets and findings to them."""
         # 1. Fetch all active assets and findings
         q_assets = select(Asset).where(Asset.deleted_at.is_(None))
@@ -52,7 +56,10 @@ class ComplianceMappingService:
 
         # Check VULN-001: Critical findings
         for f in findings:
-            if f.severity.lower() == "critical" and f.fingerprint not in covered_fingerprints:
+            if (
+                f.severity.lower() == "critical"
+                and f.fingerprint not in covered_fingerprints
+            ):
                 failures["VULN-001"]["findings"].append(f.id)
                 if f.asset_id not in failures["VULN-001"]["assets"]:
                     failures["VULN-001"]["assets"].append(f.asset_id)
@@ -69,30 +76,41 @@ class ComplianceMappingService:
             if is_exposed:
                 # Fetch open ports
                 q_ports = select(AssetPort).where(
-                    AssetPort.asset_id == asset.id,
-                    AssetPort.state == "open"
+                    AssetPort.asset_id == asset.id, AssetPort.state == "open"
                 )
                 res_ports = await db.execute(q_ports)
                 ports = res_ports.scalars().all()
 
-                admin_ports = [p.port for p in ports if p.port in [21, 22, 23, 445, 3389]]
+                admin_ports = [
+                    p.port for p in ports if p.port in [21, 22, 23, 445, 3389]
+                ]
                 if admin_ports:
                     # Check if there is any finding/remediation covered
                     # If any open finding exists for this asset and is not covered, it's non-compliant
                     asset_findings = [f for f in findings if f.asset_id == asset.id]
-                    uncovered = [f for f in asset_findings if f.fingerprint not in covered_fingerprints]
-                    
+                    uncovered = [
+                        f
+                        for f in asset_findings
+                        if f.fingerprint not in covered_fingerprints
+                    ]
+
                     # If any admin port is exposed, mark the asset non-compliant
                     failures["EXP-001"]["assets"].append(asset.id)
                     for f in uncovered:
-                        if any(term in f.title.lower() for term in ["port", "ssh", "ftp", "telnet", "rdp", "smb"]):
+                        if any(
+                            term in f.title.lower()
+                            for term in ["port", "ssh", "ftp", "telnet", "rdp", "smb"]
+                        ):
                             failures["EXP-001"]["findings"].append(f.id)
 
         # Check OPS-001: SLA breaches
         for r in remediations:
             if r.status.value in ["OPEN", "IN_PROGRESS", "DEFERRED"]:
                 is_breached = r.due_date < now
-                if is_breached and r.recommendation_fingerprint not in active_fingerprints:
+                if (
+                    is_breached
+                    and r.recommendation_fingerprint not in active_fingerprints
+                ):
                     failures["OPS-001"]["assets"].append(r.asset_id)
                     if r.finding_id:
                         failures["OPS-001"]["findings"].append(r.finding_id)
@@ -104,7 +122,8 @@ class ComplianceMappingService:
                 # If there's no active replacement for this fingerprint, it's non-compliant
                 has_active = any(
                     other.recommendation_fingerprint == a.recommendation_fingerprint
-                    and other.status in [RiskAcceptanceStatus.ACTIVE, RiskAcceptanceStatus.EXPIRING]
+                    and other.status
+                    in [RiskAcceptanceStatus.ACTIVE, RiskAcceptanceStatus.EXPIRING]
                     for other in all_acceptances
                 )
                 if not has_active:

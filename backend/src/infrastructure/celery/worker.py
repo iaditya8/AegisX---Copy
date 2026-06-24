@@ -525,14 +525,16 @@ async def _execute_workflow_async(
 
                             RemediationSnapshotService.update_snapshot(asset.id)
                             # 3.7. Update GovernanceSnapshotService and detect drift
-                            from src.services.governance_snapshot_service import (
-                                GovernanceSnapshotService,
-                            )
                             from src.services.compliance_drift_service import (
                                 ComplianceDriftService,
                             )
+                            from src.services.governance_snapshot_service import (
+                                GovernanceSnapshotService,
+                            )
 
-                            await GovernanceSnapshotService.update_snapshot(db, asset.id)
+                            await GovernanceSnapshotService.update_snapshot(
+                                db, asset.id
+                            )
                             await ComplianceDriftService.detect_drift(db)
                             # 4. Invalidate report and AI caches for asset
                             from src.services.report_cache_service import (
@@ -573,6 +575,20 @@ async def _execute_workflow_async(
                         logging.error(
                             "Failed to refresh ExecutiveReportService cache: "
                             f"{exec_err}"
+                        )
+
+                    try:
+                        from src.services.continuous_refresh_service import (
+                            ContinuousRefreshService,
+                        )
+
+                        await ContinuousRefreshService.refresh_all(db)
+                    except Exception as refresh_err:
+                        import logging
+
+                        logging.error(
+                            "Failed to run ContinuousRefreshService.refresh_all: "
+                            f"{refresh_err}"
                         )
 
                 except Exception as scope_err:

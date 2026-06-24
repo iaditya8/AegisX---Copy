@@ -1,18 +1,24 @@
 import uuid
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timedelta, timezone
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from httpx import AsyncClient
 from src.core.security import create_access_token
-from src.infrastructure.database.models import Asset, Finding, Scope, User, Workflow, AssetPort
 from src.domain.entities.governance import GovernanceStatus, RiskAcceptanceStatus
-from src.services.governance_service import GovernanceService
-from src.services.risk_acceptance_service import RiskAcceptanceService
-from src.services.governance_snapshot_service import GovernanceSnapshotService
+from src.infrastructure.database.models import (
+    Asset,
+    Finding,
+    Scope,
+    User,
+    Workflow,
+)
 from src.services.compliance_drift_service import ComplianceDriftService
 from src.services.compliance_mapping_service import ComplianceMappingService
+from src.services.governance_service import GovernanceService
+from src.services.governance_snapshot_service import GovernanceSnapshotService
 from src.services.remediation_service import RemediationService
+from src.services.risk_acceptance_service import RiskAcceptanceService
 
 ADMIN_ID = uuid.UUID("11111111-1111-1111-1111-111111111111")
 OPERATOR_ID = uuid.UUID("22222222-2222-2222-2222-222222222222")
@@ -123,9 +129,9 @@ def clean_stores():
 def setup_basic_mock_db(mock_db, mock_asset, mock_finding):
     mock_db.get = AsyncMock(
         side_effect=lambda model, ident: (
-            mock_asset if model == Asset else (
-                mock_finding if model == Finding else None
-            )
+            mock_asset
+            if model == Asset
+            else (mock_finding if model == Finding else None)
         )
     )
 
@@ -223,7 +229,9 @@ async def test_risk_acceptance_revocation(mock_db, mock_finding, mock_asset) -> 
         actor_id=ADMIN_ID,
     )
 
-    await RiskAcceptanceService.revoke_risk(mock_db, rec.acceptance_id, actor_id=ADMIN_ID)
+    await RiskAcceptanceService.revoke_risk(
+        mock_db, rec.acceptance_id, actor_id=ADMIN_ID
+    )
 
     assert rec.status == RiskAcceptanceStatus.REVOKED
 
@@ -251,7 +259,9 @@ async def test_asset_governance_status(mock_db, mock_asset, mock_finding) -> Non
     mock_res_findings.scalars.return_value.all.return_value = [mock_finding]
     mock_db.execute = AsyncMock(return_value=mock_res_findings)
 
-    with patch("src.services.compliance_mapping_service.ComplianceMappingService.get_compliance_controls") as mock_controls:
+    with patch(
+        "src.services.compliance_mapping_service.ComplianceMappingService.get_compliance_controls"
+    ) as mock_controls:
         mock_c = MagicMock()
         mock_c.affected_assets = [ASSET_ID]
         mock_controls.return_value = [mock_c]
@@ -295,22 +305,27 @@ async def test_finding_governance_status(mock_db, mock_asset, mock_finding) -> N
 async def test_non_compliant_detection(mock_db, mock_asset, mock_finding) -> None:
     """Verify non-compliant assets and findings are detected successfully."""
     setup_basic_mock_db(mock_db, mock_asset, mock_finding)
-    
-    with patch("src.services.governance_service.GovernanceService.evaluate_asset_governance", return_value=GovernanceStatus.NON_COMPLIANT), \
-         patch("src.services.governance_service.GovernanceService.evaluate_finding_governance", return_value=GovernanceStatus.NON_COMPLIANT):
-         
-         # Mock execute for get_non_compliant_assets (select assets) and get_non_compliant_findings (select findings)
-         mock_res = MagicMock()
-         mock_res.scalars.return_value.all.side_effect = [[mock_asset], [mock_finding]]
-         mock_db.execute = AsyncMock(return_value=mock_res)
 
-         assets = await GovernanceService.get_non_compliant_assets(mock_db)
-         assert len(assets) == 1
-         assert assets[0].id == ASSET_ID
+    with patch(
+        "src.services.governance_service.GovernanceService.evaluate_asset_governance",
+        return_value=GovernanceStatus.NON_COMPLIANT,
+    ), patch(
+        "src.services.governance_service.GovernanceService.evaluate_finding_governance",
+        return_value=GovernanceStatus.NON_COMPLIANT,
+    ):
 
-         findings = await GovernanceService.get_non_compliant_findings(mock_db)
-         assert len(findings) == 1
-         assert findings[0].id == FINDING_ID
+        # Mock execute for get_non_compliant_assets (select assets) and get_non_compliant_findings (select findings)
+        mock_res = MagicMock()
+        mock_res.scalars.return_value.all.side_effect = [[mock_asset], [mock_finding]]
+        mock_db.execute = AsyncMock(return_value=mock_res)
+
+        assets = await GovernanceService.get_non_compliant_assets(mock_db)
+        assert len(assets) == 1
+        assert assets[0].id == ASSET_ID
+
+        findings = await GovernanceService.get_non_compliant_findings(mock_db)
+        assert len(findings) == 1
+        assert findings[0].id == FINDING_ID
 
 
 @pytest.mark.asyncio
@@ -321,9 +336,12 @@ async def test_compliance_control_mapping(mock_db, mock_asset, mock_finding) -> 
     mock_res.scalars.return_value.all.side_effect = [[mock_asset], [mock_finding]]
     mock_db.execute = AsyncMock(return_value=mock_res)
 
-    with patch("src.services.correlation_service.CorrelationService.correlate_asset", return_value={"exposure": "internal"}):
+    with patch(
+        "src.services.correlation_service.CorrelationService.correlate_asset",
+        return_value={"exposure": "internal"},
+    ):
         controls = await ComplianceMappingService.get_compliance_controls(mock_db)
-        
+
         vuln_control = next(c for c in controls if c.control_id == "VULN-001")
         assert vuln_control.status == "NON_COMPLIANT"
         assert FINDING_ID in vuln_control.affected_findings
@@ -337,7 +355,10 @@ async def test_control_failure_detection(mock_db, mock_asset, mock_finding) -> N
     mock_res.scalars.return_value.all.side_effect = [[mock_asset], [mock_finding]]
     mock_db.execute = AsyncMock(return_value=mock_res)
 
-    with patch("src.services.correlation_service.CorrelationService.correlate_asset", return_value={"exposure": "internal"}):
+    with patch(
+        "src.services.correlation_service.CorrelationService.correlate_asset",
+        return_value={"exposure": "internal"},
+    ):
         controls = await ComplianceMappingService.get_compliance_controls(mock_db)
         vuln = next(c for c in controls if c.control_id == "VULN-001")
         assert vuln.status == "NON_COMPLIANT"
@@ -351,14 +372,19 @@ async def test_control_restoration(mock_db, mock_asset, mock_finding) -> None:
     mock_res.scalars.return_value.all.side_effect = [[mock_asset], []]
     mock_db.execute = AsyncMock(return_value=mock_res)
 
-    with patch("src.services.correlation_service.CorrelationService.correlate_asset", return_value={"exposure": "internal"}):
+    with patch(
+        "src.services.correlation_service.CorrelationService.correlate_asset",
+        return_value={"exposure": "internal"},
+    ):
         controls = await ComplianceMappingService.get_compliance_controls(mock_db)
         vuln = next(c for c in controls if c.control_id == "VULN-001")
         assert vuln.status == "COMPLIANT"
 
 
 @pytest.mark.asyncio
-async def test_governance_snapshot_generation(mock_db, mock_asset, mock_finding) -> None:
+async def test_governance_snapshot_generation(
+    mock_db, mock_asset, mock_finding
+) -> None:
     """Verify that cached governance snapshots can be generated and return statistics."""
     setup_basic_mock_db(mock_db, mock_asset, mock_finding)
     mock_summary = {
@@ -369,7 +395,10 @@ async def test_governance_snapshot_generation(mock_db, mock_asset, mock_finding)
         "exception_count": 0,
         "sla_breaches": 0,
     }
-    with patch("src.services.governance_service.GovernanceService.evaluate_platform_governance", return_value=mock_summary):
+    with patch(
+        "src.services.governance_service.GovernanceService.evaluate_platform_governance",
+        return_value=mock_summary,
+    ):
         snapshot = await GovernanceSnapshotService.generate_snapshot(mock_db)
         assert snapshot["non_compliant_assets"] == 1
         assert snapshot["compliant_assets"] == 0
@@ -377,7 +406,9 @@ async def test_governance_snapshot_generation(mock_db, mock_asset, mock_finding)
 
 
 @pytest.mark.asyncio
-async def test_governance_snapshot_rebuild_consistency(mock_db, mock_asset, mock_finding) -> None:
+async def test_governance_snapshot_rebuild_consistency(
+    mock_db, mock_asset, mock_finding
+) -> None:
     """Verify that cache clears trigger dynamic rebuilding of snapshots."""
     setup_basic_mock_db(mock_db, mock_asset, mock_finding)
     mock_summary = {
@@ -388,7 +419,10 @@ async def test_governance_snapshot_rebuild_consistency(mock_db, mock_asset, mock
         "exception_count": 0,
         "sla_breaches": 0,
     }
-    with patch("src.services.governance_service.GovernanceService.evaluate_platform_governance", return_value=mock_summary):
+    with patch(
+        "src.services.governance_service.GovernanceService.evaluate_platform_governance",
+        return_value=mock_summary,
+    ):
         await GovernanceSnapshotService.generate_snapshot(mock_db)
         GovernanceSnapshotService.clear_snapshots()
 
@@ -419,25 +453,31 @@ async def test_governance_drift_detection(mock_db, mock_asset, mock_finding) -> 
 
     mock_db.execute = AsyncMock(side_effect=execute_side_effect)
 
-    with patch("src.services.governance_service.GovernanceService.evaluate_asset_governance") as mock_eval, \
-         patch("src.services.compliance_mapping_service.ComplianceMappingService.get_compliance_controls") as mock_comp:
-         
-         mock_eval.side_effect = [GovernanceStatus.NON_COMPLIANT, GovernanceStatus.COMPLIANT]
-         mock_comp.return_value = []
+    with patch(
+        "src.services.governance_service.GovernanceService.evaluate_asset_governance"
+    ) as mock_eval, patch(
+        "src.services.compliance_mapping_service.ComplianceMappingService.get_compliance_controls"
+    ) as mock_comp:
 
-         # 1. Establish baseline state
-         await ComplianceDriftService.detect_drift(mock_db)
+        mock_eval.side_effect = [
+            GovernanceStatus.NON_COMPLIANT,
+            GovernanceStatus.COMPLIANT,
+        ]
+        mock_comp.return_value = []
 
-         # 2. Run check where state changes
-         await ComplianceDriftService.detect_drift(mock_db)
-         assert mock_db.add.called
+        # 1. Establish baseline state
+        await ComplianceDriftService.detect_drift(mock_db)
+
+        # 2. Run check where state changes
+        await ComplianceDriftService.detect_drift(mock_db)
+        assert mock_db.add.called
 
 
 @pytest.mark.asyncio
 async def test_sla_breach_governance_transition(mock_db, mock_asset) -> None:
     """Verify SLA breach transitions control and asset to non-compliant."""
     from src.services.remediation_service import RemediationService
-    
+
     mock_wf = Workflow(id=uuid.uuid4(), created_at=datetime.now(timezone.utc))
     mock_res = MagicMock()
     mock_res.scalar_one_or_none.return_value = mock_wf
@@ -463,14 +503,19 @@ async def test_sla_breach_governance_transition(mock_db, mock_asset) -> None:
     mock_res_comp.scalars.return_value.all.side_effect = [[mock_asset], []]
     mock_db.execute = AsyncMock(return_value=mock_res_comp)
 
-    with patch("src.services.correlation_service.CorrelationService.correlate_asset", return_value={"exposure": "internal"}):
+    with patch(
+        "src.services.correlation_service.CorrelationService.correlate_asset",
+        return_value={"exposure": "internal"},
+    ):
         controls = await ComplianceMappingService.get_compliance_controls(mock_db)
         ops_control = next(c for c in controls if c.control_id == "OPS-001")
         assert ops_control.status == "NON_COMPLIANT"
 
 
 @pytest.mark.asyncio
-async def test_ai_governance_context_injection(mock_db, mock_asset, mock_finding) -> None:
+async def test_ai_governance_context_injection(
+    mock_db, mock_asset, mock_finding
+) -> None:
     """Verify that governance details are injected in AIContextBuilder contexts."""
     from src.services.ai_context_builder import AIContextBuilder
 
@@ -503,10 +548,10 @@ async def test_ai_governance_context_injection(mock_db, mock_asset, mock_finding
         return_value={},
     ), patch(
         "src.services.governance_service.GovernanceService.evaluate_asset_governance",
-        return_value=GovernanceStatus.NON_COMPLIANT
+        return_value=GovernanceStatus.NON_COMPLIANT,
     ), patch(
         "src.services.compliance_mapping_service.ComplianceMappingService.get_compliance_controls",
-        return_value=[]
+        return_value=[],
     ):
         context = await AIContextBuilder.build_asset_context(mock_db, ASSET_ID)
         assert "governance" in context
@@ -552,7 +597,7 @@ async def test_governance_scope_restrictions(
 ) -> None:
     """Verify operators are blocked from viewing governance of assets outside their scope."""
     mock_get_user.return_value = mock_operator
-    
+
     # scope owner is different
     mock_scope.owner_id = uuid.uuid4()
     mock_get_scope.return_value = mock_scope

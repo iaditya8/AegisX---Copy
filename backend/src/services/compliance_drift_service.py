@@ -1,14 +1,14 @@
 import uuid
-from typing import Dict, List, Optional
+from typing import Dict, Optional
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from src.domain.entities.governance import GovernanceStatus
 from src.infrastructure.database.models import Asset
 from src.services.audit_service import create_audit_entry
-from src.services.workflow_event_service import WorkflowEventService
-from src.services.governance_service import GovernanceService
 from src.services.compliance_mapping_service import ComplianceMappingService
+from src.services.governance_service import GovernanceService
+from src.services.workflow_event_service import WorkflowEventService
 
 
 class ComplianceDriftService:
@@ -34,12 +34,17 @@ class ComplianceDriftService:
         assets = res_assets.scalars().all()
 
         for asset in assets:
-            current_status = await GovernanceService.evaluate_asset_governance(db, asset.id)
+            current_status = await GovernanceService.evaluate_asset_governance(
+                db, asset.id
+            )
             old_status = cls._last_asset_states.get(asset.id)
 
             if old_status is not None and old_status != current_status:
                 # Drift occurred!
-                if old_status == GovernanceStatus.COMPLIANT and current_status == GovernanceStatus.NON_COMPLIANT:
+                if (
+                    old_status == GovernanceStatus.COMPLIANT
+                    and current_status == GovernanceStatus.NON_COMPLIANT
+                ):
                     # Compliant -> Non-Compliant
                     await WorkflowEventService.emit_event(
                         db=db,
@@ -63,7 +68,10 @@ class ComplianceDriftService:
                         },
                     )
 
-                elif old_status == GovernanceStatus.NON_COMPLIANT and current_status == GovernanceStatus.COMPLIANT:
+                elif (
+                    old_status == GovernanceStatus.NON_COMPLIANT
+                    and current_status == GovernanceStatus.COMPLIANT
+                ):
                     # Non-Compliant -> Compliant
                     await WorkflowEventService.emit_event(
                         db=db,

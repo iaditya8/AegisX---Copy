@@ -1,6 +1,6 @@
 import uuid
-from typing import Any, Dict
 from datetime import datetime, timezone
+from typing import Any, Dict
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -14,27 +14,44 @@ CONTEXT_VERSION = "1.0"
 
 class AIContextBuilder:
     @classmethod
-    async def _build_governance_data(cls, db: AsyncSession, asset_id: uuid.UUID) -> Dict[str, Any]:
+    async def _build_governance_data(
+        cls, db: AsyncSession, asset_id: uuid.UUID
+    ) -> Dict[str, Any]:
         """Aggregate governance statistics and status for an asset."""
-        from src.services.governance_service import GovernanceService
-        from src.services.risk_acceptance_service import RiskAcceptanceService, RiskAcceptanceStatus
         from src.services.compliance_mapping_service import ComplianceMappingService
+        from src.services.governance_service import GovernanceService
         from src.services.remediation_service import RemediationService
+        from src.services.risk_acceptance_service import (
+            RiskAcceptanceService,
+            RiskAcceptanceStatus,
+        )
 
         gov_status = await GovernanceService.evaluate_asset_governance(db, asset_id)
         asset_acceptances = RiskAcceptanceService.get_acceptances_by_asset(asset_id)
-        
-        active_acc = [a.recommendation_fingerprint for a in asset_acceptances if a.status in [RiskAcceptanceStatus.ACTIVE, RiskAcceptanceStatus.EXPIRING]]
-        expired_acc = [a.recommendation_fingerprint for a in asset_acceptances if a.status == RiskAcceptanceStatus.EXPIRED]
+
+        active_acc = [
+            a.recommendation_fingerprint
+            for a in asset_acceptances
+            if a.status in [RiskAcceptanceStatus.ACTIVE, RiskAcceptanceStatus.EXPIRING]
+        ]
+        expired_acc = [
+            a.recommendation_fingerprint
+            for a in asset_acceptances
+            if a.status == RiskAcceptanceStatus.EXPIRED
+        ]
 
         controls = await ComplianceMappingService.get_compliance_controls(db)
-        failed_controls = [c.control_id for c in controls if asset_id in c.affected_assets]
+        failed_controls = [
+            c.control_id for c in controls if asset_id in c.affected_assets
+        ]
 
         remediations = RemediationService.get_remediations_by_asset(asset_id)
         now = datetime.now(timezone.utc)
         sla_breaches = [
-            str(r.remediation_id) for r in remediations 
-            if r.status.value in ["OPEN", "IN_PROGRESS", "DEFERRED"] and r.due_date < now
+            str(r.remediation_id)
+            for r in remediations
+            if r.status.value in ["OPEN", "IN_PROGRESS", "DEFERRED"]
+            and r.due_date < now
         ]
 
         return {
@@ -43,6 +60,74 @@ class AIContextBuilder:
             "expired_acceptances": expired_acc,
             "compliance_controls": failed_controls,
             "sla_breaches": sla_breaches,
+        }
+
+    @classmethod
+    async def _build_monitoring_data(
+        cls, db: AsyncSession, asset_id: Optional[uuid.UUID] = None
+    ) -> Dict[str, Any]:
+        """Aggregate continuous monitoring events and drift statistics."""
+        from src.services.continuous_refresh_service import ContinuousRefreshService
+
+        events = ContinuousRefreshService.get_all_events()
+
+        if asset_id:
+            asset_events = [e for e in events if e.asset_id == asset_id]
+        else:
+            asset_events = events
+
+        monitoring_events = [
+            {
+                "event_id": str(e.event_id),
+                "change_type": e.change_type,
+                "asset_id": str(e.asset_id),
+                "finding_id": str(e.finding_id) if e.finding_id else None,
+                "previous_state": e.previous_state,
+                "current_state": e.current_state,
+                "timestamp": e.timestamp.isoformat(),
+            }
+            for e in asset_events
+        ]
+
+        asset_drift = [
+            m
+            for m in monitoring_events
+            if m["change_type"] in ["ASSET_ADDED", "ASSET_MODIFIED", "ASSET_REMOVED"]
+        ]
+        finding_drift = [
+            m
+            for m in monitoring_events
+            if m["change_type"]
+            in [
+                "FINDING_ADDED",
+                "FINDING_RESOLVED",
+                "FINDING_REDISCOVERED",
+                "FINDING_MODIFIED",
+            ]
+        ]
+        risk_drift = [
+            m
+            for m in monitoring_events
+            if m["change_type"] in ["RISK_INCREASED", "RISK_DECREASED", "RISK_DRIFT"]
+        ]
+        governance_drift = [
+            m
+            for m in monitoring_events
+            if m["change_type"]
+            in [
+                "COMPLIANCE_FAILED",
+                "COMPLIANCE_RESTORED",
+                "RISK_ACCEPTANCE_EXPIRED",
+                "GOVERNANCE_DRIFT",
+            ]
+        ]
+
+        return {
+            "monitoring_events": monitoring_events,
+            "asset_drift": asset_drift,
+            "finding_drift": finding_drift,
+            "risk_drift": risk_drift,
+            "governance_drift": governance_drift,
         }
 
     @classmethod
@@ -66,6 +151,7 @@ class AIContextBuilder:
         rec_snapshot = RecommendationSnapshotService.get_snapshot(asset_id)
         rem_snapshot = RemediationSnapshotService.get_snapshot(asset_id)
         gov_data = await cls._build_governance_data(db, asset_id)
+        monitoring_data = await cls._build_monitoring_data(db, asset_id)
 
         return {
             "context_version": CONTEXT_VERSION,
@@ -77,8 +163,10 @@ class AIContextBuilder:
                 "recommendation_snapshot": rec_snapshot,
                 "remediation_snapshot": rem_snapshot,
                 **gov_data,
+                **monitoring_data,
             },
             "governance": gov_data,
+            **monitoring_data,
             "risk": report["risk"],
             "findings": report["findings"],
             "correlation": report["exposure"],
@@ -133,6 +221,7 @@ class AIContextBuilder:
         rec_snapshot = RecommendationSnapshotService.get_snapshot(finding.asset_id)
         rem_snapshot = RemediationSnapshotService.get_snapshot(finding.asset_id)
         gov_data = await cls._build_governance_data(db, finding.asset_id)
+        monitoring_data = await cls._build_monitoring_data(db, finding.asset_id)
 
         finding_rems = [
             r
@@ -180,8 +269,10 @@ class AIContextBuilder:
                 "recommendation_snapshot": rec_snapshot,
                 "remediation_snapshot": rem_snapshot,
                 **gov_data,
+                **monitoring_data,
             },
             "governance": gov_data,
+            **monitoring_data,
             "risk": report["risk"],
             "findings": [finding_dict],
             "correlation": report["exposure"],
@@ -194,8 +285,8 @@ class AIContextBuilder:
         report = await ExecutiveReportService.get_executive_report(db)
         trends = await DashboardTrendService.generate_trends(db, days=30)
 
-        from src.services.prioritization_service import PrioritizationService
         from src.services.governance_snapshot_service import GovernanceSnapshotService
+        from src.services.prioritization_service import PrioritizationService
 
         top_assets = await PrioritizationService.get_top_assets(db, limit=10)
         top_findings = await PrioritizationService.get_top_findings(db, limit=20)
@@ -204,11 +295,13 @@ class AIContextBuilder:
         )
         top_products = await PrioritizationService.get_top_products(db, limit=20)
         gov_snapshot = await GovernanceSnapshotService.get_snapshot(db)
+        monitoring_data = await cls._build_monitoring_data(db, asset_id=None)
 
         return {
             "context_version": CONTEXT_VERSION,
             "asset": {},
             "governance": gov_snapshot,
+            **monitoring_data,
             "risk": {
                 "risk_distribution": report.get("risk_distribution", {}),
                 "top_risky_assets": report.get("top_risky_assets", []),

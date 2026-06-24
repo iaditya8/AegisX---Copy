@@ -1,13 +1,16 @@
 import uuid
-from typing import List, Dict, Any
+from typing import Any, Dict, List
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from src.domain.entities.governance import GovernanceStatus
 from src.infrastructure.database.models import Asset, Finding
-from src.services.remediation_service import RemediationService
-from src.services.risk_acceptance_service import RiskAcceptanceService, RiskAcceptanceStatus
 from src.services.compliance_mapping_service import ComplianceMappingService
+from src.services.remediation_service import RemediationService
+from src.services.risk_acceptance_service import (
+    RiskAcceptanceService,
+    RiskAcceptanceStatus,
+)
 
 
 class GovernanceService:
@@ -26,7 +29,8 @@ class GovernanceService:
         # Check in-memory risk acceptances for finding.fingerprint
         acceptances = RiskAcceptanceService.get_all_acceptances()
         active_acc = [
-            a for a in acceptances
+            a
+            for a in acceptances
             if a.recommendation_fingerprint == finding.fingerprint
             and a.status in [RiskAcceptanceStatus.ACTIVE, RiskAcceptanceStatus.EXPIRING]
         ]
@@ -35,7 +39,14 @@ class GovernanceService:
 
         # Check exception status in RemediationService
         remediations = RemediationService.get_all_remediations()
-        rem = next((r for r in remediations if r.recommendation_fingerprint == finding.fingerprint), None)
+        rem = next(
+            (
+                r
+                for r in remediations
+                if r.recommendation_fingerprint == finding.fingerprint
+            ),
+            None,
+        )
         if rem:
             if rem.status.value in ["ACCEPTED_RISK"]:
                 return GovernanceStatus.ACCEPTED_RISK
@@ -53,8 +64,7 @@ class GovernanceService:
         """Evaluate overall governance status of a given asset."""
         # 1. Fetch asset findings
         q_findings = select(Finding).where(
-            Finding.asset_id == asset_id,
-            Finding.status == "open"
+            Finding.asset_id == asset_id, Finding.status == "open"
         )
         res_findings = await db.execute(q_findings)
         findings = res_findings.scalars().all()
@@ -62,8 +72,13 @@ class GovernanceService:
         if not findings:
             # Check if there are SLA breaches on resolved findings' remediations (if any)
             remediations = RemediationService.get_remediations_by_asset(asset_id)
-            active_rems = [r for r in remediations if r.status.value in ["OPEN", "IN_PROGRESS", "DEFERRED"]]
+            active_rems = [
+                r
+                for r in remediations
+                if r.status.value in ["OPEN", "IN_PROGRESS", "DEFERRED"]
+            ]
             from datetime import datetime, timezone
+
             now = datetime.now(timezone.utc)
             has_breach = any(r.due_date < now for r in active_rems)
             if has_breach:
@@ -146,27 +161,41 @@ class GovernanceService:
                 compliant_count += 1
             elif status == GovernanceStatus.NON_COMPLIANT:
                 non_compliant_count += 1
-            elif status in [GovernanceStatus.ACCEPTED_RISK, GovernanceStatus.EXCEPTION_ACTIVE]:
+            elif status in [
+                GovernanceStatus.ACCEPTED_RISK,
+                GovernanceStatus.EXCEPTION_ACTIVE,
+            ]:
                 accepted_count += 1
 
         active_acceptances = RiskAcceptanceService.get_active_acceptances()
-        expired_count = len([
-            a for a in RiskAcceptanceService.get_all_acceptances()
-            if a.status == RiskAcceptanceStatus.EXPIRED
-        ])
+        expired_count = len(
+            [
+                a
+                for a in RiskAcceptanceService.get_all_acceptances()
+                if a.status == RiskAcceptanceStatus.EXPIRED
+            ]
+        )
 
         remediations = RemediationService.get_all_remediations()
-        exceptions_count = len([
-            r for r in remediations
-            if r.status.value in ["ACCEPTED_RISK", "FALSE_POSITIVE", "DEFERRED"]
-        ])
+        exceptions_count = len(
+            [
+                r
+                for r in remediations
+                if r.status.value in ["ACCEPTED_RISK", "FALSE_POSITIVE", "DEFERRED"]
+            ]
+        )
 
         from datetime import datetime, timezone
+
         now = datetime.now(timezone.utc)
-        sla_breach_count = len([
-            r for r in remediations
-            if r.status.value in ["OPEN", "IN_PROGRESS", "DEFERRED"] and r.due_date < now
-        ])
+        sla_breach_count = len(
+            [
+                r
+                for r in remediations
+                if r.status.value in ["OPEN", "IN_PROGRESS", "DEFERRED"]
+                and r.due_date < now
+            ]
+        )
 
         return {
             "compliant_assets": compliant_count,
