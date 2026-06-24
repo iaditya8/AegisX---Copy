@@ -1,91 +1,83 @@
-# Implementation Plan — Sprint 15: Continuous Monitoring & Posture Drift Intelligence
+# Implementation Plan — Sprint 16: SOC Operations & Alert Management
 
-This sprint transforms AegisX from a Governance & Compliance platform into a **Continuous Monitoring & Posture Drift Intelligence Platform**. It introduces a passive, in-memory monitoring and drift detection layer that tracks state transitions (additions, modifications, resolutions, score changes, and compliance statuses) over time.
+AegisX will be transformed from a Continuous Monitoring Platform into a SOC Operations Intelligence Platform. Sprint 16 introduces an operational alert management layer that acts upon continuous monitoring events, governance drift events, SLA breaches, and risk acceptance expirations to generate, deduplicate, escalate, and assign alerts to analysts.
 
 ## User Review Required
 
 > [!IMPORTANT]
-> **In-Memory Posture History**: Following the platform patterns, all monitoring events, baseline caches, and snapshots will be maintained **strictly in-memory** to avoid database migrations.
->
-> **Dynamic Rebuild Engine**: If baseline states or snapshot statistics are cleared from memory, they are automatically rebuilt on-demand by traversing the historical list of monitoring events.
+> **Advisory-Only AI**: The AI Security Copilot is strictly advisory. It can explain alert details, reasons, and severities, but is physically blocked from mutating alert states (creating, updating, assigning, closing, or suppressing alerts).
+> 
+> **In-Memory Operations**: Alert management utilizes in-memory registries and stores to avoid database migrations, mirroring the patterns established in prior sprints (remediations, risk acceptances, and snapshots).
+> 
+> **Dynamic Rebuild Pattern**: Alert snapshots and statistics are cache-only. If lost, they are fully reconstructed dynamically by traversing past monitoring events and alerts.
 
 ## Open Questions
 
-> [!IMPORTANT]
-> **Question 1**: For risk scoring drift detection, we define specific thresholds (15.0 for increase/decrease, 75.0 for critical boundary). Do you approve these threshold values?
+> [!NOTE]
+> **Question 1**: Do you approve the default alert severity mappings and escalation aging thresholds (CRITICAL -> 1 day, HIGH -> 3 days, MEDIUM -> 7 days, LOW -> 14 days)?
 
 ## Proposed Changes
 
----
+### [NEW] [alert.py](file:///c:/Users/Aditya/Desktop/AegisX%20-%20Copy/backend/src/domain/entities/alert.py)
+Domain models and schema definitions for alert modeling:
+- Enums: `AlertSeverity` (`LOW`, `MEDIUM`, `HIGH`, `CRITICAL`), `AlertStatus` (`OPEN`, `ACKNOWLEDGED`, `IN_PROGRESS`, `ESCALATED`, `RESOLVED`, `SUPPRESSED`), and `AlertType` (`ASSET_DRIFT`, `FINDING_DRIFT`, `RISK_DRIFT`, `COMPLIANCE_DRIFT`, `RISK_ACCEPTANCE_EXPIRATION`, `SLA_BREACH`, `CRITICAL_FINDING`).
+- Schemas: `AlertResponse` containing alert details and state.
 
-### Core Domain Models
+### [NEW] [alert_severity_registry.py](file:///c:/Users/Aditya/Desktop/AegisX%20-%20Copy/backend/src/services/alert_severity_registry.py)
+- Maps `AlertType` dynamically to their corresponding `AlertSeverity`.
 
-#### [NEW] [monitoring.py](file:///c:/Users/Aditya/Desktop/AegisX%20-%20Copy/backend/src/domain/entities/monitoring.py)
-Defines the Pydantic schemas and classes for the monitoring layer:
-- `MonitoringEvent`: Class representing an individual monitoring event with attributes (`event_id`, `change_type`, `asset_id`, `finding_id`, `previous_state`, `current_state`, `timestamp`, `fingerprint`).
-- `MonitoringEventResponse`: Pydantic schema for API serialization.
-- `MonitoringSnapshotResponse`: Pydantic schema for platform-wide monitoring statistics.
+### [NEW] [alert_fingerprint_service.py](file:///c:/Users/Aditya/Desktop/AegisX%20-%20Copy/backend/src/services/alert_fingerprint_service.py)
+- Generates stable, deterministic fingerprints to prevent duplicates: `SHA256(alert_type, asset_id, finding_id, recommendation_id, remediation_id)`.
 
----
+### [NEW] [alert_generation_service.py](file:///c:/Users/Aditya/Desktop/AegisX%20-%20Copy/backend/src/services/alert_generation_service.py)
+- Consumes monitoring events, governance drift, SLA breaches, and expirations to generate alerts and deduplicate them.
+- Emits `alert.created` workflow events and logs audit entries.
 
-### Monitoring & Drift Services
+### [NEW] [alert_lifecycle_service.py](file:///c:/Users/Aditya/Desktop/AegisX%20-%20Copy/backend/src/services/alert_lifecycle_service.py)
+- Implements alert state machine transitions and enforces terminal status for `RESOLVED` and `SUPPRESSED` (alerts in terminal states cannot be reopened).
 
-#### [NEW] [monitoring_fingerprint_service.py](file:///c:/Users/Aditya/Desktop/AegisX%20-%20Copy/backend/src/services/monitoring_fingerprint_service.py)
-- Computes stable event hashes to prevent duplicate logging:
-  `SHA256(change_type + str(asset_id) + str(finding_id) + str(previous_state) + str(current_state))`
+### [NEW] [alert_queue_service.py](file:///c:/Users/Aditya/Desktop/AegisX%20-%20Copy/backend/src/services/alert_queue_service.py)
+- Tracks alert assignments, analyst workloads, and aggregates queue stats.
 
-#### [NEW] [baseline_state_service.py](file:///c:/Users/Aditya/Desktop/AegisX%20-%20Copy/backend/src/services/baseline_state_service.py)
-- Manages baseline caches for asset information, findings status, risk scores, and governance status.
-- Implements dynamic rebuild rules to reconstruct baseline caches from the `MonitoringEvent` history log.
+### [NEW] [alert_escalation_registry.py](file:///c:/Users/Aditya/Desktop/AegisX%20-%20Copy/backend/src/services/alert_escalation_registry.py)
+- Maps `AlertSeverity` to escalation aging thresholds.
 
-#### [NEW] [continuous_refresh_service.py](file:///c:/Users/Aditya/Desktop/AegisX%20-%20Copy/backend/src/services/continuous_refresh_service.py)
-- Compares current scanner findings, asset details, risk scores, and compliance states against captured baselines.
-- Emits monitoring events on asset drift (`ASSET_ADDED`, `ASSET_MODIFIED`, `ASSET_REMOVED`), finding drift (`FINDING_ADDED`, `FINDING_RESOLVED`, `FINDING_REDISCOVERED`), risk drift (score increases/decreases >= 15.0, or crossing the critical 75.0 boundary), and compliance drift.
+### [NEW] [alert_escalation_service.py](file:///c:/Users/Aditya/Desktop/AegisX%20-%20Copy/backend/src/services/alert_escalation_service.py)
+- Scans open/acknowledged/in-progress alerts, auto-escalates aging alerts based on thresholds, and emits `alert.escalated` workflow events.
 
-#### [NEW] [monitoring_snapshot_service.py](file:///c:/Users/Aditya/Desktop/AegisX%20-%20Copy/backend/src/services/monitoring_snapshot_service.py)
-- Caches cumulative monitoring metrics (e.g., total added assets, resolved findings, etc.) in-memory.
-- Rebuilds dynamically from events history if the cache is lost.
+### [NEW] [alert_snapshot_service.py](file:///c:/Users/Aditya/Desktop/AegisX%20-%20Copy/backend/src/services/alert_snapshot_service.py)
+- Caches platform-wide status metrics in-memory, supporting dynamic reconstruction from alert history.
 
----
+### [NEW] [alerts.py](file:///c:/Users/Aditya/Desktop/AegisX%20-%20Copy/backend/src/api/v1/routers/alerts.py)
+- Exposes REST endpoints for alert management with full RBAC and scope check validations.
 
-### Routing & Integrations
+### [MODIFY] [main.py](file:///c:/Users/Aditya/Desktop/AegisX%20-%20Copy/backend/src/main.py)
+- Mount the new alerts router.
 
-#### [NEW] [monitoring.py](file:///c:/Users/Aditya/Desktop/AegisX%20-%20Copy/backend/src/api/v1/routers/monitoring.py)
-- Exposes continuous monitoring endpoints with RBAC checks and scope-level filtering:
-  - `GET /api/v1/monitoring/events`
-  - `GET /api/v1/monitoring/assets/{id}`
-  - `GET /api/v1/monitoring/findings/{id}`
-  - `GET /api/v1/monitoring/summary`
-  - `GET /api/v1/monitoring/drift/assets`
-  - `GET /api/v1/monitoring/drift/findings`
-  - `GET /api/v1/monitoring/drift/risk`
-  - `GET /api/v1/monitoring/drift/governance`
+### [MODIFY] [worker.py](file:///c:/Users/Aditya/Desktop/AegisX%20-%20Copy/backend/src/infrastructure/celery/worker.py)
+- At the end of workflow scan steps, invoke `AlertGenerationService.generate_alerts(db)` and `AlertEscalationService.process_escalations(db)` gracefully.
 
-#### [MODIFY] [main.py](file:///c:/Users/Aditya/Desktop/AegisX%20-%20Copy/backend/src/main.py)
-- Register the new `monitoring_router`.
+### [MODIFY] [ai_context_builder.py](file:///c:/Users/Aditya/Desktop/AegisX%20-%20Copy/backend/src/services/ai_context_builder.py)
+- Inject alert summary details into the prompt context payloads.
 
-#### [MODIFY] [worker.py](file:///c:/Users/Aditya/Desktop/AegisX%20-%20Copy/backend/src/infrastructure/celery/worker.py)
-- Refreshes monitoring states dynamically (`ContinuousRefreshService.refresh_all(db)`) at the end of each scan execution pipeline step.
-
-#### [MODIFY] [ai_context_builder.py](file:///c:/Users/Aditya/Desktop/AegisX%20-%20Copy/backend/src/services/ai_context_builder.py)
-- Injects monitoring details (`monitoring_events`, `asset_drift`, `finding_drift`, `risk_drift`, `governance_drift`) into asset, finding, and executive prompt contexts.
+### [MODIFY] [ai_prompt_builder.py](file:///c:/Users/Aditya/Desktop/AegisX%20-%20Copy/backend/src/services/ai_prompt_builder.py)
+- Embed system constraints on AI advisor-only alert role in prompts.
 
 ---
 
 ## Verification Plan
 
 ### Automated Tests
-- Create `backend/tests/integration/test_monitoring.py` containing:
-  - Asset, finding, and risk drift detection validation.
-  - Compliance drift and governance acceptance expiration detection.
-  - Snapshot and baseline dynamic regeneration.
-  - AI Copilot context injection checks.
-  - RBAC checks and scope filtering.
-  - Celery task worker integration.
-  - Event fingerprint deduplication.
-- Run tests:
+- Create `backend/tests/integration/test_alerts.py` to verify:
+  - Alert creation, state machine transitions, and assignment.
+  - Snapshot reconstruction and queue statistics.
+  - SLA breach and risk acceptance expiration alert triggers.
+  - Copilot advisory prompt enforcements.
+  - RBAC permission boundaries and scope boundaries.
+  - Fingerprint deduplication and terminal state rules.
+- Execute integration tests:
   ```powershell
-  .venv\Scripts\pytest
+  .venv\Scripts\pytest backend/tests/integration/test_alerts.py
   ```
 - Formatting & Linting checks:
   ```powershell
