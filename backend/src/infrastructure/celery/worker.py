@@ -578,11 +578,19 @@ async def _execute_workflow_async(
                         )
 
                     try:
+                        from src.services.alert_escalation_service import (
+                            AlertEscalationService,
+                        )
+                        from src.services.alert_generation_service import (
+                            AlertGenerationService,
+                        )
                         from src.services.continuous_refresh_service import (
                             ContinuousRefreshService,
                         )
 
                         await ContinuousRefreshService.refresh_all(db)
+                        await AlertGenerationService.generate_alerts(db)
+                        await AlertEscalationService.process_escalations(db)
                     except Exception as refresh_err:
                         import logging
 

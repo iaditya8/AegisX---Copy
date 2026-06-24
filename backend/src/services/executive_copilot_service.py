@@ -20,7 +20,12 @@ class ExecutiveCopilotService:
     async def generate_executive_summary(
         cls, db: AsyncSession, actor_id: Optional[uuid.UUID] = None
     ) -> Dict[str, Any]:
-        """Generate/retrieve cached organizational executive summary explanation."""
+        """Generate/retrieve cached organizational executive summary explanation.
+
+        AI Advisory Constraint: The AI Security Copilot is strictly advisory. It can explain alert details,
+        reasons, and severities, but is physically blocked from mutating alert states (creating, updating,
+        assigning, closing, resolving, or suppressing alerts).
+        """
         now_str = datetime.now(timezone.utc).isoformat()
         fallback_response = {
             "success": False,

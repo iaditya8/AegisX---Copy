@@ -210,3 +210,51 @@ All 227 test cases pass successfully:
 ```
 - Integration tests in [test_monitoring.py](file:///c:/Users/Aditya%20-%20Copy/backend/tests/integration/test_monitoring.py) fully verify asset, finding, risk, and compliance drift detection, baseline dynamic regeneration, AI context injection, worker task integration, event fingerprinting deduplication, and role-based scope checks.
 - Code formatting and style standards with Ruff and Black are verified.
+
+---
+
+# Walkthrough — Sprint 16: SOC Operations & Alert Management
+
+In this sprint, we implemented the in-memory **SOC Operations & Alert Management** capabilities. This transforms AegisX into a SOC Operations Platform by introducing alert generation, stable deduplication fingerprinting, state machine lifecycle transitions (OPEN, ACKNOWLEDGED, IN_PROGRESS, RESOLVED, SUPPRESSED), alert queue queues, auto-escalation check tasks, role-based scope authorization, and advisory-only AI guardrails.
+
+## Changes Made
+
+### 1. Domain Entities & Schemas
+- Created [alert.py](file:///c:/Users/Aditya/Desktop/AegisX%20-%20Copy/backend/src/domain/entities/alert.py) defining:
+  - `AlertType`, `AlertSeverity`, `AlertStatus`, and `AlertHistoryType` Enums.
+  - `AlertRecord` in-memory model representation.
+  - `AlertResponse`, `AlertHistoryResponse`, and `AlertSnapshotResponse` Pydantic models.
+
+### 2. Core Service Layer & Alert Engines
+- Created [alert_severity_registry.py](file:///c:/Users/Aditya/Desktop/AegisX%20-%20Copy/backend/src/services/alert_severity_registry.py): Maps alert types to standard severities (`CRITICAL_FINDING` -> `CRITICAL`, `EXPOSURE_DRIFT` -> `HIGH`, `COMPLIANCE_DRIFT` -> `MEDIUM`, etc.).
+- Created [alert_fingerprint_service.py](file:///c:/Users/Aditya/Desktop/AegisX%20-%20Copy/backend/src/services/alert_fingerprint_service.py): Generates stable, collision-free SHA-256 hashes to deduplicate alerts.
+- Created [alert_lifecycle_service.py](file:///c:/Users/Aditya/Desktop/AegisX%20-%20Copy/backend/src/services/alert_lifecycle_service.py): Implements alert creation, assignment, transition validation, notes auditing, history tracking, and passive in-memory store.
+- Created [alert_snapshot_service.py](file:///c:/Users/Aditya/Desktop/AegisX%20-%20Copy/backend/src/services/alert_snapshot_service.py): Manages real-time alert statistics cached in-memory and supports dynamic reconstruction from alert records.
+- Created [alert_queue_service.py](file:///c:/Users/Aditya/Desktop/AegisX%20-%20Copy/backend/src/services/alert_queue_service.py): Supports queue workloads and tracks operator assignment queues.
+- Created [alert_escalation_registry.py](file:///c:/Users/Aditya/Desktop/AegisX%20-%20Copy/backend/src/services/alert_escalation_registry.py) & [alert_escalation_service.py](file:///c:/Users/Aditya/Desktop/AegisX%20-%20Copy/backend/src/services/alert_escalation_service.py): Implements age-based SLA checks (`CRITICAL` -> 1 hr, `HIGH` -> 4 hrs, `MEDIUM` -> 24 hrs) and escalates alert severity and logs events.
+- Created [alert_generation_service.py](file:///c:/Users/Aditya/Desktop/AegisX%20-%20Copy/backend/src/services/alert_generation_service.py): Detects new findings or monitoring drift events to trigger alert creation, auto-resolves when drift is cleared, and performs fingerprint-based deduplication.
+
+### 3. API Routing
+- Created [alerts.py](file:///c:/Users/Aditya/Desktop/AegisX%20-%20Copy/backend/src/api/v1/routers/alerts.py) exposing:
+  - `GET /api/v1/alerts` - List active alerts (with ownership filters).
+  - `GET /api/v1/alerts/{id}` - Get detailed alert.
+  - `POST /api/v1/alerts/{id}/assign` - Assign to operator (operator must belong to scope).
+  - `POST /api/v1/alerts/{id}/acknowledge` / `start` / `resolve` / `suppress` - State machine transition requests.
+  - `POST /api/v1/alerts/{id}/notes` - Append audit notes.
+  - `GET /api/v1/alerts/asset/{asset_id}/snapshot` - In-memory count snapshots.
+  - `GET /api/v1/alerts/queues` - Operations queue statistics.
+- Registered the router in [main.py](file:///c:/Users/Aditya/Desktop/AegisX%20-%20Copy/backend/src/main.py).
+
+### 4. Advisory AI Guardrails & Integrations
+- Updated [ai_context_builder.py](file:///c:/Users/Aditya/Desktop/AegisX%20-%20Copy/backend/src/services/ai_context_builder.py) to inject asset-level and finding-level alert summaries and counts into LLM prompts.
+- Updated [ai_prompt_builder.py](file:///c:/Users/Aditya/Desktop/AegisX%20-%20Copy/backend/src/services/ai_prompt_builder.py) to declare physical blocks preventing AI Security Copilot from changing alert status.
+- Added developer comments outlining the AI constraint to [asset_copilot_service.py](file:///c:/Users/Aditya/Desktop/AegisX%20-%20Copy/backend/src/services/asset_copilot_service.py), [finding_copilot_service.py](file:///c:/Users/Aditya/Desktop/AegisX%20-%20Copy/backend/src/services/finding_copilot_service.py), and [executive_copilot_service.py](file:///c:/Users/Aditya/Desktop/AegisX%20-%20Copy/backend/src/services/executive_copilot_service.py).
+- Staged alert generation & escalation tasks in Celery worker [worker.py](file:///c:/Users/Aditya/Desktop/AegisX%20-%20Copy/backend/src/infrastructure/celery/worker.py) at the end of each scan run execution.
+
+## Testing & Verification (Sprint 16)
+All 245 test cases pass successfully:
+```powershell
+====================== 245 passed, 67 warnings in 11.36s ======================
+```
+- Integration tests in [test_alerts.py](file:///c:/Users/Aditya/Desktop/AegisX%20-%20Copy/backend/tests/integration/test_alerts.py) fully verify alert generation, stable fingerprinting deduplication, transition validations, alert snapshots, SLA auto-escalations, API RBAC, operator scope restrictions, and AI context prompt injection.
+- Verified compliance formatting standards with Ruff and Black.

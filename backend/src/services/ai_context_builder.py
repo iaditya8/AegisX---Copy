@@ -131,6 +131,79 @@ class AIContextBuilder:
         }
 
     @classmethod
+    async def _build_alert_data(
+        cls, db: AsyncSession, asset_id: Optional[uuid.UUID] = None
+    ) -> Dict[str, Any]:
+        """Aggregate alert details, workloads, and summary statistics."""
+        from src.domain.entities.alert import AlertSeverity, AlertStatus
+        from src.services.alert_lifecycle_service import AlertLifecycleService
+        from src.services.alert_queue_service import AlertQueueService
+
+        alerts = AlertLifecycleService.get_all_alerts()
+        if asset_id:
+            asset_alerts = [a for a in alerts if a.asset_id == asset_id]
+        else:
+            asset_alerts = alerts
+
+        active_statuses = [
+            AlertStatus.OPEN,
+            AlertStatus.ACKNOWLEDGED,
+            AlertStatus.IN_PROGRESS,
+            AlertStatus.ESCALATED,
+        ]
+
+        active_alerts_list = [
+            {
+                "alert_id": str(a.alert_id),
+                "alert_fingerprint": a.alert_fingerprint,
+                "alert_type": a.alert_type.value,
+                "severity": a.severity.value,
+                "status": a.status.value,
+                "asset_id": str(a.asset_id) if a.asset_id else None,
+                "finding_id": str(a.finding_id) if a.finding_id else None,
+                "title": a.title,
+                "description": a.description,
+                "owner": str(a.owner) if a.owner else None,
+                "created_at": a.created_at.isoformat(),
+                "updated_at": a.updated_at.isoformat(),
+            }
+            for a in asset_alerts
+            if a.status in active_statuses
+        ]
+
+        critical_count = sum(
+            1
+            for a in asset_alerts
+            if a.severity == AlertSeverity.CRITICAL and a.status in active_statuses
+        )
+        escalated_count = sum(
+            1 for a in asset_alerts if a.status == AlertStatus.ESCALATED
+        )
+        owned_count = sum(
+            1
+            for a in asset_alerts
+            if a.owner is not None and a.status in active_statuses
+        )
+
+        queue_stats = AlertQueueService.get_queue_stats()
+
+        alert_summary = {
+            "total_active_alerts": len(active_alerts_list),
+            "critical_active_alerts": critical_count,
+            "escalated_active_alerts": escalated_count,
+            "owned_active_alerts": owned_count,
+            "queue_stats": queue_stats,
+        }
+
+        return {
+            "alert_summary": alert_summary,
+            "active_alerts": active_alerts_list,
+            "critical_alerts": critical_count,
+            "escalated_alerts": escalated_count,
+            "owned_alerts": owned_count,
+        }
+
+    @classmethod
     async def build_asset_context(
         cls, db: AsyncSession, asset_id: uuid.UUID
     ) -> Dict[str, Any]:
@@ -152,6 +225,7 @@ class AIContextBuilder:
         rem_snapshot = RemediationSnapshotService.get_snapshot(asset_id)
         gov_data = await cls._build_governance_data(db, asset_id)
         monitoring_data = await cls._build_monitoring_data(db, asset_id)
+        alert_data = await cls._build_alert_data(db, asset_id)
 
         return {
             "context_version": CONTEXT_VERSION,
@@ -164,9 +238,15 @@ class AIContextBuilder:
                 "remediation_snapshot": rem_snapshot,
                 **gov_data,
                 **monitoring_data,
+                "alert_summary": alert_data["alert_summary"],
+                "active_alerts": alert_data["active_alerts"],
+                "critical_alerts": alert_data["critical_alerts"],
+                "escalated_alerts": alert_data["escalated_alerts"],
+                "owned_alerts": alert_data["owned_alerts"],
             },
             "governance": gov_data,
             **monitoring_data,
+            **alert_data,
             "risk": report["risk"],
             "findings": report["findings"],
             "correlation": report["exposure"],
@@ -222,6 +302,7 @@ class AIContextBuilder:
         rem_snapshot = RemediationSnapshotService.get_snapshot(finding.asset_id)
         gov_data = await cls._build_governance_data(db, finding.asset_id)
         monitoring_data = await cls._build_monitoring_data(db, finding.asset_id)
+        alert_data = await cls._build_alert_data(db, finding.asset_id)
 
         finding_rems = [
             r
@@ -270,9 +351,15 @@ class AIContextBuilder:
                 "remediation_snapshot": rem_snapshot,
                 **gov_data,
                 **monitoring_data,
+                "alert_summary": alert_data["alert_summary"],
+                "active_alerts": alert_data["active_alerts"],
+                "critical_alerts": alert_data["critical_alerts"],
+                "escalated_alerts": alert_data["escalated_alerts"],
+                "owned_alerts": alert_data["owned_alerts"],
             },
             "governance": gov_data,
             **monitoring_data,
+            **alert_data,
             "risk": report["risk"],
             "findings": [finding_dict],
             "correlation": report["exposure"],
@@ -296,12 +383,14 @@ class AIContextBuilder:
         top_products = await PrioritizationService.get_top_products(db, limit=20)
         gov_snapshot = await GovernanceSnapshotService.get_snapshot(db)
         monitoring_data = await cls._build_monitoring_data(db, asset_id=None)
+        alert_data = await cls._build_alert_data(db, asset_id=None)
 
         return {
             "context_version": CONTEXT_VERSION,
             "asset": {},
             "governance": gov_snapshot,
             **monitoring_data,
+            **alert_data,
             "risk": {
                 "risk_distribution": report.get("risk_distribution", {}),
                 "top_risky_assets": report.get("top_risky_assets", []),

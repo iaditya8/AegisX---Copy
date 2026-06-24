@@ -5,6 +5,7 @@ from fastapi import FastAPI, Request, status
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from src.api.v1.routers.alerts import router as alerts_router
 from src.api.v1.routers.assets import router as assets_router
 from src.api.v1.routers.auth import router as auth_router
 from src.api.v1.routers.copilot import router as copilot_router
@@ -64,6 +65,7 @@ app.include_router(recommendations_router, prefix=settings.API_V1_STR)
 app.include_router(remediations_router, prefix=settings.API_V1_STR)
 app.include_router(governance_router, prefix=settings.API_V1_STR)
 app.include_router(monitoring_router, prefix=settings.API_V1_STR)
+app.include_router(alerts_router, prefix=settings.API_V1_STR)
 
 
 # Global Exception Handlers for standardizing error shapes
