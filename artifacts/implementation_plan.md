@@ -15,8 +15,7 @@ AegisX will be transformed from a SOC Operations Platform into an Incident Manag
 
 ## Open Questions
 
-> [!NOTE]
-> **Question 1**: Do you approve the default incident severity mapping rule (any critical alert -> critical incident; multiple high alerts -> high incident)?
+- None. (Question 1 resolved: Approved default incident severity mapping rule.)
 
 ## Proposed Changes
 
