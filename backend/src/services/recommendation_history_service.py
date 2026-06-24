@@ -82,6 +82,33 @@ class RecommendationHistoryService:
                 db, fingerprint, asset_id, finding_id, priority, title, actor_id
             )
 
+        # Sync with Remediation Service
+        try:
+            from src.services.remediation_service import RemediationService
+
+            asset_uuid = uuid.UUID(asset_id) if isinstance(asset_id, str) else asset_id
+            finding_uuid = (
+                (uuid.UUID(finding_id) if isinstance(finding_id, str) else finding_id)
+                if finding_id
+                else None
+            )
+            await RemediationService.sync_recommendation(
+                db=db,
+                fingerprint=fingerprint,
+                asset_id=asset_uuid,
+                finding_id=finding_uuid,
+                priority=priority,
+                title=title,
+                actor_id=actor_id,
+            )
+        except Exception as rem_err:
+            import logging
+
+            logging.error(
+                f"Failed to sync remediation for recommendation {fingerprint}: "
+                f"{rem_err}"
+            )
+
     @classmethod
     async def _emit_creation(
         cls,

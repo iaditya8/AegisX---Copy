@@ -25,9 +25,13 @@ class AIContextBuilder:
         from src.services.recommendation_snapshot_service import (
             RecommendationSnapshotService,
         )
+        from src.services.remediation_snapshot_service import (
+            RemediationSnapshotService,
+        )
 
         recs = await RecommendationService.generate_asset_recommendations(db, asset_id)
         rec_snapshot = RecommendationSnapshotService.get_snapshot(asset_id)
+        rem_snapshot = RemediationSnapshotService.get_snapshot(asset_id)
 
         return {
             "context_version": CONTEXT_VERSION,
@@ -37,6 +41,7 @@ class AIContextBuilder:
                 "services": report.get("services", []),
                 "technologies": report.get("technologies", []),
                 "recommendation_snapshot": rec_snapshot,
+                "remediation_snapshot": rem_snapshot,
             },
             "risk": report["risk"],
             "findings": report["findings"],
@@ -77,6 +82,29 @@ class AIContextBuilder:
             for ev in evidence_list
         ]
 
+        from src.services.recommendation_service import RecommendationService
+        from src.services.recommendation_snapshot_service import (
+            RecommendationSnapshotService,
+        )
+        from src.services.remediation_service import RemediationService
+        from src.services.remediation_snapshot_service import (
+            RemediationSnapshotService,
+        )
+
+        recs = await RecommendationService.generate_finding_recommendations(
+            db, finding_id
+        )
+        rec_snapshot = RecommendationSnapshotService.get_snapshot(finding.asset_id)
+        rem_snapshot = RemediationSnapshotService.get_snapshot(finding.asset_id)
+
+        finding_rems = [
+            r
+            for r in RemediationService.get_all_remediations()
+            if r.finding_id == finding_id
+        ]
+        remediation_status = finding_rems[0].status.value if finding_rems else None
+        remediation_owner = finding_rems[0].owner if finding_rems else None
+
         finding_dict = {
             "id": str(finding.id),
             "asset_id": str(finding.asset_id),
@@ -93,6 +121,8 @@ class AIContextBuilder:
             "last_seen": finding.last_seen.isoformat() if finding.last_seen else None,
             "metadata_json": finding.metadata_json,
             "evidence": evidence_data,
+            "remediation_status": remediation_status,
+            "remediation_owner": remediation_owner,
         }
 
         # Fetch asset report for contextual asset details
@@ -103,16 +133,6 @@ class AIContextBuilder:
                 f"{finding_id} not found"
             )
 
-        from src.services.recommendation_service import RecommendationService
-        from src.services.recommendation_snapshot_service import (
-            RecommendationSnapshotService,
-        )
-
-        recs = await RecommendationService.generate_finding_recommendations(
-            db, finding_id
-        )
-        rec_snapshot = RecommendationSnapshotService.get_snapshot(finding.asset_id)
-
         return {
             "context_version": CONTEXT_VERSION,
             "asset": {
@@ -121,6 +141,7 @@ class AIContextBuilder:
                 "services": report.get("services", []),
                 "technologies": report.get("technologies", []),
                 "recommendation_snapshot": rec_snapshot,
+                "remediation_snapshot": rem_snapshot,
             },
             "risk": report["risk"],
             "findings": [finding_dict],

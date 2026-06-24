@@ -518,6 +518,12 @@ async def _execute_workflow_async(
                             await RecommendationSnapshotService.update_snapshot(
                                 db, asset.id
                             )
+                            # 3.6. Update RemediationSnapshotService
+                            from src.services.remediation_snapshot_service import (
+                                RemediationSnapshotService,
+                            )
+
+                            RemediationSnapshotService.update_snapshot(asset.id)
                             # 4. Invalidate report and AI caches for asset
                             from src.services.report_cache_service import (
                                 ReportCacheService,

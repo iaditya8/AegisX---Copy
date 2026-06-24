@@ -13,6 +13,7 @@ from src.api.v1.routers.findings import router as findings_router
 from src.api.v1.routers.health import router as health_router
 from src.api.v1.routers.plugins import router as plugins_router
 from src.api.v1.routers.recommendations import router as recommendations_router
+from src.api.v1.routers.remediations import router as remediations_router
 from src.api.v1.routers.reports import router as reports_router
 from src.api.v1.routers.scan_runs import router as scan_runs_router
 from src.api.v1.routers.scopes import router as scopes_router
@@ -58,6 +59,7 @@ app.include_router(correlations_router, prefix=settings.API_V1_STR)
 app.include_router(reports_router, prefix=settings.API_V1_STR)
 app.include_router(copilot_router, prefix=settings.API_V1_STR)
 app.include_router(recommendations_router, prefix=settings.API_V1_STR)
+app.include_router(remediations_router, prefix=settings.API_V1_STR)
 
 
 # Global Exception Handlers for standardizing error shapes
