@@ -1,5 +1,6 @@
 import uuid
 from typing import Any, Dict
+from datetime import datetime, timezone
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -12,6 +13,38 @@ CONTEXT_VERSION = "1.0"
 
 
 class AIContextBuilder:
+    @classmethod
+    async def _build_governance_data(cls, db: AsyncSession, asset_id: uuid.UUID) -> Dict[str, Any]:
+        """Aggregate governance statistics and status for an asset."""
+        from src.services.governance_service import GovernanceService
+        from src.services.risk_acceptance_service import RiskAcceptanceService, RiskAcceptanceStatus
+        from src.services.compliance_mapping_service import ComplianceMappingService
+        from src.services.remediation_service import RemediationService
+
+        gov_status = await GovernanceService.evaluate_asset_governance(db, asset_id)
+        asset_acceptances = RiskAcceptanceService.get_acceptances_by_asset(asset_id)
+        
+        active_acc = [a.recommendation_fingerprint for a in asset_acceptances if a.status in [RiskAcceptanceStatus.ACTIVE, RiskAcceptanceStatus.EXPIRING]]
+        expired_acc = [a.recommendation_fingerprint for a in asset_acceptances if a.status == RiskAcceptanceStatus.EXPIRED]
+
+        controls = await ComplianceMappingService.get_compliance_controls(db)
+        failed_controls = [c.control_id for c in controls if asset_id in c.affected_assets]
+
+        remediations = RemediationService.get_remediations_by_asset(asset_id)
+        now = datetime.now(timezone.utc)
+        sla_breaches = [
+            str(r.remediation_id) for r in remediations 
+            if r.status.value in ["OPEN", "IN_PROGRESS", "DEFERRED"] and r.due_date < now
+        ]
+
+        return {
+            "governance_status": gov_status.value,
+            "accepted_risks": active_acc,
+            "expired_acceptances": expired_acc,
+            "compliance_controls": failed_controls,
+            "sla_breaches": sla_breaches,
+        }
+
     @classmethod
     async def build_asset_context(
         cls, db: AsyncSession, asset_id: uuid.UUID
@@ -32,6 +65,7 @@ class AIContextBuilder:
         recs = await RecommendationService.generate_asset_recommendations(db, asset_id)
         rec_snapshot = RecommendationSnapshotService.get_snapshot(asset_id)
         rem_snapshot = RemediationSnapshotService.get_snapshot(asset_id)
+        gov_data = await cls._build_governance_data(db, asset_id)
 
         return {
             "context_version": CONTEXT_VERSION,
@@ -42,7 +76,9 @@ class AIContextBuilder:
                 "technologies": report.get("technologies", []),
                 "recommendation_snapshot": rec_snapshot,
                 "remediation_snapshot": rem_snapshot,
+                **gov_data,
             },
+            "governance": gov_data,
             "risk": report["risk"],
             "findings": report["findings"],
             "correlation": report["exposure"],
@@ -96,6 +132,7 @@ class AIContextBuilder:
         )
         rec_snapshot = RecommendationSnapshotService.get_snapshot(finding.asset_id)
         rem_snapshot = RemediationSnapshotService.get_snapshot(finding.asset_id)
+        gov_data = await cls._build_governance_data(db, finding.asset_id)
 
         finding_rems = [
             r
@@ -142,7 +179,9 @@ class AIContextBuilder:
                 "technologies": report.get("technologies", []),
                 "recommendation_snapshot": rec_snapshot,
                 "remediation_snapshot": rem_snapshot,
+                **gov_data,
             },
+            "governance": gov_data,
             "risk": report["risk"],
             "findings": [finding_dict],
             "correlation": report["exposure"],
@@ -156,6 +195,7 @@ class AIContextBuilder:
         trends = await DashboardTrendService.generate_trends(db, days=30)
 
         from src.services.prioritization_service import PrioritizationService
+        from src.services.governance_snapshot_service import GovernanceSnapshotService
 
         top_assets = await PrioritizationService.get_top_assets(db, limit=10)
         top_findings = await PrioritizationService.get_top_findings(db, limit=20)
@@ -163,10 +203,12 @@ class AIContextBuilder:
             db, limit=20
         )
         top_products = await PrioritizationService.get_top_products(db, limit=20)
+        gov_snapshot = await GovernanceSnapshotService.get_snapshot(db)
 
         return {
             "context_version": CONTEXT_VERSION,
             "asset": {},
+            "governance": gov_snapshot,
             "risk": {
                 "risk_distribution": report.get("risk_distribution", {}),
                 "top_risky_assets": report.get("top_risky_assets", []),

@@ -205,27 +205,29 @@ class RemediationService:
         actor_id: Optional[uuid.UUID] = None,
         reason: Optional[str] = None,
         approved_by: Optional[str] = None,
+        bypass_terminal: bool = False,
     ) -> RemediationRecord:
         """Update status of a remediation record with strict transition validation."""
         record = cls.get_remediation(remediation_id)
         if not record:
             raise ValueError(f"Remediation {remediation_id} not found")
 
-        if status in [
-            RemediationStatus.ACCEPTED_RISK,
-            RemediationStatus.FALSE_POSITIVE,
-            RemediationStatus.DEFERRED,
-        ]:
-            if not reason or not approved_by:
-                raise ValueError("Reason and approved_by required for exception status")
-            from src.services.exception_service import ExceptionService
+        if not bypass_terminal:
+            if status in [
+                RemediationStatus.ACCEPTED_RISK,
+                RemediationStatus.FALSE_POSITIVE,
+                RemediationStatus.DEFERRED,
+            ]:
+                if not reason or not approved_by:
+                    raise ValueError("Reason and approved_by required for exception status")
+                from src.services.exception_service import ExceptionService
 
-            await ExceptionService.apply_exception(
-                db, record, status, reason, approved_by, actor_id
-            )
-            return record
+                await ExceptionService.apply_exception(
+                    db, record, status, reason, approved_by, actor_id
+                )
+                return record
 
-        cls.validate_transition(record.status, status)
+            cls.validate_transition(record.status, status)
         old_status = record.status
         record.status = status
         record.updated_at = datetime.now(timezone.utc)

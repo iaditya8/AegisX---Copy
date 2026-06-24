@@ -524,6 +524,16 @@ async def _execute_workflow_async(
                             )
 
                             RemediationSnapshotService.update_snapshot(asset.id)
+                            # 3.7. Update GovernanceSnapshotService and detect drift
+                            from src.services.governance_snapshot_service import (
+                                GovernanceSnapshotService,
+                            )
+                            from src.services.compliance_drift_service import (
+                                ComplianceDriftService,
+                            )
+
+                            await GovernanceSnapshotService.update_snapshot(db, asset.id)
+                            await ComplianceDriftService.detect_drift(db)
                             # 4. Invalidate report and AI caches for asset
                             from src.services.report_cache_service import (
                                 ReportCacheService,
