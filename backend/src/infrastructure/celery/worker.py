@@ -322,7 +322,7 @@ async def _execute_workflow_async(
                     plugin_payload = {
                         "scope_id": str(scope_id),
                         "config": step.get("config", {}) or {},
-                        "definition": scope.definition if scope else {},
+                        "definition": scope.definition if scope is not None else {},
                     }
                     try:
                         scan_run.plugin_id = plugin.id
@@ -331,7 +331,7 @@ async def _execute_workflow_async(
                         result = await PluginHost.run_plugin(
                             db=db,
                             plugin_id=plugin.id,
-                            entry_point=plugin.manifest.get("entry_point"),
+                            entry_point=plugin.manifest.get("entry_point") or "",
                             payload=plugin_payload,
                             timeout=plugin.manifest.get("timeout", 30),
                             correlation_id=scan_run_id,
@@ -591,12 +591,18 @@ async def _execute_workflow_async(
                             IncidentEscalationService,
                         )
                         from src.services.incident_service import IncidentService
+                        from src.services.case_service import CaseService
 
                         await ContinuousRefreshService.refresh_all(db)
                         await AlertGenerationService.generate_alerts(db)
                         await AlertEscalationService.process_escalations(db)
                         await IncidentService.sync_alerts(db)
                         await IncidentEscalationService.process_escalations(db)
+                        try:
+                            await CaseService.sync_cases(db)
+                        except Exception as case_sync_err:
+                            import logging
+                            logging.error(f"Failed to sync cases: {case_sync_err}")
                     except Exception as refresh_err:
                         import logging
 

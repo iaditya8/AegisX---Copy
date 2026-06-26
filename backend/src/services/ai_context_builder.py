@@ -351,6 +351,7 @@ class AIContextBuilder:
         monitoring_data = await cls._build_monitoring_data(db, asset_id)
         alert_data = await cls._build_alert_data(db, asset_id)
         incident_data = await cls._build_incident_data(db, asset_id)
+        case_data = await cls._build_case_data(db, asset_id)
 
         return {
             "context_version": CONTEXT_VERSION,
@@ -370,11 +371,14 @@ class AIContextBuilder:
                 "owned_alerts": alert_data["owned_alerts"],
                 "incident_summary": incident_data["incident_summary"],
                 "active_incidents": incident_data["active_incidents"],
+                "case_summary": case_data["case_summary"],
+                "active_cases": case_data["active_cases"],
             },
             "governance": gov_data,
             **monitoring_data,
             **alert_data,
             **incident_data,
+            **case_data,
             "risk": report["risk"],
             "findings": report["findings"],
             "correlation": report["exposure"],
@@ -432,6 +436,7 @@ class AIContextBuilder:
         monitoring_data = await cls._build_monitoring_data(db, finding.asset_id)
         alert_data = await cls._build_alert_data(db, finding.asset_id)
         incident_data = await cls._build_incident_data(db, finding.asset_id)
+        case_data = await cls._build_case_data(db, finding.asset_id)
 
         finding_rems = [
             r
@@ -480,11 +485,14 @@ class AIContextBuilder:
                 "remediation_snapshot": rem_snapshot,
                 "incident_summary": incident_data["incident_summary"],
                 "active_incidents": incident_data["active_incidents"],
+                "case_summary": case_data["case_summary"],
+                "active_cases": case_data["active_cases"],
             },
             "governance": gov_data,
             **monitoring_data,
             **alert_data,
             **incident_data,
+            **case_data,
             "risk": report["risk"],
             "findings": [finding_dict],
             "correlation": report["exposure"],
@@ -510,6 +518,7 @@ class AIContextBuilder:
         monitoring_data = await cls._build_monitoring_data(db, asset_id=None)
         alert_data = await cls._build_alert_data(db, asset_id=None)
         incident_data = await cls._build_incident_data(db, asset_id=None)
+        case_data = await cls._build_case_data(db, asset_id=None)
 
         return {
             "context_version": CONTEXT_VERSION,
@@ -518,6 +527,7 @@ class AIContextBuilder:
             **monitoring_data,
             **alert_data,
             **incident_data,
+            **case_data,
             "risk": {
                 "risk_distribution": report.get("risk_distribution", {}),
                 "top_risky_assets": report.get("top_risky_assets", []),
@@ -534,4 +544,158 @@ class AIContextBuilder:
                 "top_technologies": [tt.model_dump() for tt in top_technologies],
                 "top_products": [tp.model_dump() for tp in top_products],
             },
+        }
+
+    @classmethod
+    async def _build_case_data(
+        cls, db: AsyncSession, asset_id: Optional[uuid.UUID] = None
+    ) -> Dict[str, Any]:
+        """Aggregate case summaries, active lists, timelines, and linked evidence."""
+        from src.services.case_service import CaseService
+        from src.services.case_history_service import CaseHistoryService
+        from src.services.case_evidence_correlation_service import CaseEvidenceCorrelationService
+        from src.services.custody_service import CustodyService
+        from src.services.case_snapshot_service import CaseSnapshotService
+
+        cases = CaseService.get_all_cases()
+        if asset_id:
+            asset_cases = [c for c in cases if asset_id in c.asset_ids]
+        else:
+            asset_cases = cases
+
+        active_cases_list = []
+        for c in asset_cases:
+            timeline = [
+                {
+                    "timestamp": h.timestamp.isoformat(),
+                    "event_type": h.event_type,
+                    "details": h.details,
+                }
+                for h in CaseHistoryService.get_history(c.case_id)
+            ]
+
+            correlated_evidence = CaseEvidenceCorrelationService.get_correlated_evidence(c.case_id, c.incident_ids)
+            case_evidence_details = []
+            for ev in correlated_evidence["case_evidence"]:
+                custody_timeline = [
+                    {
+                        "entry_id": str(ch.entry_id),
+                        "action": ch.action.value,
+                        "actor": str(ch.actor),
+                        "timestamp": ch.timestamp.isoformat(),
+                        "notes": ch.notes,
+                        "integrity_verified": ch.integrity_verified,
+                    }
+                    for ch in CustodyService.get_custody(ev.evidence_id)
+                ]
+                case_evidence_details.append({
+                    "evidence_id": str(ev.evidence_id),
+                    "source_entity": ev.source_entity,
+                    "source_id": str(ev.source_id),
+                    "integrity_hash": ev.integrity_hash,
+                    "status": ev.status.value,
+                    "collected_by": str(ev.collected_by),
+                    "collected_at": ev.collected_at.isoformat(),
+                    "chain_of_custody": custody_timeline,
+                })
+
+            active_cases_list.append(
+                {
+                    "case_id": str(c.case_id),
+                    "case_fingerprint": c.case_fingerprint,
+                    "title": c.title,
+                    "description": c.description,
+                    "severity": c.severity.value if hasattr(c.severity, "value") else str(c.severity),
+                    "status": c.status.value if hasattr(c.status, "value") else str(c.status),
+                    "owner": str(c.owner) if c.owner else None,
+                    "created_at": c.created_at.isoformat(),
+                    "updated_at": c.updated_at.isoformat(),
+                    "incident_ids": [str(iid) for iid in c.incident_ids],
+                    "alert_ids": [str(aid) for aid in c.alert_ids],
+                    "asset_ids": [str(asid) for asid in c.asset_ids],
+                    "case_timeline": timeline,
+                    "case_evidence": case_evidence_details,
+                }
+            )
+
+        snapshot = CaseSnapshotService.get_snapshot(asset_id)
+
+        return {
+            "case_summary": snapshot,
+            "active_cases": active_cases_list,
+        }
+
+    @classmethod
+    async def build_case_context(
+        cls, db: AsyncSession, case_id: uuid.UUID
+    ) -> Dict[str, Any]:
+        """Aggregate context for a specific case."""
+        from src.services.case_service import CaseService
+        from src.services.case_history_service import CaseHistoryService
+        from src.services.case_evidence_correlation_service import CaseEvidenceCorrelationService
+        from src.services.custody_service import CustodyService
+
+        case = CaseService.get_case(case_id)
+        if not case:
+            raise ValueError(f"Case {case_id} not found")
+
+        timeline = [
+            {
+                "timestamp": h.timestamp.isoformat(),
+                "event_type": h.event_type,
+                "details": h.details,
+            }
+            for h in CaseHistoryService.get_history(case_id)
+        ]
+
+        correlated_evidence = CaseEvidenceCorrelationService.get_correlated_evidence(case_id, case.incident_ids)
+        case_evidence_details = []
+        for ev in correlated_evidence["case_evidence"]:
+            custody_timeline = [
+                {
+                    "entry_id": str(ch.entry_id),
+                    "action": ch.action.value,
+                    "actor": str(ch.actor),
+                    "timestamp": ch.timestamp.isoformat(),
+                    "notes": ch.notes,
+                    "integrity_verified": ch.integrity_verified,
+                }
+                for ch in CustodyService.get_custody(ev.evidence_id)
+            ]
+            case_evidence_details.append({
+                "evidence_id": str(ev.evidence_id),
+                "source_entity": ev.source_entity,
+                "source_id": str(ev.source_id),
+                "integrity_hash": ev.integrity_hash,
+                "status": ev.status.value,
+                "collected_by": str(ev.collected_by),
+                "collected_at": ev.collected_at.isoformat(),
+                "chain_of_custody": custody_timeline,
+            })
+
+        asset_context = {}
+        if case.asset_ids:
+            primary_asset_id = case.asset_ids[0]
+            try:
+                asset_context = await cls.build_asset_context(db, primary_asset_id)
+            except Exception:
+                pass
+
+        return {
+            "context_version": CONTEXT_VERSION,
+            "case_id": str(case.case_id),
+            "case_fingerprint": case.case_fingerprint,
+            "title": case.title,
+            "description": case.description,
+            "severity": case.severity.value if hasattr(case.severity, "value") else str(case.severity),
+            "status": case.status.value if hasattr(case.status, "value") else str(case.status),
+            "owner": str(case.owner) if case.owner else None,
+            "created_at": case.created_at.isoformat(),
+            "updated_at": case.updated_at.isoformat(),
+            "incident_ids": [str(iid) for iid in case.incident_ids],
+            "alert_ids": [str(aid) for aid in case.alert_ids],
+            "asset_ids": [str(asid) for asid in case.asset_ids],
+            "case_timeline": timeline,
+            "case_evidence": case_evidence_details,
+            "asset_context": asset_context,
         }
