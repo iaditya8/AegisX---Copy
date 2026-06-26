@@ -1,6 +1,6 @@
 import uuid
 from datetime import datetime, timezone
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -204,6 +204,130 @@ class AIContextBuilder:
         }
 
     @classmethod
+    async def _build_incident_data(
+        cls, db: AsyncSession, asset_id: Optional[uuid.UUID] = None
+    ) -> Dict[str, Any]:
+        """Aggregate incident summaries, active lists, timelines, and linked evidence."""
+        from src.services.incident_evidence_service import IncidentEvidenceService
+        from src.services.incident_history_service import IncidentHistoryService
+        from src.services.incident_service import IncidentService
+        from src.services.incident_snapshot_service import IncidentSnapshotService
+
+        incidents = IncidentService.get_all_incidents()
+        if asset_id:
+            asset_incidents = [inc for inc in incidents if asset_id in inc.asset_ids]
+        else:
+            asset_incidents = incidents
+
+        active_incidents_list = []
+        for inc in asset_incidents:
+            timeline = [
+                {
+                    "timestamp": h.timestamp.isoformat(),
+                    "event_type": h.event_type,
+                    "details": h.details,
+                }
+                for h in IncidentHistoryService.get_history(inc.incident_id)
+            ]
+            evidence = IncidentEvidenceService.get_evidence(inc.incident_id)
+
+            active_incidents_list.append(
+                {
+                    "incident_id": str(inc.incident_id),
+                    "incident_fingerprint": inc.incident_fingerprint,
+                    "title": inc.title,
+                    "description": inc.description,
+                    "severity": (
+                        inc.severity.value
+                        if hasattr(inc.severity, "value")
+                        else str(inc.severity)
+                    ),
+                    "status": (
+                        inc.status.value
+                        if hasattr(inc.status, "value")
+                        else str(inc.status)
+                    ),
+                    "owner": str(inc.owner) if inc.owner else None,
+                    "created_at": inc.created_at.isoformat(),
+                    "updated_at": inc.updated_at.isoformat(),
+                    "alert_ids": [str(aid) for aid in inc.alert_ids],
+                    "asset_ids": [str(asid) for asid in inc.asset_ids],
+                    "finding_ids": [str(fid) for fid in inc.finding_ids],
+                    "recommendation_ids": inc.recommendation_ids,
+                    "remediation_ids": [str(rid) for rid in inc.remediation_ids],
+                    "incident_timeline": timeline,
+                    "linked_evidence": evidence,
+                }
+            )
+
+        snapshot = IncidentSnapshotService.get_snapshot()
+
+        return {
+            "incident_summary": snapshot,
+            "active_incidents": active_incidents_list,
+        }
+
+    @classmethod
+    async def build_incident_context(
+        cls, db: AsyncSession, incident_id: uuid.UUID
+    ) -> Dict[str, Any]:
+        """Aggregate context for a specific incident."""
+        from src.services.incident_evidence_service import IncidentEvidenceService
+        from src.services.incident_history_service import IncidentHistoryService
+        from src.services.incident_service import IncidentService
+
+        incident = IncidentService.get_incident(incident_id)
+        if not incident:
+            raise ValueError(f"Incident {incident_id} not found")
+
+        timeline = [
+            {
+                "timestamp": h.timestamp.isoformat(),
+                "event_type": h.event_type,
+                "details": h.details,
+            }
+            for h in IncidentHistoryService.get_history(incident_id)
+        ]
+        evidence = IncidentEvidenceService.get_evidence(incident_id)
+
+        asset_context = {}
+        if incident.asset_ids:
+            primary_asset_id = incident.asset_ids[0]
+            try:
+                asset_context = await cls.build_asset_context(db, primary_asset_id)
+            except Exception:
+                pass
+
+        return {
+            "context_version": CONTEXT_VERSION,
+            "incident_id": str(incident.incident_id),
+            "incident_fingerprint": incident.incident_fingerprint,
+            "title": incident.title,
+            "description": incident.description,
+            "severity": (
+                incident.severity.value
+                if hasattr(incident.severity, "value")
+                else str(incident.severity)
+            ),
+            "status": (
+                incident.status.value
+                if hasattr(incident.status, "value")
+                else str(incident.status)
+            ),
+            "owner": str(incident.owner) if incident.owner else None,
+            "created_at": incident.created_at.isoformat(),
+            "updated_at": incident.updated_at.isoformat(),
+            "alert_ids": [str(aid) for aid in incident.alert_ids],
+            "asset_ids": [str(asid) for asid in incident.asset_ids],
+            "finding_ids": [str(fid) for fid in incident.finding_ids],
+            "recommendation_ids": incident.recommendation_ids,
+            "remediation_ids": [str(rid) for rid in incident.remediation_ids],
+            "incident_timeline": timeline,
+            "linked_evidence": evidence,
+            "asset_context": asset_context,
+        }
+
+    @classmethod
     async def build_asset_context(
         cls, db: AsyncSession, asset_id: uuid.UUID
     ) -> Dict[str, Any]:
@@ -226,6 +350,7 @@ class AIContextBuilder:
         gov_data = await cls._build_governance_data(db, asset_id)
         monitoring_data = await cls._build_monitoring_data(db, asset_id)
         alert_data = await cls._build_alert_data(db, asset_id)
+        incident_data = await cls._build_incident_data(db, asset_id)
 
         return {
             "context_version": CONTEXT_VERSION,
@@ -243,10 +368,13 @@ class AIContextBuilder:
                 "critical_alerts": alert_data["critical_alerts"],
                 "escalated_alerts": alert_data["escalated_alerts"],
                 "owned_alerts": alert_data["owned_alerts"],
+                "incident_summary": incident_data["incident_summary"],
+                "active_incidents": incident_data["active_incidents"],
             },
             "governance": gov_data,
             **monitoring_data,
             **alert_data,
+            **incident_data,
             "risk": report["risk"],
             "findings": report["findings"],
             "correlation": report["exposure"],
@@ -303,6 +431,7 @@ class AIContextBuilder:
         gov_data = await cls._build_governance_data(db, finding.asset_id)
         monitoring_data = await cls._build_monitoring_data(db, finding.asset_id)
         alert_data = await cls._build_alert_data(db, finding.asset_id)
+        incident_data = await cls._build_incident_data(db, finding.asset_id)
 
         finding_rems = [
             r
@@ -349,17 +478,13 @@ class AIContextBuilder:
                 "technologies": report.get("technologies", []),
                 "recommendation_snapshot": rec_snapshot,
                 "remediation_snapshot": rem_snapshot,
-                **gov_data,
-                **monitoring_data,
-                "alert_summary": alert_data["alert_summary"],
-                "active_alerts": alert_data["active_alerts"],
-                "critical_alerts": alert_data["critical_alerts"],
-                "escalated_alerts": alert_data["escalated_alerts"],
-                "owned_alerts": alert_data["owned_alerts"],
+                "incident_summary": incident_data["incident_summary"],
+                "active_incidents": incident_data["active_incidents"],
             },
             "governance": gov_data,
             **monitoring_data,
             **alert_data,
+            **incident_data,
             "risk": report["risk"],
             "findings": [finding_dict],
             "correlation": report["exposure"],
@@ -384,6 +509,7 @@ class AIContextBuilder:
         gov_snapshot = await GovernanceSnapshotService.get_snapshot(db)
         monitoring_data = await cls._build_monitoring_data(db, asset_id=None)
         alert_data = await cls._build_alert_data(db, asset_id=None)
+        incident_data = await cls._build_incident_data(db, asset_id=None)
 
         return {
             "context_version": CONTEXT_VERSION,
@@ -391,6 +517,7 @@ class AIContextBuilder:
             "governance": gov_snapshot,
             **monitoring_data,
             **alert_data,
+            **incident_data,
             "risk": {
                 "risk_distribution": report.get("risk_distribution", {}),
                 "top_risky_assets": report.get("top_risky_assets", []),

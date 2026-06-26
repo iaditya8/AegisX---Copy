@@ -587,10 +587,16 @@ async def _execute_workflow_async(
                         from src.services.continuous_refresh_service import (
                             ContinuousRefreshService,
                         )
+                        from src.services.incident_escalation_service import (
+                            IncidentEscalationService,
+                        )
+                        from src.services.incident_service import IncidentService
 
                         await ContinuousRefreshService.refresh_all(db)
                         await AlertGenerationService.generate_alerts(db)
                         await AlertEscalationService.process_escalations(db)
+                        await IncidentService.sync_alerts(db)
+                        await IncidentEscalationService.process_escalations(db)
                     except Exception as refresh_err:
                         import logging
 
