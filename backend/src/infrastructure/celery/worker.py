@@ -603,6 +603,19 @@ async def _execute_workflow_async(
                         except Exception as case_sync_err:
                             import logging
                             logging.error(f"Failed to sync cases: {case_sync_err}")
+
+                        try:
+                            from src.services.detection_gap_service import DetectionGapService
+                            from src.services.detection_drift_service import DetectionDriftService
+                            from src.services.detection_snapshot_service import DetectionSnapshotService
+
+                            prev_snap = DetectionSnapshotService._snapshots.get(scope_id)
+                            await DetectionGapService.check_gaps_and_regressions(db, scope_id=scope_id, prev_snapshot=prev_snap)
+                            await DetectionDriftService.check_drift(db, scope_id=scope_id, prev_snapshot=prev_snap)
+                            DetectionSnapshotService.generate_snapshot(scope_id)
+                        except Exception as det_err:
+                            import logging
+                            logging.error(f"Failed to process detection coverage checks: {det_err}")
                     except Exception as refresh_err:
                         import logging
 

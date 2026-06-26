@@ -352,6 +352,7 @@ class AIContextBuilder:
         alert_data = await cls._build_alert_data(db, asset_id)
         incident_data = await cls._build_incident_data(db, asset_id)
         case_data = await cls._build_case_data(db, asset_id)
+        detection_data = await cls._build_detection_data()
 
         return {
             "context_version": CONTEXT_VERSION,
@@ -379,6 +380,7 @@ class AIContextBuilder:
             **alert_data,
             **incident_data,
             **case_data,
+            **detection_data,
             "risk": report["risk"],
             "findings": report["findings"],
             "correlation": report["exposure"],
@@ -519,6 +521,7 @@ class AIContextBuilder:
         alert_data = await cls._build_alert_data(db, asset_id=None)
         incident_data = await cls._build_incident_data(db, asset_id=None)
         case_data = await cls._build_case_data(db, asset_id=None)
+        detection_data = await cls._build_detection_data()
 
         return {
             "context_version": CONTEXT_VERSION,
@@ -528,6 +531,7 @@ class AIContextBuilder:
             **alert_data,
             **incident_data,
             **case_data,
+            **detection_data,
             "risk": {
                 "risk_distribution": report.get("risk_distribution", {}),
                 "top_risky_assets": report.get("top_risky_assets", []),
@@ -623,6 +627,47 @@ class AIContextBuilder:
         return {
             "case_summary": snapshot,
             "active_cases": active_cases_list,
+        }
+
+    @classmethod
+    async def _build_detection_data(cls) -> Dict[str, Any]:
+        """Aggregate detection summary and coverage details."""
+        from src.services.detection_service import DetectionService
+        from src.services.detection_coverage_service import DetectionCoverageService
+        from src.services.detection_snapshot_service import DetectionSnapshotService
+        from src.domain.entities.detection import CoverageStatus, DetectionStatus
+
+        detections = DetectionService.get_all_detections()
+        coverage = DetectionCoverageService.calculate_coverage()
+        overall_score = DetectionCoverageService.calculate_overall_score()
+        snapshot = DetectionSnapshotService.get_snapshot()
+
+        active_count = sum(1 for d in detections if d.status == DetectionStatus.ACTIVE)
+        disabled_count = sum(1 for d in detections if d.status == DetectionStatus.DISABLED)
+        deprecated_count = sum(1 for d in detections if d.status == DetectionStatus.DEPRECATED)
+
+        covered_techniques = [
+            c.technique_id for c in coverage if c.coverage_status == CoverageStatus.COVERED
+        ]
+        uncovered_techniques = [
+            c.technique_id for c in coverage if c.coverage_status == CoverageStatus.NOT_COVERED
+        ]
+        coverage_gaps = uncovered_techniques
+
+        detection_summary = {
+            "total_detections": len(detections),
+            "active_detections": active_count,
+            "disabled_detections": disabled_count,
+            "deprecated_detections": deprecated_count,
+            "coverage_snapshot": snapshot,
+        }
+
+        return {
+            "detection_summary": detection_summary,
+            "coverage_score": overall_score,
+            "covered_techniques": covered_techniques,
+            "uncovered_techniques": uncovered_techniques,
+            "coverage_gaps": coverage_gaps,
         }
 
     @classmethod
