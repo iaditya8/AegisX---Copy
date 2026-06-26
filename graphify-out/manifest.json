@@ -205,8 +205,8 @@
     "semantic_hash": "cc6a567e71f110d84dc586c96beb901d"
   },
   "backend/src/infrastructure/celery/worker.py": {
-    "mtime": 1782502677.4897282,
-    "ast_hash": "1c9b3ab53fbcb56ca73ca1d1e180da38",
+    "mtime": 1782504993.5113733,
+    "ast_hash": "aa0777e71c4605c95be6f85155ba443e",
     "semantic_hash": ""
   },
   "backend/src/infrastructure/database/models.py": {
@@ -220,8 +220,8 @@
     "semantic_hash": "e9df1259af19fb708350b2b937c006e7"
   },
   "backend/src/main.py": {
-    "mtime": 1782502677.482837,
-    "ast_hash": "5e3ddc1c7bc20ed4dce5fa660de8937c",
+    "mtime": 1782505172.5485642,
+    "ast_hash": "a5f597e68ac8ba9fd9b1e22cb2a7212a",
     "semantic_hash": ""
   },
   "backend/src/plugins/amass.py": {
@@ -290,8 +290,8 @@
     "semantic_hash": "786254af83392568c552728d126a8c66"
   },
   "backend/src/services/ai_context_builder.py": {
-    "mtime": 1782502682.215971,
-    "ast_hash": "b18bfb744178f709bc9a41c6909ab0c4",
+    "mtime": 1782505034.0339687,
+    "ast_hash": "95672994c33df39fbfa3f9e3b8b7c8f2",
     "semantic_hash": ""
   },
   "backend/src/services/ai_guardrails.py": {
@@ -300,9 +300,9 @@
     "semantic_hash": "cacac50b1dd10c0ccd714ab1b0e10e86"
   },
   "backend/src/services/ai_prompt_builder.py": {
-    "mtime": 1782322532.2753396,
-    "ast_hash": "c571568768354c5ec4f58213b89e9049",
-    "semantic_hash": "c571568768354c5ec4f58213b89e9049"
+    "mtime": 1782505055.2609339,
+    "ast_hash": "0bff7df6a7beb9be038381c429df70b8",
+    "semantic_hash": ""
   },
   "backend/src/services/ai_provider.py": {
     "mtime": 1782249042.7369576,
@@ -1668,5 +1668,120 @@
     "mtime": 1781994767.2874544,
     "ast_hash": "a2760511c65806022ad20adf74370ff3",
     "semantic_hash": "a2760511c65806022ad20adf74370ff3"
+  },
+  "backend/src/api/v1/routers/cases.py": {
+    "mtime": 1782504084.14608,
+    "ast_hash": "df48aa2f567881cc1d13e707890668f3",
+    "semantic_hash": ""
+  },
+  "backend/src/domain/entities/case.py": {
+    "mtime": 1782503782.8784049,
+    "ast_hash": "026c8747796a9ae7bb8ef09b7825c275",
+    "semantic_hash": ""
+  },
+  "backend/src/services/case_evidence_correlation_service.py": {
+    "mtime": 1782503856.657664,
+    "ast_hash": "56f351785e69885e769aad320ffa5036",
+    "semantic_hash": ""
+  },
+  "backend/src/services/case_fingerprint_service.py": {
+    "mtime": 1782503798.442904,
+    "ast_hash": "da5021a52f57c899c6fd44a459629e80",
+    "semantic_hash": ""
+  },
+  "backend/src/services/case_history_service.py": {
+    "mtime": 1782503807.6970696,
+    "ast_hash": "7a6b0fd66bf8a21589fce14f95a5c86c",
+    "semantic_hash": ""
+  },
+  "backend/src/services/case_service.py": {
+    "mtime": 1782503875.6738524,
+    "ast_hash": "ee642189989c662fa3a55ceb68d1fa3d",
+    "semantic_hash": ""
+  },
+  "backend/src/services/case_severity_registry.py": {
+    "mtime": 1782503790.7797515,
+    "ast_hash": "112a92073e8301671d7463f9767d8a88",
+    "semantic_hash": ""
+  },
+  "backend/src/services/case_snapshot_service.py": {
+    "mtime": 1782504370.006528,
+    "ast_hash": "8c2256b267d46daad0f1e17a4213d9ee",
+    "semantic_hash": ""
+  },
+  "backend/src/services/custody_service.py": {
+    "mtime": 1782503823.4356418,
+    "ast_hash": "ee3a7a32bf4341f3dc1c60b95b6a55ce",
+    "semantic_hash": ""
+  },
+  "backend/src/services/evidence_service.py": {
+    "mtime": 1782503849.8239927,
+    "ast_hash": "0f18898d6e5251143cdc3a454c817a8a",
+    "semantic_hash": ""
+  },
+  "backend/tests/integration/test_cases.py": {
+    "mtime": 1782504165.2349336,
+    "ast_hash": "8a84658dc95acf9f35dcc71928b00698",
+    "semantic_hash": ""
+  },
+  "backend/src/api/v1/routers/detections.py": {
+    "mtime": 1782505137.744771,
+    "ast_hash": "1c49a4fb8c513bd3f3c967852c301f2d",
+    "semantic_hash": ""
+  },
+  "backend/src/domain/entities/detection.py": {
+    "mtime": 1782504875.9754882,
+    "ast_hash": "a4633b8adae634f9f607d7930edf460c",
+    "semantic_hash": ""
+  },
+  "backend/src/services/attack_registry.py": {
+    "mtime": 1782504848.0190675,
+    "ast_hash": "b4978ac8d5d848e8a84b91b8d90c703c",
+    "semantic_hash": ""
+  },
+  "backend/src/services/detection_coverage_service.py": {
+    "mtime": 1782505124.5803225,
+    "ast_hash": "710f871852a2b1460682f57483f25556",
+    "semantic_hash": ""
+  },
+  "backend/src/services/detection_drift_service.py": {
+    "mtime": 1782504952.1914604,
+    "ast_hash": "6a62c06996f3f725c8bfc7f718be3095",
+    "semantic_hash": ""
+  },
+  "backend/src/services/detection_fingerprint_service.py": {
+    "mtime": 1782504865.4333172,
+    "ast_hash": "c6f93a30d61e5fc198fab5e2eb387cbf",
+    "semantic_hash": ""
+  },
+  "backend/src/services/detection_gap_service.py": {
+    "mtime": 1782504967.810924,
+    "ast_hash": "b29bef43fcda3340c14f3745c814da9e",
+    "semantic_hash": ""
+  },
+  "backend/src/services/detection_history_service.py": {
+    "mtime": 1782504880.170183,
+    "ast_hash": "277dc43c68671e47a11094dd4f08b200",
+    "semantic_hash": ""
+  },
+  "backend/src/services/detection_service.py": {
+    "mtime": 1782504915.322946,
+    "ast_hash": "d08259fac99b7cf55397d35fda8c61ad",
+    "semantic_hash": ""
+  },
+  "backend/src/services/detection_severity_registry.py": {
+    "mtime": 1782504853.0982852,
+    "ast_hash": "492d0e22ba72c60df83e0784a86816c0",
+    "semantic_hash": ""
+  },
+  "backend/src/services/detection_snapshot_service.py": {
+    "mtime": 1782504934.2080634,
+    "ast_hash": "a1d6185787d5473a8241920761068632",
+    "semantic_hash": ""
+  },
+  "backend/tests/integration/test_detections.py": {
+    "mtime": 1782505419.4721563,
+    "ast_hash": "0a65c451fe0e1b04367e538430d16d96",
+    "semantic_hash": ""
   }
 }
