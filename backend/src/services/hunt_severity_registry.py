@@ -1,4 +1,4 @@
-from typing import List, Union
+from typing import List, Union, Sequence
 
 from src.domain.entities.hunt import HuntSeverity
 
@@ -20,7 +20,7 @@ class HuntSeverityRegistry:
 
     @classmethod
     def get_highest_severity(
-        cls, severities: List[Union[HuntSeverity, str]]
+        cls, severities: Sequence[Union[HuntSeverity, str]]
     ) -> HuntSeverity:
         """Determine highest severity from a list of severities based on hierarchy."""
         hierarchy = {

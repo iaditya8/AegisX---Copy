@@ -142,7 +142,7 @@ async def list_incidents(
     if current_user.role == "admin":
         return [to_incident_response(i) for i in incidents]
 
-    allowed_asset_ids = await get_allowed_asset_ids(db, current_user)
+    allowed_asset_ids = await get_allowed_asset_ids(db, current_user) or set()
     filtered = []
     for inc in incidents:
         if not inc.asset_ids:
@@ -168,7 +168,7 @@ async def list_open_incidents(
     if current_user.role == "admin":
         return [to_incident_response(i) for i in open_incidents]
 
-    allowed_asset_ids = await get_allowed_asset_ids(db, current_user)
+    allowed_asset_ids = await get_allowed_asset_ids(db, current_user) or set()
     filtered = []
     for inc in open_incidents:
         if not inc.asset_ids:
@@ -190,7 +190,7 @@ async def list_escalated_incidents(
     if current_user.role == "admin":
         return [to_incident_response(i) for i in escalated_incidents]
 
-    allowed_asset_ids = await get_allowed_asset_ids(db, current_user)
+    allowed_asset_ids = await get_allowed_asset_ids(db, current_user) or set()
     filtered = []
     for inc in escalated_incidents:
         if not inc.asset_ids:
@@ -214,7 +214,7 @@ async def list_critical_incidents(
     if current_user.role == "admin":
         return [to_incident_response(i) for i in critical_incidents]
 
-    allowed_asset_ids = await get_allowed_asset_ids(db, current_user)
+    allowed_asset_ids = await get_allowed_asset_ids(db, current_user) or set()
     filtered = []
     for inc in critical_incidents:
         if not inc.asset_ids:

@@ -1,5 +1,5 @@
 import hashlib
-from typing import List, Union
+from typing import List, Union, Sequence
 
 from src.domain.entities.hunt import HuntType
 
@@ -7,7 +7,7 @@ from src.domain.entities.hunt import HuntType
 class HuntFingerprintService:
     @classmethod
     def generate_fingerprint(
-        cls, hunt_type: HuntType, title: str, related_entities: List[Union[dict, str]]
+        cls, hunt_type: HuntType, title: str, related_entities: Sequence[Union[dict, str]]
     ) -> str:
         """Generate a stable deterministic SHA-256 fingerprint for a hunt."""
         normalized_title = str(title).strip().lower()

@@ -350,7 +350,7 @@ def test_hunt_history_immutable():
     history = HuntHistoryService.get_history(hunt.hunt_id)
     from pydantic import ValidationError
     with pytest.raises((TypeError, ValidationError)):
-        history[0].details = "Malicious update"
+        history[0].details = "Malicious update"  # type: ignore
 
 
 def test_hunt_history_survives_sync():
@@ -537,7 +537,7 @@ async def test_attack_hunt_generation_correlation_findings():
     finding.id = uuid.uuid4()
     finding.title = "Suspicious process execution T1059"
     finding.description = "..."
-    finding.metadata_json = None
+    finding.metadata_json = {}
     setup_test_db(mock_db, findings=[finding])
 
     await AttackHuntService.sync_attack_hunts(mock_db)
