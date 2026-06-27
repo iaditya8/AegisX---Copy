@@ -291,12 +291,18 @@ class AIContextBuilder:
         evidence = IncidentEvidenceService.get_evidence(incident_id)
 
         asset_context = {}
+        scope_id = None
         if incident.asset_ids:
             primary_asset_id = incident.asset_ids[0]
             try:
                 asset_context = await cls.build_asset_context(db, primary_asset_id)
+                from src.infrastructure.database.models import Asset
+                asset_obj = await db.get(Asset, primary_asset_id)
+                scope_id = asset_obj.scope_id if asset_obj else None
             except Exception:
                 pass
+
+        th_data = await cls._build_threat_hunting_data(scope_id)
 
         return {
             "context_version": CONTEXT_VERSION,
@@ -325,6 +331,7 @@ class AIContextBuilder:
             "incident_timeline": timeline,
             "linked_evidence": evidence,
             "asset_context": asset_context,
+            **th_data,
         }
 
     @classmethod
@@ -332,6 +339,12 @@ class AIContextBuilder:
         cls, scope_id: Optional[uuid.UUID] = None
     ) -> Dict[str, Any]:
         """Aggregate threat intelligence summary, threat actors, campaigns, and active correlations."""
+        if scope_id and isinstance(scope_id, str):
+            try:
+                scope_id = uuid.UUID(scope_id)
+            except ValueError:
+                pass
+
         from src.services.threat_intelligence_snapshot_service import ThreatIntelligenceSnapshotService
         from src.services.threat_actor_service import ThreatActorService
         from src.services.campaign_service import CampaignService
@@ -361,6 +374,49 @@ class AIContextBuilder:
             "threat_actors": [a.model_dump() for a in actors],
             "campaigns": [c.model_dump() for c in campaigns],
             "active_correlations": correlations_list,
+        }
+
+    @classmethod
+    async def _build_threat_hunting_data(
+        cls, scope_id: Optional[uuid.UUID] = None
+    ) -> Dict[str, Any]:
+        """Aggregate threat hunting summary, active hunts, and coverage statistics."""
+        if scope_id and isinstance(scope_id, str):
+            try:
+                scope_id = uuid.UUID(scope_id)
+            except ValueError:
+                pass
+
+        from src.services.hunt_snapshot_service import HuntSnapshotService
+        from src.services.hunt_service import HuntService
+
+        snapshot = HuntSnapshotService.get_snapshot(scope_id)
+        hunts = HuntService.get_all_hunts()
+        if scope_id:
+            hunts = [h for h in hunts if h.scope_id == scope_id]
+
+        active_hunts_list = [
+            HuntService.to_response(h).model_dump()
+            for h in hunts
+            if h.status.value in ["OPEN", "ACTIVE", "UNDER_REVIEW", "ESCALATED"]
+        ]
+
+        for h in active_hunts_list:
+            h["hunt_id"] = str(h["hunt_id"])
+            h["owner_id"] = str(h["owner_id"]) if h["owner_id"] else None
+            h["scope_id"] = str(h["scope_id"]) if h["scope_id"] else None
+            for hyp in h.get("hypotheses", []):
+                hyp["hypothesis_id"] = str(hyp["hypothesis_id"])
+                hyp["hunt_id"] = str(hyp["hunt_id"])
+            for f in h.get("findings", []):
+                f["finding_id"] = str(f["finding_id"])
+                f["hunt_id"] = str(f["hunt_id"])
+                f["entity_id"] = str(f["entity_id"])
+
+        return {
+            "threat_hunting_summary": snapshot["summary"],
+            "hunt_coverage": snapshot["coverage"],
+            "active_hunts": active_hunts_list,
         }
 
     @classmethod
@@ -397,6 +453,7 @@ class AIContextBuilder:
             scope_id = asset_obj.scope_id if asset_obj else None
 
         ti_data = await cls._build_threat_intelligence_data(scope_id)
+        th_data = await cls._build_threat_hunting_data(scope_id)
 
         return {
             "context_version": CONTEXT_VERSION,
@@ -422,6 +479,9 @@ class AIContextBuilder:
                 "threat_actors": ti_data["threat_actors"],
                 "campaigns": ti_data["campaigns"],
                 "active_correlations": ti_data["active_correlations"],
+                "threat_hunting_summary": th_data["threat_hunting_summary"],
+                "hunt_coverage": th_data["hunt_coverage"],
+                "active_hunts": th_data["active_hunts"],
             },
             "governance": gov_data,
             **monitoring_data,
@@ -430,6 +490,7 @@ class AIContextBuilder:
             **case_data,
             **detection_data,
             **ti_data,
+            **th_data,
             "risk": report["risk"],
             "findings": report["findings"],
             "correlation": report["exposure"],
@@ -525,6 +586,14 @@ class AIContextBuilder:
                 f"{finding_id} not found"
             )
 
+        scope_id = report["asset"].get("scope_id") if isinstance(report.get("asset"), dict) else None
+        if not scope_id:
+            from src.infrastructure.database.models import Asset
+            asset_obj = await db.get(Asset, finding.asset_id)
+            scope_id = asset_obj.scope_id if asset_obj else None
+
+        th_data = await cls._build_threat_hunting_data(scope_id)
+
         return {
             "context_version": CONTEXT_VERSION,
             "asset": {
@@ -538,12 +607,16 @@ class AIContextBuilder:
                 "active_incidents": incident_data["active_incidents"],
                 "case_summary": case_data["case_summary"],
                 "active_cases": case_data["active_cases"],
+                "threat_hunting_summary": th_data["threat_hunting_summary"],
+                "hunt_coverage": th_data["hunt_coverage"],
+                "active_hunts": th_data["active_hunts"],
             },
             "governance": gov_data,
             **monitoring_data,
             **alert_data,
             **incident_data,
             **case_data,
+            **th_data,
             "risk": report["risk"],
             "findings": [finding_dict],
             "correlation": report["exposure"],
@@ -572,6 +645,7 @@ class AIContextBuilder:
         case_data = await cls._build_case_data(db, asset_id=None)
         detection_data = await cls._build_detection_data()
         ti_data = await cls._build_threat_intelligence_data(scope_id=None)
+        th_data = await cls._build_threat_hunting_data(scope_id=None)
 
         return {
             "context_version": CONTEXT_VERSION,
@@ -583,6 +657,7 @@ class AIContextBuilder:
             **case_data,
             **detection_data,
             **ti_data,
+            **th_data,
             "risk": {
                 "risk_distribution": report.get("risk_distribution", {}),
                 "top_risky_assets": report.get("top_risky_assets", []),
@@ -770,12 +845,18 @@ class AIContextBuilder:
             })
 
         asset_context = {}
+        scope_id = None
         if case.asset_ids:
             primary_asset_id = case.asset_ids[0]
             try:
                 asset_context = await cls.build_asset_context(db, primary_asset_id)
+                from src.infrastructure.database.models import Asset
+                asset_obj = await db.get(Asset, primary_asset_id)
+                scope_id = asset_obj.scope_id if asset_obj else None
             except Exception:
                 pass
+
+        th_data = await cls._build_threat_hunting_data(scope_id)
 
         return {
             "context_version": CONTEXT_VERSION,
@@ -794,4 +875,5 @@ class AIContextBuilder:
             "case_timeline": timeline,
             "case_evidence": case_evidence_details,
             "asset_context": asset_context,
+            **th_data,
         }

@@ -629,6 +629,22 @@ async def _execute_workflow_async(
                         except Exception as ti_err:
                             import logging
                             logging.error(f"Failed to process threat intelligence checks: {ti_err}")
+
+                        try:
+                            from src.services.ioc_hunt_service import IOCHuntService
+                            from src.services.attack_hunt_service import AttackHuntService
+                            from src.services.hunt_drift_service import HuntDriftService
+                            from src.services.hunt_snapshot_service import HuntSnapshotService
+
+                            IOCHuntService.sync_ioc_hunts()
+                            await AttackHuntService.sync_attack_hunts(db)
+
+                            prev_hunt_snap = HuntSnapshotService._snapshots.get(scope_id)
+                            await HuntDriftService.check_drift(db, scope_id=scope_id, prev_snapshot=prev_hunt_snap)
+                            HuntSnapshotService.generate_snapshot(scope_id)
+                        except Exception as hunt_err:
+                            import logging
+                            logging.error(f"Failed to process threat hunting checks: {hunt_err}")
                     except Exception as refresh_err:
                         import logging
 
