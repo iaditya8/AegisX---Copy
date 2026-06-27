@@ -682,6 +682,20 @@ async def _execute_workflow_async(
                             import logging
                             logging.error(f"Failed to process exposure management checks: {exp_err}")
 
+                        try:
+                            from src.services.security_posture_service import SecurityPostureService
+                            from src.services.posture_drift_service import PostureDriftService
+                            from src.services.security_posture_snapshot_service import SecurityPostureSnapshotService
+
+                            await SecurityPostureService.sync_postures(db)
+
+                            prev_posture_snap = SecurityPostureSnapshotService._snapshots.get(scope_id)
+                            await PostureDriftService.check_drift(db, scope_id=scope_id, prev_snapshot=prev_posture_snap)
+                            await SecurityPostureSnapshotService.generate_snapshot(db, scope_id)
+                        except Exception as posture_err:
+                            import logging
+                            logging.error(f"Failed to process security posture checks: {posture_err}")
+
                     except Exception as refresh_err:
                         import logging
 

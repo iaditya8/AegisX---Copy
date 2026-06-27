@@ -205,8 +205,8 @@
     "semantic_hash": "cc6a567e71f110d84dc586c96beb901d"
   },
   "backend/src/infrastructure/celery/worker.py": {
-    "mtime": 1782558857.4175951,
-    "ast_hash": "ff7060cf64f1c1c4da51d094fc900bd9",
+    "mtime": 1782559400.091035,
+    "ast_hash": "7cb52de83793cc0a90afc8d832f6b14a",
     "semantic_hash": ""
   },
   "backend/src/infrastructure/database/models.py": {
@@ -220,8 +220,8 @@
     "semantic_hash": "e9df1259af19fb708350b2b937c006e7"
   },
   "backend/src/main.py": {
-    "mtime": 1782558984.987631,
-    "ast_hash": "a3f3427a31f4fdd0670379e90c6a724a",
+    "mtime": 1782559563.4139595,
+    "ast_hash": "3791c22b8d5d359c9a8a5a34dd2b6341",
     "semantic_hash": ""
   },
   "backend/src/plugins/amass.py": {
@@ -290,8 +290,8 @@
     "semantic_hash": "786254af83392568c552728d126a8c66"
   },
   "backend/src/services/ai_context_builder.py": {
-    "mtime": 1782558924.9905071,
-    "ast_hash": "96e9e1a2402ec5d1f0e48927b102bea7",
+    "mtime": 1782559529.3454072,
+    "ast_hash": "b409472d18b068a098537d1341007f62",
     "semantic_hash": ""
   },
   "backend/src/services/ai_guardrails.py": {
@@ -300,8 +300,8 @@
     "semantic_hash": "cacac50b1dd10c0ccd714ab1b0e10e86"
   },
   "backend/src/services/ai_prompt_builder.py": {
-    "mtime": 1782558936.5128064,
-    "ast_hash": "c6c81904068dbab55e4b39278c14f57f",
+    "mtime": 1782559538.6641665,
+    "ast_hash": "09252afbc94b56e4be329a897cbd2d3c",
     "semantic_hash": ""
   },
   "backend/src/services/ai_provider.py": {
@@ -2017,6 +2017,76 @@
   "backend/tests/integration/test_purple_team.py": {
     "mtime": 1782559141.6066554,
     "ast_hash": "d29444b90799bce9c1e38b8e6619c503",
+    "semantic_hash": ""
+  },
+  "backend/src/api/v1/routers/exposures.py": {
+    "mtime": 1782559548.7348423,
+    "ast_hash": "372b8db1a306cf837287a6654b2ead8d",
+    "semantic_hash": ""
+  },
+  "backend/src/domain/entities/exposure.py": {
+    "mtime": 1782559279.5888338,
+    "ast_hash": "62fed7860f1684c9bdd2e28a403a764c",
+    "semantic_hash": ""
+  },
+  "backend/src/services/attack_surface_registry.py": {
+    "mtime": 1782559292.6000109,
+    "ast_hash": "f3c2f7747ab7514e0e64a1252c212965",
+    "semantic_hash": ""
+  },
+  "backend/src/services/attack_surface_service.py": {
+    "mtime": 1782559342.380919,
+    "ast_hash": "3334700ae16bcc5125e7b7636713cec0",
+    "semantic_hash": ""
+  },
+  "backend/src/services/exposure_correlation_service.py": {
+    "mtime": 1782559349.219369,
+    "ast_hash": "cf62edfcdec4cbc70277b94a81512d25",
+    "semantic_hash": ""
+  },
+  "backend/src/services/exposure_drift_service.py": {
+    "mtime": 1782559368.5976388,
+    "ast_hash": "941fec8f7fb3da40c3f816bb6bc36063",
+    "semantic_hash": ""
+  },
+  "backend/src/services/exposure_fingerprint_service.py": {
+    "mtime": 1782559296.4305778,
+    "ast_hash": "a85feb4f85441ba77d36f556734b250e",
+    "semantic_hash": ""
+  },
+  "backend/src/services/exposure_history_service.py": {
+    "mtime": 1782559300.2504983,
+    "ast_hash": "58328472b5e7722ad7714b89da7ea277",
+    "semantic_hash": ""
+  },
+  "backend/src/services/exposure_prioritization_service.py": {
+    "mtime": 1782559603.1068325,
+    "ast_hash": "757c766ba9193153c5c9d89a9e6e9d0c",
+    "semantic_hash": ""
+  },
+  "backend/src/services/exposure_service.py": {
+    "mtime": 1782559358.1301012,
+    "ast_hash": "179f4621e42cb893c8627067f4230012",
+    "semantic_hash": ""
+  },
+  "backend/src/services/exposure_severity_registry.py": {
+    "mtime": 1782559288.6710896,
+    "ast_hash": "c94a79a05874bb576eaf47fa9de48528",
+    "semantic_hash": ""
+  },
+  "backend/src/services/exposure_snapshot_service.py": {
+    "mtime": 1782559381.0395103,
+    "ast_hash": "01d469bcf07890d29f43635864240ba4",
+    "semantic_hash": ""
+  },
+  "backend/src/services/exposure_type_registry.py": {
+    "mtime": 1782559284.4089992,
+    "ast_hash": "613daf97b92c6fc43c5f2c88454254e8",
+    "semantic_hash": ""
+  },
+  "backend/tests/integration/test_exposures.py": {
+    "mtime": 1782559685.4643116,
+    "ast_hash": "069c5e0ff9e1c30a73859e7256c7ed3b",
     "semantic_hash": ""
   }
 }

@@ -305,6 +305,7 @@ class AIContextBuilder:
         th_data = await cls._build_threat_hunting_data(scope_id)
         pt_data = await cls._build_purple_team_data(scope_id)
         exposure_data = await cls._build_exposure_data(scope_id)
+        posture_data = await cls._build_security_posture_context_block(scope_id)
 
         return {
             "context_version": CONTEXT_VERSION,
@@ -336,6 +337,7 @@ class AIContextBuilder:
             **th_data,
             **pt_data,
             **exposure_data,
+            **posture_data,
         }
 
     @classmethod
@@ -516,6 +518,7 @@ class AIContextBuilder:
         th_data = await cls._build_threat_hunting_data(scope_id)
         pt_data = await cls._build_purple_team_data(scope_id)
         exposure_data = await cls._build_exposure_data(scope_id)
+        posture_data = await cls._build_security_posture_context_block(scope_id)
 
         return {
             "context_version": CONTEXT_VERSION,
@@ -550,6 +553,7 @@ class AIContextBuilder:
                 "exposure_summary": exposure_data["exposure_summary"],
                 "active_exposures": exposure_data["active_exposures"],
                 "attack_surface_inventory": exposure_data["attack_surface_inventory"],
+                **posture_data,
             },
             "governance": gov_data,
             **monitoring_data,
@@ -561,6 +565,7 @@ class AIContextBuilder:
             **th_data,
             **pt_data,
             **exposure_data,
+            **posture_data,
             "risk": report["risk"],
             "findings": report["findings"],
             "correlation": report["exposure"],
@@ -665,6 +670,7 @@ class AIContextBuilder:
         th_data = await cls._build_threat_hunting_data(scope_id)
         pt_data = await cls._build_purple_team_data(scope_id)
         exposure_data = await cls._build_exposure_data(scope_id)
+        posture_data = await cls._build_security_posture_context_block(scope_id)
 
         return {
             "context_version": CONTEXT_VERSION,
@@ -688,6 +694,7 @@ class AIContextBuilder:
                 "exposure_summary": exposure_data["exposure_summary"],
                 "active_exposures": exposure_data["active_exposures"],
                 "attack_surface_inventory": exposure_data["attack_surface_inventory"],
+                **posture_data,
             },
             "governance": gov_data,
             **monitoring_data,
@@ -697,6 +704,7 @@ class AIContextBuilder:
             **th_data,
             **pt_data,
             **exposure_data,
+            **posture_data,
             "risk": report["risk"],
             "findings": [finding_dict],
             "correlation": report["exposure"],
@@ -728,6 +736,7 @@ class AIContextBuilder:
         th_data = await cls._build_threat_hunting_data(scope_id=None)
         pt_data = await cls._build_purple_team_data(scope_id=None)
         exposure_data = await cls._build_exposure_data(scope_id=None)
+        posture_data = await cls._build_global_security_posture_context_block()
 
         return {
             "context_version": CONTEXT_VERSION,
@@ -742,6 +751,7 @@ class AIContextBuilder:
             **th_data,
             **pt_data,
             **exposure_data,
+            **posture_data,
             "risk": {
                 "risk_distribution": report.get("risk_distribution", {}),
                 "top_risky_assets": report.get("top_risky_assets", []),
@@ -943,6 +953,7 @@ class AIContextBuilder:
         th_data = await cls._build_threat_hunting_data(scope_id)
         pt_data = await cls._build_purple_team_data(scope_id)
         exposure_data = await cls._build_exposure_data(scope_id)
+        posture_data = await cls._build_security_posture_context_block(scope_id)
 
         return {
             "context_version": CONTEXT_VERSION,
@@ -964,6 +975,7 @@ class AIContextBuilder:
             **th_data,
             **pt_data,
             **exposure_data,
+            **posture_data,
         }
 
     @classmethod
@@ -1007,3 +1019,50 @@ class AIContextBuilder:
             "active_exposures": active_exposures_list,
             "attack_surface_inventory": snapshot.get("attack_surface", {}),
         }
+
+    @classmethod
+    async def _build_security_posture_context_block(
+        cls, scope_id: Optional[uuid.UUID] = None
+    ) -> Dict[str, Any]:
+        """Aggregate security posture summary, active postures, status counts, and trends."""
+        if scope_id and isinstance(scope_id, str):
+            try:
+                scope_id = uuid.UUID(scope_id)
+            except ValueError:
+                pass
+
+        from src.services.security_posture_snapshot_service import SecurityPostureSnapshotService
+        from src.services.security_posture_service import SecurityPostureService
+        from src.services.posture_history_service import PostureHistoryService
+        from src.services.risk_correlation_service import RiskCorrelationService
+
+        snapshot = SecurityPostureSnapshotService.get_snapshot(scope_id)
+        postures = SecurityPostureService.get_all_postures()
+
+        active_postures_list = []
+        for p in postures:
+            if p.status.value in ["OPEN", "ACCEPTED", "MITIGATED"]:
+                pdata = SecurityPostureService.to_response(p).model_dump()
+                pdata["posture_id"] = str(p.posture_id)
+                pdata["asset_id"] = str(p.asset_id)
+                pdata["history"] = [
+                    {
+                        "timestamp": h.timestamp.isoformat(),
+                        "event_type": h.event_type,
+                        "details": h.details,
+                    }
+                    for h in PostureHistoryService.get_history(p.posture_id)
+                ]
+                pdata["correlations"] = RiskCorrelationService.get_correlations(p.posture_id)
+                active_postures_list.append(pdata)
+
+        return {
+            "security_posture_summary": snapshot["summary"],
+            "active_postures": active_postures_list,
+            "status_counts": snapshot.get("status_counts", {}),
+        }
+
+    @classmethod
+    async def _build_global_security_posture_context_block(cls) -> Dict[str, Any]:
+        """Aggregate global security posture summary across all scopes."""
+        return await cls._build_security_posture_context_block(scope_id=None)
