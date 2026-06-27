@@ -308,6 +308,7 @@ class AIContextBuilder:
         posture_data = await cls._build_security_posture_context_block(scope_id)
         control_data = await cls._build_control_validation_context_block(scope_id)
         program_data = await cls._build_security_program_context_block(scope_id)
+        exec_data = await cls._build_executive_reporting_context_block(scope_id)
 
         return {
             "context_version": CONTEXT_VERSION,
@@ -342,6 +343,7 @@ class AIContextBuilder:
             **posture_data,
             **control_data,
             **program_data,
+            **exec_data,
         }
 
     @classmethod
@@ -525,6 +527,7 @@ class AIContextBuilder:
         posture_data = await cls._build_security_posture_context_block(scope_id)
         control_data = await cls._build_control_validation_context_block(scope_id)
         program_data = await cls._build_security_program_context_block(scope_id)
+        exec_data = await cls._build_executive_reporting_context_block(scope_id)
 
         return {
             "context_version": CONTEXT_VERSION,
@@ -562,6 +565,7 @@ class AIContextBuilder:
                 **posture_data,
                 **control_data,
                 **program_data,
+                **exec_data,
             },
             "governance": gov_data,
             **monitoring_data,
@@ -576,6 +580,7 @@ class AIContextBuilder:
             **posture_data,
             **control_data,
             **program_data,
+            **exec_data,
             "risk": report["risk"],
             "findings": report["findings"],
             "correlation": report["exposure"],
@@ -683,6 +688,7 @@ class AIContextBuilder:
         posture_data = await cls._build_security_posture_context_block(scope_id)
         control_data = await cls._build_control_validation_context_block(scope_id)
         program_data = await cls._build_security_program_context_block(scope_id)
+        exec_data = await cls._build_executive_reporting_context_block(scope_id)
 
         return {
             "context_version": CONTEXT_VERSION,
@@ -709,6 +715,7 @@ class AIContextBuilder:
                 **posture_data,
                 **control_data,
                 **program_data,
+                **exec_data,
             },
             "governance": gov_data,
             **monitoring_data,
@@ -721,6 +728,7 @@ class AIContextBuilder:
             **posture_data,
             **control_data,
             **program_data,
+            **exec_data,
             "risk": report["risk"],
             "findings": [finding_dict],
             "correlation": report["exposure"],
@@ -755,6 +763,7 @@ class AIContextBuilder:
         posture_data = await cls._build_global_security_posture_context_block()
         control_data = await cls._build_global_control_validation_context_block()
         program_data = await cls._build_global_security_program_context_block()
+        exec_data = await cls._build_global_executive_reporting_context_block()
 
         return {
             "context_version": CONTEXT_VERSION,
@@ -772,6 +781,7 @@ class AIContextBuilder:
             **posture_data,
             **control_data,
             **program_data,
+            **exec_data,
             "risk": {
                 "risk_distribution": report.get("risk_distribution", {}),
                 "top_risky_assets": report.get("top_risky_assets", []),
@@ -976,6 +986,7 @@ class AIContextBuilder:
         posture_data = await cls._build_security_posture_context_block(scope_id)
         control_data = await cls._build_control_validation_context_block(scope_id)
         program_data = await cls._build_security_program_context_block(scope_id)
+        exec_data = await cls._build_executive_reporting_context_block(scope_id)
 
         return {
             "context_version": CONTEXT_VERSION,
@@ -1000,6 +1011,7 @@ class AIContextBuilder:
             **posture_data,
             **control_data,
             **program_data,
+            **exec_data,
         }
 
     @classmethod
@@ -1193,3 +1205,50 @@ class AIContextBuilder:
     async def _build_global_security_program_context_block(cls) -> Dict[str, Any]:
         """Aggregate global security program summary across all scopes."""
         return await cls._build_security_program_context_block(scope_id=None)
+
+    @classmethod
+    async def _build_executive_reporting_context_block(
+        cls, scope_id: Optional[uuid.UUID] = None
+    ) -> Dict[str, Any]:
+        """Aggregate executive reporting summary and details for context."""
+        if scope_id and isinstance(scope_id, str):
+            try:
+                scope_id = uuid.UUID(scope_id)
+            except ValueError:
+                pass
+
+        from src.services.executive_snapshot_service import ExecutiveSnapshotService
+        from src.services.executive_reporting_service import ExecutiveReportingService
+        from src.services.executive_history_service import ExecutiveHistoryService
+
+        snapshot = ExecutiveSnapshotService.get_snapshot(scope_id)
+        reports = ExecutiveReportingService.get_all_reports()
+        if scope_id:
+            reports = [r for r in reports if r.scope_id == scope_id]
+
+        reports_list = []
+        for r in reports:
+            rdata = ExecutiveReportingService.to_response(r).model_dump()
+            rdata["report_id"] = str(r.report_id)
+            rdata["history"] = [
+                {
+                    "timestamp": h.timestamp.isoformat(),
+                    "event_type": h.event_type,
+                    "details": h.details,
+                }
+                for h in ExecutiveHistoryService.get_history(r.report_id)
+            ]
+            reports_list.append(rdata)
+
+        return {
+            "executive_reporting_summary": snapshot["summary"],
+            "executive_scorecard": snapshot["scorecard"],
+            "executive_heatmap": snapshot["heatmap"],
+            "executive_trends": snapshot["trends"],
+            "executive_reports": reports_list,
+        }
+
+    @classmethod
+    async def _build_global_executive_reporting_context_block(cls) -> Dict[str, Any]:
+        """Aggregate global executive reporting summary across all scopes."""
+        return await cls._build_executive_reporting_context_block(scope_id=None)

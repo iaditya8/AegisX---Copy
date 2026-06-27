@@ -724,6 +724,22 @@ async def _execute_workflow_async(
                             import logging
                             logging.error(f"Failed to process security program checks: {program_err}")
 
+                        try:
+                            from src.services.executive_reporting_service import ExecutiveReportingService
+                            from src.services.executive_trend_service import ExecutiveTrendService
+                            from src.services.executive_drift_service import ExecutiveDriftService
+                            from src.services.executive_snapshot_service import ExecutiveSnapshotService
+
+                            await ExecutiveReportingService.sync_reports(db)
+                            ExecutiveTrendService.calculate_trends(scope_id)
+
+                            prev_exec_snap = ExecutiveSnapshotService._snapshots.get(scope_id)
+                            await ExecutiveDriftService.check_drift(db, scope_id=scope_id, prev_snapshot=prev_exec_snap)
+                            await ExecutiveSnapshotService.generate_snapshot(db, scope_id)
+                        except Exception as exec_err:
+                            import logging
+                            logging.error(f"Failed to process executive reporting checks: {exec_err}")
+
                     except Exception as refresh_err:
                         import logging
 
