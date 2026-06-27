@@ -766,6 +766,7 @@ class AIContextBuilder:
         exec_data = await cls._build_global_executive_reporting_context_block()
         resilience_data = await cls._build_global_cyber_resilience_context_block()
         soc_data = await cls._build_global_soc_context_block()
+        risk_quantification_data = await cls._build_global_risk_quantification_context_block()
 
         return {
             "context_version": CONTEXT_VERSION,
@@ -786,6 +787,7 @@ class AIContextBuilder:
             **exec_data,
             **resilience_data,
             **soc_data,
+            **risk_quantification_data,
             "risk": {
                 "risk_distribution": report.get("risk_distribution", {}),
                 "top_risky_assets": report.get("top_risky_assets", []),
@@ -1362,3 +1364,57 @@ class AIContextBuilder:
     async def _build_global_soc_context_block(cls) -> Dict[str, Any]:
         """Aggregate global SOC summary across all scopes."""
         return await cls._build_soc_context_block(scope_id=None)
+
+    @classmethod
+    async def _build_risk_quantification_context_block(
+        cls, scope_id: Optional[uuid.UUID] = None
+    ) -> Dict[str, Any]:
+        """Aggregate Risk Quantification summary and details for context."""
+        if scope_id and isinstance(scope_id, str):
+            try:
+                scope_id = uuid.UUID(scope_id)
+            except ValueError:
+                pass
+
+        from src.services.risk_quantification_snapshot_service import RiskQuantificationSnapshotService
+        from src.services.cyber_risk_quantification_service import CyberRiskQuantificationService
+        from src.services.quantified_risk_history_service import QuantifiedRiskHistoryService
+        from src.services.risk_forecast_service import RiskForecastService
+
+        snapshot = RiskQuantificationSnapshotService.get_snapshot(scope_id)
+        records = CyberRiskQuantificationService.get_all_risks()
+        if scope_id:
+            records = [r for r in records if r.scope_id == scope_id]
+
+        records_list = []
+        for r in records:
+            rdata = CyberRiskQuantificationService.to_response(r).model_dump()
+            rdata["risk_id"] = str(r.risk_id)
+            rdata["history"] = [
+                {
+                    "timestamp": h.timestamp.isoformat(),
+                    "event_type": h.event_type,
+                    "details": h.details,
+                }
+                for h in QuantifiedRiskHistoryService.get_history(r.risk_id)
+            ]
+            rdata["forecasts"] = [
+                f.model_dump()
+                for f in RiskForecastService.get_forecasts(r.risk_id, r.annualized_loss_expectancy, r.exposure_value)
+            ]
+            records_list.append(rdata)
+
+        return {
+            "risk_quantification_summary": snapshot["summary"],
+            "total_exposure_value": snapshot["summary"]["total_exposure_value"],
+            "total_annualized_loss_expectancy": snapshot["summary"]["total_annualized_loss_expectancy"],
+            "average_inherent_risk_score": snapshot["summary"]["average_inherent_risk_score"],
+            "average_residual_risk_score": snapshot["summary"]["average_residual_risk_score"],
+            "projected_loss_forecast": snapshot["summary"]["projected_loss_forecast"],
+            "quantified_risks": records_list,
+        }
+
+    @classmethod
+    async def _build_global_risk_quantification_context_block(cls) -> Dict[str, Any]:
+        """Aggregate global Risk Quantification summary across all scopes."""
+        return await cls._build_risk_quantification_context_block(scope_id=None)

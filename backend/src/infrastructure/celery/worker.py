@@ -774,6 +774,29 @@ async def _execute_workflow_async(
                             import logging
                             logging.error(f"Failed to perform SOC analytics intelligence checks: {soc_err}")
 
+                        try:
+                            from src.services.cyber_risk_quantification_service import CyberRiskQuantificationService
+                            from src.services.loss_expectancy_service import LossExpectancyService
+                            from src.services.residual_risk_service import ResidualRiskService
+                            from src.services.risk_forecast_service import RiskForecastService
+                            from src.services.risk_trend_service import RiskTrendService
+                            from src.services.risk_drift_service import RiskDriftService
+                            from src.services.risk_quantification_snapshot_service import RiskQuantificationSnapshotService
+
+                            # Sprint 30 Worker Execution Order
+                            await CyberRiskQuantificationService.sync_risks(db)
+                            LossExpectancyService.calculate()
+                            ResidualRiskService.calculate()
+                            RiskForecastService.calculate()
+                            RiskTrendService.calculate()
+                            
+                            prev_risk_snap = RiskQuantificationSnapshotService._snapshots.get(scope_id)
+                            await RiskDriftService.process_drift(db, scope_id=scope_id, prev_snapshot=prev_risk_snap)
+                            await RiskQuantificationSnapshotService.generate_snapshot(db, scope_id)
+                        except Exception as risk_err:
+                            import logging
+                            logging.error(f"Failed to perform cyber risk quantification intelligence checks: {risk_err}")
+
                     except Exception as refresh_err:
                         import logging
 

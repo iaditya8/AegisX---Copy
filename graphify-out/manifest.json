@@ -205,8 +205,8 @@
     "semantic_hash": "cc6a567e71f110d84dc586c96beb901d"
   },
   "backend/src/infrastructure/celery/worker.py": {
-    "mtime": 1782580849.3516521,
-    "ast_hash": "bc76a487a84bca80f68b147f4d4e14d0",
+    "mtime": 1782581365.9854996,
+    "ast_hash": "b4f4ac3e6a19563001fb6f405b9492f8",
     "semantic_hash": ""
   },
   "backend/src/infrastructure/database/models.py": {
@@ -220,8 +220,8 @@
     "semantic_hash": "e9df1259af19fb708350b2b937c006e7"
   },
   "backend/src/main.py": {
-    "mtime": 1782580917.5555623,
-    "ast_hash": "fbde5d3ad261493863b686d480f3f2ec",
+    "mtime": 1782581469.560295,
+    "ast_hash": "e2c556ca02fd4f23b3503fbe8563a548",
     "semantic_hash": ""
   },
   "backend/src/plugins/amass.py": {
@@ -290,8 +290,8 @@
     "semantic_hash": "786254af83392568c552728d126a8c66"
   },
   "backend/src/services/ai_context_builder.py": {
-    "mtime": 1782580867.5719466,
-    "ast_hash": "96e5b9878126cb991aa589218828cbef",
+    "mtime": 1782581395.2174735,
+    "ast_hash": "31bc4c73300a794b0f03090c316d1b90",
     "semantic_hash": ""
   },
   "backend/src/services/ai_guardrails.py": {
@@ -300,8 +300,8 @@
     "semantic_hash": "cacac50b1dd10c0ccd714ab1b0e10e86"
   },
   "backend/src/services/ai_prompt_builder.py": {
-    "mtime": 1782580890.4957483,
-    "ast_hash": "174993d986a44805b39eeb1b3a6ef606",
+    "mtime": 1782581438.5085516,
+    "ast_hash": "d2222ad618d7dc63bc7cf85293a22faf",
     "semantic_hash": ""
   },
   "backend/src/services/ai_provider.py": {
@@ -2512,6 +2512,81 @@
   "backend/tests/integration/test_security_operations_analytics.py": {
     "mtime": 1782580972.2973418,
     "ast_hash": "f7e65f146a57e9a058d1c29ac8837152",
+    "semantic_hash": ""
+  },
+  "backend/src/api/v1/routers/cyber_risk_quantification.py": {
+    "mtime": 1782581453.038586,
+    "ast_hash": "923d33e9b5a6f49396dab4289f898efe",
+    "semantic_hash": ""
+  },
+  "backend/src/domain/entities/cyber_risk_quantification.py": {
+    "mtime": 1782581289.4725516,
+    "ast_hash": "ba1ce3117c893e90497b321143af385d",
+    "semantic_hash": ""
+  },
+  "backend/src/services/cyber_risk_quantification_service.py": {
+    "mtime": 1782581357.258279,
+    "ast_hash": "1faac1dc94434b34861319ecfa783be1",
+    "semantic_hash": ""
+  },
+  "backend/src/services/loss_expectancy_service.py": {
+    "mtime": 1782581323.1393342,
+    "ast_hash": "554c9f5b8425fdbb39e505fe88521d70",
+    "semantic_hash": ""
+  },
+  "backend/src/services/quantified_risk_history_service.py": {
+    "mtime": 1782581318.004832,
+    "ast_hash": "538b64c06061f35709191d514a6cadb5",
+    "semantic_hash": ""
+  },
+  "backend/src/services/residual_risk_service.py": {
+    "mtime": 1782581327.5228305,
+    "ast_hash": "89ba086af93fa4e48402c555f2237b6e",
+    "semantic_hash": ""
+  },
+  "backend/src/services/risk_drift_service.py": {
+    "mtime": 1782581343.2961135,
+    "ast_hash": "2d59578ab46d4bee04cbbc70ec1cf581",
+    "semantic_hash": ""
+  },
+  "backend/src/services/risk_forecast_service.py": {
+    "mtime": 1782581332.7047086,
+    "ast_hash": "18226d8b02089890dcf50db1ae993606",
+    "semantic_hash": ""
+  },
+  "backend/src/services/risk_frequency_registry.py": {
+    "mtime": 1782581299.949685,
+    "ast_hash": "50d4adc0d809ea15bfc42e107061b4dd",
+    "semantic_hash": ""
+  },
+  "backend/src/services/risk_impact_registry.py": {
+    "mtime": 1782581304.8356493,
+    "ast_hash": "dbcf29d9290422de47c39a8277be7068",
+    "semantic_hash": ""
+  },
+  "backend/src/services/risk_quantification_fingerprint_service.py": {
+    "mtime": 1782581308.7803934,
+    "ast_hash": "7c795689a1aa30a840b84dd49388eb64",
+    "semantic_hash": ""
+  },
+  "backend/src/services/risk_quantification_snapshot_service.py": {
+    "mtime": 1782581349.454089,
+    "ast_hash": "fa6097934eee89989b7942d6fe9cbef9",
+    "semantic_hash": ""
+  },
+  "backend/src/services/risk_scenario_registry.py": {
+    "mtime": 1782581295.1454468,
+    "ast_hash": "cca9a1b4bd12092e41f0f85f0788becd",
+    "semantic_hash": ""
+  },
+  "backend/src/services/risk_trend_service.py": {
+    "mtime": 1782581337.7641373,
+    "ast_hash": "fcb0d279c3b66f0abcf8b761c9f6dcaa",
+    "semantic_hash": ""
+  },
+  "backend/tests/integration/test_cyber_risk_quantification.py": {
+    "mtime": 1782581510.96311,
+    "ast_hash": "56788c75e5be6ec88d3ce51f50c36ff8",
     "semantic_hash": ""
   }
 }
