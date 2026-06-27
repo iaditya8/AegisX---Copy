@@ -696,6 +696,20 @@ async def _execute_workflow_async(
                             import logging
                             logging.error(f"Failed to process security posture checks: {posture_err}")
 
+                        try:
+                            from src.services.control_validation_service import ControlValidationService
+                            from src.services.control_drift_service import ControlDriftService
+                            from src.services.control_validation_snapshot_service import ControlValidationSnapshotService
+
+                            await ControlValidationService.sync_controls(db)
+
+                            prev_control_snap = ControlValidationSnapshotService._snapshots.get(scope_id)
+                            await ControlDriftService.check_drift(db, scope_id=scope_id, prev_snapshot=prev_control_snap)
+                            await ControlValidationSnapshotService.generate_snapshot(db, scope_id)
+                        except Exception as control_err:
+                            import logging
+                            logging.error(f"Failed to process control validation checks: {control_err}")
+
                     except Exception as refresh_err:
                         import logging
 

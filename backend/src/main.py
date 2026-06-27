@@ -22,6 +22,7 @@ from src.api.v1.routers.monitoring import router as monitoring_router
 from src.api.v1.routers.purple_team import router as purple_team_router
 from src.api.v1.routers.exposures import router as exposures_router
 from src.api.v1.routers.security_posture import router as security_posture_router
+from src.api.v1.routers.control_validation import router as control_validation_router
 from src.api.v1.routers.plugins import router as plugins_router
 from src.api.v1.routers.recommendations import router as recommendations_router
 from src.api.v1.routers.remediations import router as remediations_router
@@ -82,6 +83,7 @@ app.include_router(hunts_router, prefix=settings.API_V1_STR)
 app.include_router(purple_team_router, prefix=settings.API_V1_STR)
 app.include_router(exposures_router, prefix=settings.API_V1_STR)
 app.include_router(security_posture_router, prefix=settings.API_V1_STR)
+app.include_router(control_validation_router, prefix=settings.API_V1_STR)
 
 
 # Global Exception Handlers for standardizing error shapes

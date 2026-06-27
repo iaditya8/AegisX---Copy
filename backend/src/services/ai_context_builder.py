@@ -306,6 +306,7 @@ class AIContextBuilder:
         pt_data = await cls._build_purple_team_data(scope_id)
         exposure_data = await cls._build_exposure_data(scope_id)
         posture_data = await cls._build_security_posture_context_block(scope_id)
+        control_data = await cls._build_control_validation_context_block(scope_id)
 
         return {
             "context_version": CONTEXT_VERSION,
@@ -338,6 +339,7 @@ class AIContextBuilder:
             **pt_data,
             **exposure_data,
             **posture_data,
+            **control_data,
         }
 
     @classmethod
@@ -519,6 +521,7 @@ class AIContextBuilder:
         pt_data = await cls._build_purple_team_data(scope_id)
         exposure_data = await cls._build_exposure_data(scope_id)
         posture_data = await cls._build_security_posture_context_block(scope_id)
+        control_data = await cls._build_control_validation_context_block(scope_id)
 
         return {
             "context_version": CONTEXT_VERSION,
@@ -554,6 +557,7 @@ class AIContextBuilder:
                 "active_exposures": exposure_data["active_exposures"],
                 "attack_surface_inventory": exposure_data["attack_surface_inventory"],
                 **posture_data,
+                **control_data,
             },
             "governance": gov_data,
             **monitoring_data,
@@ -566,6 +570,7 @@ class AIContextBuilder:
             **pt_data,
             **exposure_data,
             **posture_data,
+            **control_data,
             "risk": report["risk"],
             "findings": report["findings"],
             "correlation": report["exposure"],
@@ -671,6 +676,7 @@ class AIContextBuilder:
         pt_data = await cls._build_purple_team_data(scope_id)
         exposure_data = await cls._build_exposure_data(scope_id)
         posture_data = await cls._build_security_posture_context_block(scope_id)
+        control_data = await cls._build_control_validation_context_block(scope_id)
 
         return {
             "context_version": CONTEXT_VERSION,
@@ -695,6 +701,7 @@ class AIContextBuilder:
                 "active_exposures": exposure_data["active_exposures"],
                 "attack_surface_inventory": exposure_data["attack_surface_inventory"],
                 **posture_data,
+                **control_data,
             },
             "governance": gov_data,
             **monitoring_data,
@@ -705,6 +712,7 @@ class AIContextBuilder:
             **pt_data,
             **exposure_data,
             **posture_data,
+            **control_data,
             "risk": report["risk"],
             "findings": [finding_dict],
             "correlation": report["exposure"],
@@ -737,6 +745,7 @@ class AIContextBuilder:
         pt_data = await cls._build_purple_team_data(scope_id=None)
         exposure_data = await cls._build_exposure_data(scope_id=None)
         posture_data = await cls._build_global_security_posture_context_block()
+        control_data = await cls._build_global_control_validation_context_block()
 
         return {
             "context_version": CONTEXT_VERSION,
@@ -752,6 +761,7 @@ class AIContextBuilder:
             **pt_data,
             **exposure_data,
             **posture_data,
+            **control_data,
             "risk": {
                 "risk_distribution": report.get("risk_distribution", {}),
                 "top_risky_assets": report.get("top_risky_assets", []),
@@ -954,6 +964,7 @@ class AIContextBuilder:
         pt_data = await cls._build_purple_team_data(scope_id)
         exposure_data = await cls._build_exposure_data(scope_id)
         posture_data = await cls._build_security_posture_context_block(scope_id)
+        control_data = await cls._build_control_validation_context_block(scope_id)
 
         return {
             "context_version": CONTEXT_VERSION,
@@ -976,6 +987,7 @@ class AIContextBuilder:
             **pt_data,
             **exposure_data,
             **posture_data,
+            **control_data,
         }
 
     @classmethod
@@ -1066,3 +1078,60 @@ class AIContextBuilder:
     async def _build_global_security_posture_context_block(cls) -> Dict[str, Any]:
         """Aggregate global security posture summary across all scopes."""
         return await cls._build_security_posture_context_block(scope_id=None)
+
+    @classmethod
+    async def _build_control_validation_context_block(
+        cls, scope_id: Optional[uuid.UUID] = None
+    ) -> Dict[str, Any]:
+        """Aggregate control validation summary, coverage, active controls, and status counts."""
+        if scope_id and isinstance(scope_id, str):
+            try:
+                scope_id = uuid.UUID(scope_id)
+            except ValueError:
+                pass
+
+        from src.services.control_validation_snapshot_service import ControlValidationSnapshotService
+        from src.services.control_validation_service import ControlValidationService
+        from src.services.control_history_service import ControlHistoryService
+        from src.services.control_correlation_service import ControlCorrelationService
+
+        snapshot = ControlValidationSnapshotService.get_snapshot(scope_id)
+        controls = ControlValidationService.get_all_controls()
+
+        active_controls_list = []
+        for c in controls:
+            if c.status.value in ["ACTIVE", "DEGRADED", "FAILED"]:
+                cdata = ControlValidationService.to_response(c).model_dump()
+                cdata["control_id"] = str(c.control_id)
+                cdata["history"] = [
+                    {
+                        "timestamp": h.timestamp.isoformat(),
+                        "event_type": h.event_type,
+                        "details": h.details,
+                    }
+                    for h in ControlHistoryService.get_history(c.control_id)
+                ]
+                cdata["correlations"] = ControlCorrelationService.get_correlations(c.control_id)
+                cdata["validations"] = [
+                    {
+                        "validation_id": str(v.validation_id),
+                        "validation_status": v.validation_status.value,
+                        "effectiveness_score": v.effectiveness_score,
+                        "attack_technique": v.attack_technique,
+                        "evidence": v.evidence,
+                        "created_at": v.created_at.isoformat(),
+                    }
+                    for v in ControlValidationService.get_validations(c.control_id)
+                ]
+                active_controls_list.append(cdata)
+
+        return {
+            "control_validation_summary": snapshot["summary"],
+            "control_coverage": snapshot.get("coverage", {}),
+            "active_controls": active_controls_list,
+        }
+
+    @classmethod
+    async def _build_global_control_validation_context_block(cls) -> Dict[str, Any]:
+        """Aggregate global control validation summary across all scopes."""
+        return await cls._build_control_validation_context_block(scope_id=None)
