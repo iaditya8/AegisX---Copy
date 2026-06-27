@@ -645,6 +645,29 @@ async def _execute_workflow_async(
                         except Exception as hunt_err:
                             import logging
                             logging.error(f"Failed to process threat hunting checks: {hunt_err}")
+
+                        try:
+                            from src.services.attack_validation_service import AttackValidationService
+                            from src.services.purple_team_drift_service import PurpleTeamDriftService
+                            from src.services.purple_team_snapshot_service import PurpleTeamSnapshotService
+                            from src.services.purple_team_service import PurpleTeamService
+                            from src.domain.entities.purple_team import ExerciseStatus
+
+                            exercises = PurpleTeamService.get_all_exercises()
+                            if scope_id:
+                                exercises = [e for e in exercises if e.scope_id == scope_id]
+
+                            for ex in exercises:
+                                if ex.status != ExerciseStatus.CLOSED:
+                                    await AttackValidationService.validate_exercise_techniques(db, ex.exercise_id)
+
+                            prev_pt_snap = PurpleTeamSnapshotService._snapshots.get(scope_id)
+                            await PurpleTeamDriftService.check_drift(db, scope_id=scope_id, prev_snapshot=prev_pt_snap)
+                            PurpleTeamSnapshotService.generate_snapshot(scope_id)
+                        except Exception as pt_err:
+                            import logging
+                            logging.error(f"Failed to process purple team checks: {pt_err}")
+
                     except Exception as refresh_err:
                         import logging
 

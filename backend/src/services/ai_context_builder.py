@@ -303,6 +303,7 @@ class AIContextBuilder:
                 pass
 
         th_data = await cls._build_threat_hunting_data(scope_id)
+        pt_data = await cls._build_purple_team_data(scope_id)
 
         return {
             "context_version": CONTEXT_VERSION,
@@ -332,6 +333,7 @@ class AIContextBuilder:
             "linked_evidence": evidence,
             "asset_context": asset_context,
             **th_data,
+            **pt_data,
         }
 
     @classmethod
@@ -420,6 +422,62 @@ class AIContextBuilder:
         }
 
     @classmethod
+    async def _build_purple_team_data(
+        cls, scope_id: Optional[uuid.UUID] = None
+    ) -> Dict[str, Any]:
+        """Aggregate Purple Team summary, active exercises, and validation statistics."""
+        if scope_id and isinstance(scope_id, str):
+            try:
+                scope_id = uuid.UUID(scope_id)
+            except ValueError:
+                pass
+
+        from src.services.purple_team_snapshot_service import PurpleTeamSnapshotService
+        from src.services.purple_team_service import PurpleTeamService
+        from src.services.purple_team_finding_service import PurpleTeamFindingService
+        from src.services.attack_validation_service import AttackValidationService
+
+        snapshot = PurpleTeamSnapshotService.get_snapshot(scope_id)
+        exercises = PurpleTeamService.get_all_exercises()
+        if scope_id:
+            exercises = [e for e in exercises if e.scope_id == scope_id]
+
+        active_exercises_list = [
+            PurpleTeamService.to_response(e).model_dump()
+            for e in exercises
+            if e.status.value in ["OPEN", "ACTIVE", "UNDER_REVIEW", "COMPLETED"]
+        ]
+
+        for ex in active_exercises_list:
+            ex_id_raw = ex["exercise_id"]
+            ex["exercise_id"] = str(ex_id_raw)
+            ex["scope_id"] = str(ex["scope_id"]) if ex["scope_id"] else None
+            ex_id = uuid.UUID(ex_id_raw) if isinstance(ex_id_raw, str) else ex_id_raw
+            ex["findings"] = [f.model_dump() for f in PurpleTeamFindingService.get_findings(ex_id)]
+            ex["validations"] = [
+                {
+                    "validation_id": str(v.validation_id),
+                    "technique_id": v.technique_id,
+                    "validation_status": v.validation_status.value,
+                    "expected_detection": v.expected_detection,
+                    "actual_detection": v.actual_detection,
+                    "coverage_gap": v.coverage_gap,
+                }
+                for v in AttackValidationService.get_exercise_validations(ex_id)
+            ]
+
+        for item in active_exercises_list:
+            for f in item.get("findings", []):
+                f["finding_id"] = str(f["finding_id"])
+                f["exercise_id"] = str(f["exercise_id"])
+
+        return {
+            "purple_team_summary": snapshot["summary"],
+            "purple_team_coverage": snapshot["coverage"],
+            "active_exercises": active_exercises_list,
+        }
+
+    @classmethod
     async def build_asset_context(
         cls, db: AsyncSession, asset_id: uuid.UUID
     ) -> Dict[str, Any]:
@@ -454,6 +512,7 @@ class AIContextBuilder:
 
         ti_data = await cls._build_threat_intelligence_data(scope_id)
         th_data = await cls._build_threat_hunting_data(scope_id)
+        pt_data = await cls._build_purple_team_data(scope_id)
 
         return {
             "context_version": CONTEXT_VERSION,
@@ -482,6 +541,9 @@ class AIContextBuilder:
                 "threat_hunting_summary": th_data["threat_hunting_summary"],
                 "hunt_coverage": th_data["hunt_coverage"],
                 "active_hunts": th_data["active_hunts"],
+                "purple_team_summary": pt_data["purple_team_summary"],
+                "purple_team_coverage": pt_data["purple_team_coverage"],
+                "active_exercises": pt_data["active_exercises"],
             },
             "governance": gov_data,
             **monitoring_data,
@@ -491,6 +553,7 @@ class AIContextBuilder:
             **detection_data,
             **ti_data,
             **th_data,
+            **pt_data,
             "risk": report["risk"],
             "findings": report["findings"],
             "correlation": report["exposure"],
@@ -593,6 +656,7 @@ class AIContextBuilder:
             scope_id = asset_obj.scope_id if asset_obj else None
 
         th_data = await cls._build_threat_hunting_data(scope_id)
+        pt_data = await cls._build_purple_team_data(scope_id)
 
         return {
             "context_version": CONTEXT_VERSION,
@@ -610,6 +674,9 @@ class AIContextBuilder:
                 "threat_hunting_summary": th_data["threat_hunting_summary"],
                 "hunt_coverage": th_data["hunt_coverage"],
                 "active_hunts": th_data["active_hunts"],
+                "purple_team_summary": pt_data["purple_team_summary"],
+                "purple_team_coverage": pt_data["purple_team_coverage"],
+                "active_exercises": pt_data["active_exercises"],
             },
             "governance": gov_data,
             **monitoring_data,
@@ -617,6 +684,7 @@ class AIContextBuilder:
             **incident_data,
             **case_data,
             **th_data,
+            **pt_data,
             "risk": report["risk"],
             "findings": [finding_dict],
             "correlation": report["exposure"],
@@ -646,6 +714,7 @@ class AIContextBuilder:
         detection_data = await cls._build_detection_data()
         ti_data = await cls._build_threat_intelligence_data(scope_id=None)
         th_data = await cls._build_threat_hunting_data(scope_id=None)
+        pt_data = await cls._build_purple_team_data(scope_id=None)
 
         return {
             "context_version": CONTEXT_VERSION,
@@ -658,6 +727,7 @@ class AIContextBuilder:
             **detection_data,
             **ti_data,
             **th_data,
+            **pt_data,
             "risk": {
                 "risk_distribution": report.get("risk_distribution", {}),
                 "top_risky_assets": report.get("top_risky_assets", []),
@@ -857,6 +927,7 @@ class AIContextBuilder:
                 pass
 
         th_data = await cls._build_threat_hunting_data(scope_id)
+        pt_data = await cls._build_purple_team_data(scope_id)
 
         return {
             "context_version": CONTEXT_VERSION,
@@ -876,4 +947,5 @@ class AIContextBuilder:
             "case_evidence": case_evidence_details,
             "asset_context": asset_context,
             **th_data,
+            **pt_data,
         }
