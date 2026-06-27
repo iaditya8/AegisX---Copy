@@ -668,6 +668,20 @@ async def _execute_workflow_async(
                             import logging
                             logging.error(f"Failed to process purple team checks: {pt_err}")
 
+                        try:
+                            from src.services.exposure_service import ExposureService
+                            from src.services.exposure_drift_service import ExposureDriftService
+                            from src.services.exposure_snapshot_service import ExposureSnapshotService
+
+                            await ExposureService.sync_exposures(db)
+
+                            prev_exp_snap = ExposureSnapshotService._snapshots.get(scope_id)
+                            await ExposureDriftService.check_drift(db, scope_id=scope_id, prev_snapshot=prev_exp_snap)
+                            await ExposureSnapshotService.generate_snapshot(db, scope_id)
+                        except Exception as exp_err:
+                            import logging
+                            logging.error(f"Failed to process exposure management checks: {exp_err}")
+
                     except Exception as refresh_err:
                         import logging
 

@@ -205,8 +205,8 @@
     "semantic_hash": "cc6a567e71f110d84dc586c96beb901d"
   },
   "backend/src/infrastructure/celery/worker.py": {
-    "mtime": 1782523009.835688,
-    "ast_hash": "3b7d7a2216384294fe6a96dfd37be57d",
+    "mtime": 1782558857.4175951,
+    "ast_hash": "ff7060cf64f1c1c4da51d094fc900bd9",
     "semantic_hash": ""
   },
   "backend/src/infrastructure/database/models.py": {
@@ -220,8 +220,8 @@
     "semantic_hash": "e9df1259af19fb708350b2b937c006e7"
   },
   "backend/src/main.py": {
-    "mtime": 1782523115.4621704,
-    "ast_hash": "7d6958154960e623347be33cd8fb457a",
+    "mtime": 1782558984.987631,
+    "ast_hash": "a3f3427a31f4fdd0670379e90c6a724a",
     "semantic_hash": ""
   },
   "backend/src/plugins/amass.py": {
@@ -290,8 +290,8 @@
     "semantic_hash": "786254af83392568c552728d126a8c66"
   },
   "backend/src/services/ai_context_builder.py": {
-    "mtime": 1782523252.4384878,
-    "ast_hash": "7adad6e09c7c1e6b30b191f0066a16bc",
+    "mtime": 1782558924.9905071,
+    "ast_hash": "96e9e1a2402ec5d1f0e48927b102bea7",
     "semantic_hash": ""
   },
   "backend/src/services/ai_guardrails.py": {
@@ -300,8 +300,8 @@
     "semantic_hash": "cacac50b1dd10c0ccd714ab1b0e10e86"
   },
   "backend/src/services/ai_prompt_builder.py": {
-    "mtime": 1782523089.4452107,
-    "ast_hash": "0ffd17558b633259bd033575d092600e",
+    "mtime": 1782558936.5128064,
+    "ast_hash": "c6c81904068dbab55e4b39278c14f57f",
     "semantic_hash": ""
   },
   "backend/src/services/ai_provider.py": {
@@ -1937,6 +1937,86 @@
   ".vscode/settings.json": {
     "mtime": 1782524377.0383792,
     "ast_hash": "96fc659049e12989d913e916d307424a",
+    "semantic_hash": ""
+  },
+  "backend/src/api/v1/routers/purple_team.py": {
+    "mtime": 1782558975.462993,
+    "ast_hash": "ed714645706e1daac1c42d7e4924dc22",
+    "semantic_hash": ""
+  },
+  "backend/src/domain/entities/purple_team.py": {
+    "mtime": 1782558715.4044843,
+    "ast_hash": "3994088a3b12ff60c8509ef4f6961431",
+    "semantic_hash": ""
+  },
+  "backend/src/services/adversary_emulation_service.py": {
+    "mtime": 1782558784.43117,
+    "ast_hash": "349e5f1f7a7bf00458d644f59b88555f",
+    "semantic_hash": ""
+  },
+  "backend/src/services/attack_validation_registry.py": {
+    "mtime": 1782558741.951384,
+    "ast_hash": "4400e390ee9f78e571cf3b8b08d8fb8c",
+    "semantic_hash": ""
+  },
+  "backend/src/services/attack_validation_service.py": {
+    "mtime": 1782558792.973433,
+    "ast_hash": "03c5d0a3b9bb9543335b9d90b7a65962",
+    "semantic_hash": ""
+  },
+  "backend/src/services/detection_validation_service.py": {
+    "mtime": 1782558797.8399017,
+    "ast_hash": "ef75db2baa2ca67f73f067293413087e",
+    "semantic_hash": ""
+  },
+  "backend/src/services/exercise_type_registry.py": {
+    "mtime": 1782558727.7888246,
+    "ast_hash": "f24c8d1fbeb36f7219af0e7490db0fa4",
+    "semantic_hash": ""
+  },
+  "backend/src/services/purple_team_coverage_service.py": {
+    "mtime": 1782558811.7964804,
+    "ast_hash": "7f03ccd16882518a4372859e183cdbe9",
+    "semantic_hash": ""
+  },
+  "backend/src/services/purple_team_drift_service.py": {
+    "mtime": 1782558823.6003394,
+    "ast_hash": "42520f9be509b48304857aac51552229",
+    "semantic_hash": ""
+  },
+  "backend/src/services/purple_team_finding_service.py": {
+    "mtime": 1782558802.4587724,
+    "ast_hash": "1ebba3cb1ec5daa60ff52e8a141982df",
+    "semantic_hash": ""
+  },
+  "backend/src/services/purple_team_fingerprint_service.py": {
+    "mtime": 1782558752.132954,
+    "ast_hash": "63e6e1785e6c518e0dd366b6f5272d8f",
+    "semantic_hash": ""
+  },
+  "backend/src/services/purple_team_history_service.py": {
+    "mtime": 1782558758.832942,
+    "ast_hash": "120ccdfed88ea8bee8db0c17af06bdcf",
+    "semantic_hash": ""
+  },
+  "backend/src/services/purple_team_service.py": {
+    "mtime": 1782558777.6114972,
+    "ast_hash": "5317c407071047df1148ecce273cd6da",
+    "semantic_hash": ""
+  },
+  "backend/src/services/purple_team_snapshot_service.py": {
+    "mtime": 1782558833.2007422,
+    "ast_hash": "ea29009e316a67a3097ba69802ee581a",
+    "semantic_hash": ""
+  },
+  "backend/src/services/validation_status_registry.py": {
+    "mtime": 1782558732.079146,
+    "ast_hash": "e275846a6f7620f92adcc20a2d07a131",
+    "semantic_hash": ""
+  },
+  "backend/tests/integration/test_purple_team.py": {
+    "mtime": 1782559141.6066554,
+    "ast_hash": "d29444b90799bce9c1e38b8e6619c503",
     "semantic_hash": ""
   }
 }

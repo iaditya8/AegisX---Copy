@@ -304,6 +304,7 @@ class AIContextBuilder:
 
         th_data = await cls._build_threat_hunting_data(scope_id)
         pt_data = await cls._build_purple_team_data(scope_id)
+        exposure_data = await cls._build_exposure_data(scope_id)
 
         return {
             "context_version": CONTEXT_VERSION,
@@ -334,6 +335,7 @@ class AIContextBuilder:
             "asset_context": asset_context,
             **th_data,
             **pt_data,
+            **exposure_data,
         }
 
     @classmethod
@@ -513,6 +515,7 @@ class AIContextBuilder:
         ti_data = await cls._build_threat_intelligence_data(scope_id)
         th_data = await cls._build_threat_hunting_data(scope_id)
         pt_data = await cls._build_purple_team_data(scope_id)
+        exposure_data = await cls._build_exposure_data(scope_id)
 
         return {
             "context_version": CONTEXT_VERSION,
@@ -544,6 +547,9 @@ class AIContextBuilder:
                 "purple_team_summary": pt_data["purple_team_summary"],
                 "purple_team_coverage": pt_data["purple_team_coverage"],
                 "active_exercises": pt_data["active_exercises"],
+                "exposure_summary": exposure_data["exposure_summary"],
+                "active_exposures": exposure_data["active_exposures"],
+                "attack_surface_inventory": exposure_data["attack_surface_inventory"],
             },
             "governance": gov_data,
             **monitoring_data,
@@ -554,6 +560,7 @@ class AIContextBuilder:
             **ti_data,
             **th_data,
             **pt_data,
+            **exposure_data,
             "risk": report["risk"],
             "findings": report["findings"],
             "correlation": report["exposure"],
@@ -657,6 +664,7 @@ class AIContextBuilder:
 
         th_data = await cls._build_threat_hunting_data(scope_id)
         pt_data = await cls._build_purple_team_data(scope_id)
+        exposure_data = await cls._build_exposure_data(scope_id)
 
         return {
             "context_version": CONTEXT_VERSION,
@@ -677,6 +685,9 @@ class AIContextBuilder:
                 "purple_team_summary": pt_data["purple_team_summary"],
                 "purple_team_coverage": pt_data["purple_team_coverage"],
                 "active_exercises": pt_data["active_exercises"],
+                "exposure_summary": exposure_data["exposure_summary"],
+                "active_exposures": exposure_data["active_exposures"],
+                "attack_surface_inventory": exposure_data["attack_surface_inventory"],
             },
             "governance": gov_data,
             **monitoring_data,
@@ -685,6 +696,7 @@ class AIContextBuilder:
             **case_data,
             **th_data,
             **pt_data,
+            **exposure_data,
             "risk": report["risk"],
             "findings": [finding_dict],
             "correlation": report["exposure"],
@@ -715,6 +727,7 @@ class AIContextBuilder:
         ti_data = await cls._build_threat_intelligence_data(scope_id=None)
         th_data = await cls._build_threat_hunting_data(scope_id=None)
         pt_data = await cls._build_purple_team_data(scope_id=None)
+        exposure_data = await cls._build_exposure_data(scope_id=None)
 
         return {
             "context_version": CONTEXT_VERSION,
@@ -728,6 +741,7 @@ class AIContextBuilder:
             **ti_data,
             **th_data,
             **pt_data,
+            **exposure_data,
             "risk": {
                 "risk_distribution": report.get("risk_distribution", {}),
                 "top_risky_assets": report.get("top_risky_assets", []),
@@ -928,6 +942,7 @@ class AIContextBuilder:
 
         th_data = await cls._build_threat_hunting_data(scope_id)
         pt_data = await cls._build_purple_team_data(scope_id)
+        exposure_data = await cls._build_exposure_data(scope_id)
 
         return {
             "context_version": CONTEXT_VERSION,
@@ -948,4 +963,47 @@ class AIContextBuilder:
             "asset_context": asset_context,
             **th_data,
             **pt_data,
+            **exposure_data,
+        }
+
+    @classmethod
+    async def _build_exposure_data(
+        cls, scope_id: Optional[uuid.UUID] = None
+    ) -> Dict[str, Any]:
+        """Aggregate Exposure Management summary, active exposures, attack surface categories, and drift statistics."""
+        if scope_id and isinstance(scope_id, str):
+            try:
+                scope_id = uuid.UUID(scope_id)
+            except ValueError:
+                pass
+
+        from src.services.exposure_snapshot_service import ExposureSnapshotService
+        from src.services.exposure_service import ExposureService
+        from src.services.exposure_history_service import ExposureHistoryService
+        from src.services.exposure_correlation_service import ExposureCorrelationService
+
+        snapshot = ExposureSnapshotService.get_snapshot(scope_id)
+        exposures = ExposureService.get_all_exposures()
+
+        active_exposures_list = []
+        for e in exposures:
+            if e.status.value in ["OPEN", "VALIDATED", "ACCEPTED", "MITIGATED"]:
+                edata = ExposureService.to_response(e).model_dump()
+                edata["exposure_id"] = str(e.exposure_id)
+                edata["asset_id"] = str(e.asset_id)
+                edata["history"] = [
+                    {
+                        "timestamp": h.timestamp.isoformat(),
+                        "event_type": h.event_type,
+                        "details": h.details,
+                    }
+                    for h in ExposureHistoryService.get_history(e.exposure_id)
+                ]
+                edata["correlations"] = ExposureCorrelationService.get_correlations(e.exposure_id)
+                active_exposures_list.append(edata)
+
+        return {
+            "exposure_summary": snapshot["summary"],
+            "active_exposures": active_exposures_list,
+            "attack_surface_inventory": snapshot.get("attack_surface", {}),
         }
