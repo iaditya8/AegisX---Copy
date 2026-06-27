@@ -307,6 +307,7 @@ class AIContextBuilder:
         exposure_data = await cls._build_exposure_data(scope_id)
         posture_data = await cls._build_security_posture_context_block(scope_id)
         control_data = await cls._build_control_validation_context_block(scope_id)
+        program_data = await cls._build_security_program_context_block(scope_id)
 
         return {
             "context_version": CONTEXT_VERSION,
@@ -340,6 +341,7 @@ class AIContextBuilder:
             **exposure_data,
             **posture_data,
             **control_data,
+            **program_data,
         }
 
     @classmethod
@@ -522,6 +524,7 @@ class AIContextBuilder:
         exposure_data = await cls._build_exposure_data(scope_id)
         posture_data = await cls._build_security_posture_context_block(scope_id)
         control_data = await cls._build_control_validation_context_block(scope_id)
+        program_data = await cls._build_security_program_context_block(scope_id)
 
         return {
             "context_version": CONTEXT_VERSION,
@@ -558,6 +561,7 @@ class AIContextBuilder:
                 "attack_surface_inventory": exposure_data["attack_surface_inventory"],
                 **posture_data,
                 **control_data,
+                **program_data,
             },
             "governance": gov_data,
             **monitoring_data,
@@ -571,6 +575,7 @@ class AIContextBuilder:
             **exposure_data,
             **posture_data,
             **control_data,
+            **program_data,
             "risk": report["risk"],
             "findings": report["findings"],
             "correlation": report["exposure"],
@@ -677,6 +682,7 @@ class AIContextBuilder:
         exposure_data = await cls._build_exposure_data(scope_id)
         posture_data = await cls._build_security_posture_context_block(scope_id)
         control_data = await cls._build_control_validation_context_block(scope_id)
+        program_data = await cls._build_security_program_context_block(scope_id)
 
         return {
             "context_version": CONTEXT_VERSION,
@@ -702,6 +708,7 @@ class AIContextBuilder:
                 "attack_surface_inventory": exposure_data["attack_surface_inventory"],
                 **posture_data,
                 **control_data,
+                **program_data,
             },
             "governance": gov_data,
             **monitoring_data,
@@ -713,6 +720,7 @@ class AIContextBuilder:
             **exposure_data,
             **posture_data,
             **control_data,
+            **program_data,
             "risk": report["risk"],
             "findings": [finding_dict],
             "correlation": report["exposure"],
@@ -746,6 +754,7 @@ class AIContextBuilder:
         exposure_data = await cls._build_exposure_data(scope_id=None)
         posture_data = await cls._build_global_security_posture_context_block()
         control_data = await cls._build_global_control_validation_context_block()
+        program_data = await cls._build_global_security_program_context_block()
 
         return {
             "context_version": CONTEXT_VERSION,
@@ -762,6 +771,7 @@ class AIContextBuilder:
             **exposure_data,
             **posture_data,
             **control_data,
+            **program_data,
             "risk": {
                 "risk_distribution": report.get("risk_distribution", {}),
                 "top_risky_assets": report.get("top_risky_assets", []),
@@ -965,6 +975,7 @@ class AIContextBuilder:
         exposure_data = await cls._build_exposure_data(scope_id)
         posture_data = await cls._build_security_posture_context_block(scope_id)
         control_data = await cls._build_control_validation_context_block(scope_id)
+        program_data = await cls._build_security_program_context_block(scope_id)
 
         return {
             "context_version": CONTEXT_VERSION,
@@ -988,6 +999,7 @@ class AIContextBuilder:
             **exposure_data,
             **posture_data,
             **control_data,
+            **program_data,
         }
 
     @classmethod
@@ -1135,3 +1147,49 @@ class AIContextBuilder:
     async def _build_global_control_validation_context_block(cls) -> Dict[str, Any]:
         """Aggregate global control validation summary across all scopes."""
         return await cls._build_control_validation_context_block(scope_id=None)
+
+    @classmethod
+    async def _build_security_program_context_block(
+        cls, scope_id: Optional[uuid.UUID] = None
+    ) -> Dict[str, Any]:
+        """Aggregate security program summary and details for context."""
+        if scope_id and isinstance(scope_id, str):
+            try:
+                scope_id = uuid.UUID(scope_id)
+            except ValueError:
+                pass
+
+        from src.services.security_program_snapshot_service import SecurityProgramSnapshotService
+        from src.services.security_program_service import SecurityProgramService
+        from src.services.program_history_service import ProgramHistoryService
+        from src.services.program_correlation_service import ProgramCorrelationService
+
+        snapshot = SecurityProgramSnapshotService.get_snapshot(scope_id)
+        programs = SecurityProgramService.get_all_programs()
+        if scope_id:
+            programs = [p for p in programs if p.scope_id == scope_id]
+
+        programs_list = []
+        for p in programs:
+            pdata = SecurityProgramService.to_response(p).model_dump()
+            pdata["program_id"] = str(p.program_id)
+            pdata["history"] = [
+                {
+                    "timestamp": h.timestamp.isoformat(),
+                    "event_type": h.event_type,
+                    "details": h.details,
+                }
+                for h in ProgramHistoryService.get_history(p.program_id)
+            ]
+            pdata["correlations"] = ProgramCorrelationService.get_correlations(p.program_id)
+            programs_list.append(pdata)
+
+        return {
+            "security_program_summary": snapshot["summary"],
+            "security_programs": programs_list,
+        }
+
+    @classmethod
+    async def _build_global_security_program_context_block(cls) -> Dict[str, Any]:
+        """Aggregate global security program summary across all scopes."""
+        return await cls._build_security_program_context_block(scope_id=None)

@@ -710,6 +710,20 @@ async def _execute_workflow_async(
                             import logging
                             logging.error(f"Failed to process control validation checks: {control_err}")
 
+                        try:
+                            from src.services.security_program_service import SecurityProgramService
+                            from src.services.program_drift_service import ProgramDriftService
+                            from src.services.security_program_snapshot_service import SecurityProgramSnapshotService
+
+                            await SecurityProgramService.sync_programs(db)
+
+                            prev_program_snap = SecurityProgramSnapshotService._snapshots.get(scope_id)
+                            await ProgramDriftService.check_drift(db, scope_id=scope_id, prev_snapshot=prev_program_snap)
+                            await SecurityProgramSnapshotService.generate_snapshot(db, scope_id)
+                        except Exception as program_err:
+                            import logging
+                            logging.error(f"Failed to process security program checks: {program_err}")
+
                     except Exception as refresh_err:
                         import logging
 
