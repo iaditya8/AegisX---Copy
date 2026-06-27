@@ -616,6 +616,19 @@ async def _execute_workflow_async(
                         except Exception as det_err:
                             import logging
                             logging.error(f"Failed to process detection coverage checks: {det_err}")
+
+                        try:
+                            from src.services.ioc_correlation_service import IOCCorrelationService
+                            from src.services.ioc_drift_service import IOCDriftService
+                            from src.services.threat_intelligence_snapshot_service import ThreatIntelligenceSnapshotService
+
+                            await IOCCorrelationService.correlate_iocs(db)
+                            prev_ti_snap = ThreatIntelligenceSnapshotService._snapshots.get(scope_id)
+                            await IOCDriftService.check_drift(db, scope_id=scope_id, prev_snapshot=prev_ti_snap)
+                            ThreatIntelligenceSnapshotService.generate_snapshot(scope_id)
+                        except Exception as ti_err:
+                            import logging
+                            logging.error(f"Failed to process threat intelligence checks: {ti_err}")
                     except Exception as refresh_err:
                         import logging
 

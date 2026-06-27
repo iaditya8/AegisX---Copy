@@ -328,6 +328,42 @@ class AIContextBuilder:
         }
 
     @classmethod
+    async def _build_threat_intelligence_data(
+        cls, scope_id: Optional[uuid.UUID] = None
+    ) -> Dict[str, Any]:
+        """Aggregate threat intelligence summary, threat actors, campaigns, and active correlations."""
+        from src.services.threat_intelligence_snapshot_service import ThreatIntelligenceSnapshotService
+        from src.services.threat_actor_service import ThreatActorService
+        from src.services.campaign_service import CampaignService
+        from src.services.ioc_correlation_service import IOCCorrelationService
+
+        snapshot = ThreatIntelligenceSnapshotService.get_snapshot(scope_id)
+        actors = ThreatActorService.get_all_actors(scope_id)
+        campaigns = CampaignService.get_all_campaigns(scope_id)
+        correlations = IOCCorrelationService.get_all_correlations(scope_id)
+
+        correlations_list = [
+            {
+                "correlation_id": str(c.correlation_id),
+                "ioc_id": str(c.ioc_id),
+                "ioc_fingerprint": c.ioc_fingerprint,
+                "entity_type": c.entity_type,
+                "entity_id": str(c.entity_id),
+                "scope_id": str(c.scope_id) if c.scope_id else None,
+                "created_at": c.created_at.isoformat(),
+                "updated_at": c.updated_at.isoformat(),
+            }
+            for c in correlations
+        ]
+
+        return {
+            "threat_intelligence_summary": snapshot["summary"],
+            "threat_actors": [a.model_dump() for a in actors],
+            "campaigns": [c.model_dump() for c in campaigns],
+            "active_correlations": correlations_list,
+        }
+
+    @classmethod
     async def build_asset_context(
         cls, db: AsyncSession, asset_id: uuid.UUID
     ) -> Dict[str, Any]:
@@ -354,6 +390,14 @@ class AIContextBuilder:
         case_data = await cls._build_case_data(db, asset_id)
         detection_data = await cls._build_detection_data()
 
+        scope_id = report["asset"].get("scope_id") if isinstance(report.get("asset"), dict) else None
+        if not scope_id:
+            from src.infrastructure.database.models import Asset
+            asset_obj = await db.get(Asset, asset_id)
+            scope_id = asset_obj.scope_id if asset_obj else None
+
+        ti_data = await cls._build_threat_intelligence_data(scope_id)
+
         return {
             "context_version": CONTEXT_VERSION,
             "asset": {
@@ -374,6 +418,10 @@ class AIContextBuilder:
                 "active_incidents": incident_data["active_incidents"],
                 "case_summary": case_data["case_summary"],
                 "active_cases": case_data["active_cases"],
+                "threat_intelligence_summary": ti_data["threat_intelligence_summary"],
+                "threat_actors": ti_data["threat_actors"],
+                "campaigns": ti_data["campaigns"],
+                "active_correlations": ti_data["active_correlations"],
             },
             "governance": gov_data,
             **monitoring_data,
@@ -381,6 +429,7 @@ class AIContextBuilder:
             **incident_data,
             **case_data,
             **detection_data,
+            **ti_data,
             "risk": report["risk"],
             "findings": report["findings"],
             "correlation": report["exposure"],
@@ -522,6 +571,7 @@ class AIContextBuilder:
         incident_data = await cls._build_incident_data(db, asset_id=None)
         case_data = await cls._build_case_data(db, asset_id=None)
         detection_data = await cls._build_detection_data()
+        ti_data = await cls._build_threat_intelligence_data(scope_id=None)
 
         return {
             "context_version": CONTEXT_VERSION,
@@ -532,6 +582,7 @@ class AIContextBuilder:
             **incident_data,
             **case_data,
             **detection_data,
+            **ti_data,
             "risk": {
                 "risk_distribution": report.get("risk_distribution", {}),
                 "top_risky_assets": report.get("top_risky_assets", []),

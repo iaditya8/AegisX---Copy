@@ -16,6 +16,7 @@ from src.api.v1.routers.health import router as health_router
 from src.api.v1.routers.incidents import router as incidents_router
 from src.api.v1.routers.cases import router as cases_router
 from src.api.v1.routers.detections import router as detections_router
+from src.api.v1.routers.threat_intelligence import router as threat_intelligence_router
 from src.api.v1.routers.monitoring import router as monitoring_router
 from src.api.v1.routers.plugins import router as plugins_router
 from src.api.v1.routers.recommendations import router as recommendations_router
@@ -72,6 +73,7 @@ app.include_router(alerts_router, prefix=settings.API_V1_STR)
 app.include_router(incidents_router, prefix=settings.API_V1_STR)
 app.include_router(cases_router, prefix=settings.API_V1_STR)
 app.include_router(detections_router, prefix=settings.API_V1_STR)
+app.include_router(threat_intelligence_router, prefix=settings.API_V1_STR)
 
 
 # Global Exception Handlers for standardizing error shapes

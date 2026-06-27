@@ -29,6 +29,13 @@ SCOPE_ID = uuid.UUID("55555555-5555-5555-5555-555555555555")
 SCOPE_ID_2 = uuid.UUID("66666666-6666-6666-6666-666666666666")
 
 
+@pytest.fixture(autouse=True)
+def restore_workflow_event_service():
+    orig_emit = WorkflowEventService.emit_event
+    yield
+    WorkflowEventService.emit_event = orig_emit
+
+
 @pytest.fixture
 def mock_admin() -> User:
     user = User()
