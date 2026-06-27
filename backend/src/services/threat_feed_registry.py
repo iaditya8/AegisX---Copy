@@ -1,4 +1,4 @@
-from typing import Set
+from typing import Any, Set
 
 from src.domain.entities.threat_intelligence import ThreatFeedType
 
@@ -16,6 +16,6 @@ class ThreatFeedRegistry:
         return set(cls.FEEDS.keys())
 
     @classmethod
-    def is_valid_feed(cls, feed: ThreatFeedType) -> bool:
+    def is_valid_feed(cls, feed: Any) -> bool:
         """Check if a feed is registered."""
         return feed in cls.FEEDS

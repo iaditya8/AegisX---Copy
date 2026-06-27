@@ -205,8 +205,8 @@
     "semantic_hash": "cc6a567e71f110d84dc586c96beb901d"
   },
   "backend/src/infrastructure/celery/worker.py": {
-    "mtime": 1782521114.881456,
-    "ast_hash": "8a9e0254353e55335373422bd11ee344",
+    "mtime": 1782523009.835688,
+    "ast_hash": "3b7d7a2216384294fe6a96dfd37be57d",
     "semantic_hash": ""
   },
   "backend/src/infrastructure/database/models.py": {
@@ -220,8 +220,8 @@
     "semantic_hash": "e9df1259af19fb708350b2b937c006e7"
   },
   "backend/src/main.py": {
-    "mtime": 1782521186.4456818,
-    "ast_hash": "a898ccb3047965781de4f3a93cd125e7",
+    "mtime": 1782523115.4621704,
+    "ast_hash": "7d6958154960e623347be33cd8fb457a",
     "semantic_hash": ""
   },
   "backend/src/plugins/amass.py": {
@@ -290,8 +290,8 @@
     "semantic_hash": "786254af83392568c552728d126a8c66"
   },
   "backend/src/services/ai_context_builder.py": {
-    "mtime": 1782521141.9987419,
-    "ast_hash": "0d61cd431c5de4ab4e6772412cebc5ef",
+    "mtime": 1782523252.4384878,
+    "ast_hash": "7adad6e09c7c1e6b30b191f0066a16bc",
     "semantic_hash": ""
   },
   "backend/src/services/ai_guardrails.py": {
@@ -300,8 +300,8 @@
     "semantic_hash": "cacac50b1dd10c0ccd714ab1b0e10e86"
   },
   "backend/src/services/ai_prompt_builder.py": {
-    "mtime": 1782521155.8856363,
-    "ast_hash": "a8f1d2b43b66023add024897c833be41",
+    "mtime": 1782523089.4452107,
+    "ast_hash": "0ffd17558b633259bd033575d092600e",
     "semantic_hash": ""
   },
   "backend/src/services/ai_provider.py": {
@@ -1500,7 +1500,7 @@
     "semantic_hash": "29ded97e0a8db742cda8267a52846f8d"
   },
   "Implementation/walkthroughs/sprint_20_walkthrough.md": {
-    "mtime": 1782246943.3004837,
+    "mtime": 1782522288.549781,
     "ast_hash": "3fd28ada9cf39b105d2129e5877a3986",
     "semantic_hash": "3fd28ada9cf39b105d2129e5877a3986"
   },
@@ -1857,6 +1857,81 @@
   "backend/tests/integration/test_threat_intelligence.py": {
     "mtime": 1782521527.8973904,
     "ast_hash": "ef5e1187ae2a7148d344e1aa38ab0422",
+    "semantic_hash": ""
+  },
+  "backend/src/api/v1/routers/hunts.py": {
+    "mtime": 1782523101.6969783,
+    "ast_hash": "cb22677824004b3e1f751c2080465840",
+    "semantic_hash": ""
+  },
+  "backend/src/domain/entities/hunt.py": {
+    "mtime": 1782523164.9631124,
+    "ast_hash": "01035b13151a3ad8a4274721a97dd9f2",
+    "semantic_hash": ""
+  },
+  "backend/src/services/attack_hunt_service.py": {
+    "mtime": 1782523198.0468931,
+    "ast_hash": "cd0890dfdfd60d2cf12e5bc1b2b77716",
+    "semantic_hash": ""
+  },
+  "backend/src/services/hunt_coverage_service.py": {
+    "mtime": 1782522985.8595343,
+    "ast_hash": "79d4ccb2c69010f2408ce21c6e390650",
+    "semantic_hash": ""
+  },
+  "backend/src/services/hunt_drift_service.py": {
+    "mtime": 1782522992.0793524,
+    "ast_hash": "24b4a936ea87367dcc80f310e503314c",
+    "semantic_hash": ""
+  },
+  "backend/src/services/hunt_finding_service.py": {
+    "mtime": 1782522940.7081373,
+    "ast_hash": "3f1ce76c8f78fa308468b91fba076b27",
+    "semantic_hash": ""
+  },
+  "backend/src/services/hunt_fingerprint_service.py": {
+    "mtime": 1782522922.9550698,
+    "ast_hash": "600170e77d2012a353b3ed5a9e09feb6",
+    "semantic_hash": ""
+  },
+  "backend/src/services/hunt_history_service.py": {
+    "mtime": 1782522930.2387185,
+    "ast_hash": "e33d47251cecc818461d197a2bce0dfd",
+    "semantic_hash": ""
+  },
+  "backend/src/services/hunt_hypothesis_service.py": {
+    "mtime": 1782522935.6090543,
+    "ast_hash": "87580821957d7e98452b1bbc20b2faa2",
+    "semantic_hash": ""
+  },
+  "backend/src/services/hunt_service.py": {
+    "mtime": 1782522954.701032,
+    "ast_hash": "b04713bad93cdc65aec6d5d0fb7551e1",
+    "semantic_hash": ""
+  },
+  "backend/src/services/hunt_severity_registry.py": {
+    "mtime": 1782523205.908018,
+    "ast_hash": "898cdf31740f4c2e3a10bd3d8a6c7a85",
+    "semantic_hash": ""
+  },
+  "backend/src/services/hunt_snapshot_service.py": {
+    "mtime": 1782523001.7129478,
+    "ast_hash": "5ad3bed72fb579d7041670c6e54a3f14",
+    "semantic_hash": ""
+  },
+  "backend/src/services/hunt_type_registry.py": {
+    "mtime": 1782522906.4473042,
+    "ast_hash": "aef07de445d8af0236fbb51cbcc72fc4",
+    "semantic_hash": ""
+  },
+  "backend/src/services/ioc_hunt_service.py": {
+    "mtime": 1782522961.4386585,
+    "ast_hash": "bde14933951edf7c3acd31b3bb4b126e",
+    "semantic_hash": ""
+  },
+  "backend/tests/integration/test_hunts.py": {
+    "mtime": 1782523385.0076568,
+    "ast_hash": "c4fe9078ba8179a2594a4e3d837af4d0",
     "semantic_hash": ""
   }
 }
