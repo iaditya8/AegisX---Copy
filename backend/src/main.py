@@ -28,6 +28,7 @@ from src.api.v1.routers.executive_reporting import router as executive_reporting
 from src.api.v1.routers.cyber_resilience import router as cyber_resilience_router
 from src.api.v1.routers.security_operations_analytics import router as security_operations_analytics_router
 from src.api.v1.routers.cyber_risk_quantification import router as cyber_risk_quantification_router
+from src.api.v1.routers.governance_risk_compliance import router as governance_risk_compliance_router
 from src.api.v1.routers.plugins import router as plugins_router
 from src.api.v1.routers.recommendations import router as recommendations_router
 from src.api.v1.routers.remediations import router as remediations_router
@@ -94,6 +95,7 @@ app.include_router(executive_reporting_router, prefix=settings.API_V1_STR)
 app.include_router(cyber_resilience_router, prefix=settings.API_V1_STR)
 app.include_router(security_operations_analytics_router, prefix=settings.API_V1_STR)
 app.include_router(cyber_risk_quantification_router, prefix=settings.API_V1_STR)
+app.include_router(governance_risk_compliance_router, prefix=settings.API_V1_STR)
 
 
 # Global Exception Handlers for standardizing error shapes

@@ -797,6 +797,29 @@ async def _execute_workflow_async(
                             import logging
                             logging.error(f"Failed to perform cyber risk quantification intelligence checks: {risk_err}")
 
+                        try:
+                            from src.services.governance_risk_compliance_service import GovernanceRiskComplianceService
+                            from src.services.framework_mapping_service import FrameworkMappingService
+                            from src.services.compliance_scoring_service import ComplianceScoringService
+                            from src.services.audit_readiness_service import AuditReadinessService
+                            from src.services.compliance_gap_service import ComplianceGapService
+                            from src.services.grc_compliance_drift_service import GRCComplianceDriftService
+                            from src.services.compliance_snapshot_service import ComplianceSnapshotService
+
+                            # Sprint 31 GRC Worker Execution Order
+                            await GovernanceRiskComplianceService.sync_assessments(db)
+                            FrameworkMappingService.calculate()
+                            ComplianceScoringService.calculate()
+                            AuditReadinessService.calculate()
+                            ComplianceGapService.calculate()
+                            
+                            prev_grc_snap = ComplianceSnapshotService._snapshots.get(scope_id)
+                            await GRCComplianceDriftService.process_drift(db, scope_id=scope_id, prev_snapshot=prev_grc_snap)
+                            await ComplianceSnapshotService.generate_snapshot(db, scope_id)
+                        except Exception as grc_err:
+                            import logging
+                            logging.error(f"Failed to perform GRC intelligence checks: {grc_err}")
+
                     except Exception as refresh_err:
                         import logging
 

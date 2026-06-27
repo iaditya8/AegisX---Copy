@@ -767,6 +767,7 @@ class AIContextBuilder:
         resilience_data = await cls._build_global_cyber_resilience_context_block()
         soc_data = await cls._build_global_soc_context_block()
         risk_quantification_data = await cls._build_global_risk_quantification_context_block()
+        compliance_data = await cls._build_global_compliance_context_block()
 
         return {
             "context_version": CONTEXT_VERSION,
@@ -788,6 +789,7 @@ class AIContextBuilder:
             **resilience_data,
             **soc_data,
             **risk_quantification_data,
+            **compliance_data,
             "risk": {
                 "risk_distribution": report.get("risk_distribution", {}),
                 "top_risky_assets": report.get("top_risky_assets", []),
@@ -1418,3 +1420,59 @@ class AIContextBuilder:
     async def _build_global_risk_quantification_context_block(cls) -> Dict[str, Any]:
         """Aggregate global Risk Quantification summary across all scopes."""
         return await cls._build_risk_quantification_context_block(scope_id=None)
+
+    @classmethod
+    async def _build_compliance_context_block(
+        cls, scope_id: Optional[uuid.UUID] = None
+    ) -> Dict[str, Any]:
+        """Aggregate GRC compliance summaries, coverage, readiness, scores, and gaps for context."""
+        if scope_id and isinstance(scope_id, str):
+            try:
+                scope_id = uuid.UUID(scope_id)
+            except ValueError:
+                pass
+
+        from src.services.compliance_snapshot_service import ComplianceSnapshotService
+        from src.services.governance_risk_compliance_service import GovernanceRiskComplianceService
+        from src.services.compliance_history_service import ComplianceHistoryService
+        from src.services.compliance_gap_service import ComplianceGapService
+        from src.services.control_mapping_registry import ControlMappingRegistry
+
+        snapshot = ComplianceSnapshotService.get_snapshot(scope_id)
+        records = GovernanceRiskComplianceService.get_all_assessments()
+        if scope_id:
+            records = [r for r in records if r.scope_id == scope_id]
+
+        records_list = []
+        for r in records:
+            rdata = GovernanceRiskComplianceService.to_response(r).model_dump()
+            rdata["assessment_id"] = str(r.assessment_id)
+            rdata["history"] = [
+                {
+                    "timestamp": h.timestamp.isoformat(),
+                    "event_type": h.event_type,
+                    "details": h.details,
+                }
+                for h in ComplianceHistoryService.get_history(r.assessment_id)
+            ]
+            controls = ControlMappingRegistry.get_controls(r.framework_type)
+            rdata["gaps"] = [
+                g.model_dump()
+                for g in ComplianceGapService.get_gaps(r.assessment_id, len(controls), len(r.evidence_list))
+            ]
+            records_list.append(rdata)
+
+        return {
+            "compliance_summary": snapshot["summary"],
+            "average_compliance_score": snapshot["summary"]["average_compliance_score"],
+            "average_framework_coverage": snapshot["summary"]["average_framework_coverage"],
+            "average_control_coverage": snapshot["summary"]["average_control_coverage"],
+            "average_evidence_completeness": snapshot["summary"]["average_evidence_completeness"],
+            "average_audit_readiness": snapshot["summary"]["average_audit_readiness"],
+            "compliance_assessments": records_list,
+        }
+
+    @classmethod
+    async def _build_global_compliance_context_block(cls) -> Dict[str, Any]:
+        """Aggregate global compliance GRC context summary across all scopes."""
+        return await cls._build_compliance_context_block(scope_id=None)
