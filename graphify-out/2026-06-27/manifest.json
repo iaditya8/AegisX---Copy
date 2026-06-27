@@ -205,8 +205,8 @@
     "semantic_hash": "cc6a567e71f110d84dc586c96beb901d"
   },
   "backend/src/infrastructure/celery/worker.py": {
-    "mtime": 1782581365.9854996,
-    "ast_hash": "b4f4ac3e6a19563001fb6f405b9492f8",
+    "mtime": 1782581845.0983405,
+    "ast_hash": "f60c8515ef92145138e1fa3013c2d11d",
     "semantic_hash": ""
   },
   "backend/src/infrastructure/database/models.py": {
@@ -220,8 +220,8 @@
     "semantic_hash": "e9df1259af19fb708350b2b937c006e7"
   },
   "backend/src/main.py": {
-    "mtime": 1782581469.560295,
-    "ast_hash": "e2c556ca02fd4f23b3503fbe8563a548",
+    "mtime": 1782581949.3621533,
+    "ast_hash": "fe7524308976b4fdaf038c178f5da6fc",
     "semantic_hash": ""
   },
   "backend/src/plugins/amass.py": {
@@ -290,8 +290,8 @@
     "semantic_hash": "786254af83392568c552728d126a8c66"
   },
   "backend/src/services/ai_context_builder.py": {
-    "mtime": 1782581395.2174735,
-    "ast_hash": "31bc4c73300a794b0f03090c316d1b90",
+    "mtime": 1782581889.4812407,
+    "ast_hash": "a7ff1819584691a0e836da58a0cd7b7d",
     "semantic_hash": ""
   },
   "backend/src/services/ai_guardrails.py": {
@@ -300,8 +300,8 @@
     "semantic_hash": "cacac50b1dd10c0ccd714ab1b0e10e86"
   },
   "backend/src/services/ai_prompt_builder.py": {
-    "mtime": 1782581438.5085516,
-    "ast_hash": "d2222ad618d7dc63bc7cf85293a22faf",
+    "mtime": 1782581918.265002,
+    "ast_hash": "e5b724abf26cd38fd1893a5c2638c35e",
     "semantic_hash": ""
   },
   "backend/src/services/ai_provider.py": {
@@ -2587,6 +2587,81 @@
   "backend/tests/integration/test_cyber_risk_quantification.py": {
     "mtime": 1782581510.96311,
     "ast_hash": "56788c75e5be6ec88d3ce51f50c36ff8",
+    "semantic_hash": ""
+  },
+  "backend/src/api/v1/routers/governance_risk_compliance.py": {
+    "mtime": 1782581928.1288745,
+    "ast_hash": "8c13bdcb40a6cf4ca7f1ecbf0a312ada",
+    "semantic_hash": ""
+  },
+  "backend/src/domain/entities/governance_risk_compliance.py": {
+    "mtime": 1782581765.0874562,
+    "ast_hash": "0157bd2de4185b0f4e60a8124da7167f",
+    "semantic_hash": ""
+  },
+  "backend/src/services/audit_readiness_service.py": {
+    "mtime": 1782581806.7024639,
+    "ast_hash": "8d0b9c60587ede22a46b145b7d23742f",
+    "semantic_hash": ""
+  },
+  "backend/src/services/compliance_fingerprint_service.py": {
+    "mtime": 1782581782.4382393,
+    "ast_hash": "e67bcd36c2c602994798cfcb8acb5ba9",
+    "semantic_hash": ""
+  },
+  "backend/src/services/compliance_framework_registry.py": {
+    "mtime": 1782581770.0521896,
+    "ast_hash": "541edfaece946320b4c623fd478a82ba",
+    "semantic_hash": ""
+  },
+  "backend/src/services/compliance_gap_service.py": {
+    "mtime": 1782581812.7715034,
+    "ast_hash": "035506ec3310863fe0e4a003056dcb0c",
+    "semantic_hash": ""
+  },
+  "backend/src/services/compliance_history_service.py": {
+    "mtime": 1782581786.209682,
+    "ast_hash": "9f6135f92ba58691ec1a2843566d30ed",
+    "semantic_hash": ""
+  },
+  "backend/src/services/compliance_scoring_service.py": {
+    "mtime": 1782581799.069415,
+    "ast_hash": "68fcdef150ca3865c6b12a508c95c2ca",
+    "semantic_hash": ""
+  },
+  "backend/src/services/compliance_severity_registry.py": {
+    "mtime": 1782581778.366441,
+    "ast_hash": "c8955da6dda20461f82ad35fbe1bc75a",
+    "semantic_hash": ""
+  },
+  "backend/src/services/compliance_snapshot_service.py": {
+    "mtime": 1782581831.0522218,
+    "ast_hash": "b07c4062dfb7e8f304c18f13e3844a96",
+    "semantic_hash": ""
+  },
+  "backend/src/services/control_mapping_registry.py": {
+    "mtime": 1782581773.751376,
+    "ast_hash": "d9b6fbdd479a74a45df00995c3179019",
+    "semantic_hash": ""
+  },
+  "backend/src/services/framework_mapping_service.py": {
+    "mtime": 1782581791.351009,
+    "ast_hash": "b9e9711bbfca85ea64e11a769cde17a5",
+    "semantic_hash": ""
+  },
+  "backend/src/services/governance_risk_compliance_service.py": {
+    "mtime": 1782581837.2845557,
+    "ast_hash": "41036bfaef450f2576a8c4b8add86fa5",
+    "semantic_hash": ""
+  },
+  "backend/src/services/grc_compliance_drift_service.py": {
+    "mtime": 1782581826.2899387,
+    "ast_hash": "729eb08a2fb597cec19f36ff8c3b589a",
+    "semantic_hash": ""
+  },
+  "backend/tests/integration/test_governance_risk_compliance.py": {
+    "mtime": 1782581986.4121969,
+    "ast_hash": "f6b82b01746b05f1da3f5b902900e415",
     "semantic_hash": ""
   }
 }

@@ -820,6 +820,27 @@ async def _execute_workflow_async(
                             import logging
                             logging.error(f"Failed to perform GRC intelligence checks: {grc_err}")
 
+                        try:
+                            from src.services.security_knowledge_service import SecurityKnowledgeService
+                            from src.services.knowledge_relationship_service import KnowledgeRelationshipService
+                            from src.services.knowledge_relevance_service import KnowledgeRelevanceService
+                            from src.services.knowledge_recommendation_service import KnowledgeRecommendationService
+                            from src.services.knowledge_drift_service import KnowledgeDriftService
+                            from src.services.knowledge_snapshot_service import KnowledgeSnapshotService
+
+                            # Sprint 32 GRC Knowledge Worker Execution Order
+                            await SecurityKnowledgeService.sync_knowledge(db)
+                            KnowledgeRelationshipService.calculate()
+                            KnowledgeRelevanceService.calculate()
+                            KnowledgeRecommendationService.calculate()
+                            
+                            prev_know_snap = KnowledgeSnapshotService._snapshots.get(scope_id)
+                            await KnowledgeDriftService.process_drift(db, scope_id=scope_id, prev_snapshot=prev_know_snap)
+                            await KnowledgeSnapshotService.generate_snapshot(db, scope_id)
+                        except Exception as know_err:
+                            import logging
+                            logging.error(f"Failed to perform GRC knowledge base intelligence checks: {know_err}")
+
                     except Exception as refresh_err:
                         import logging
 

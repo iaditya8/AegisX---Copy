@@ -768,6 +768,7 @@ class AIContextBuilder:
         soc_data = await cls._build_global_soc_context_block()
         risk_quantification_data = await cls._build_global_risk_quantification_context_block()
         compliance_data = await cls._build_global_compliance_context_block()
+        knowledge_data = await cls._build_global_knowledge_context_block()
 
         return {
             "context_version": CONTEXT_VERSION,
@@ -790,6 +791,7 @@ class AIContextBuilder:
             **soc_data,
             **risk_quantification_data,
             **compliance_data,
+            **knowledge_data,
             "risk": {
                 "risk_distribution": report.get("risk_distribution", {}),
                 "top_risky_assets": report.get("top_risky_assets", []),
@@ -1476,3 +1478,62 @@ class AIContextBuilder:
     async def _build_global_compliance_context_block(cls) -> Dict[str, Any]:
         """Aggregate global compliance GRC context summary across all scopes."""
         return await cls._build_compliance_context_block(scope_id=None)
+
+    @classmethod
+    async def _build_knowledge_context_block(
+        cls, scope_id: Optional[uuid.UUID] = None
+    ) -> Dict[str, Any]:
+        """Aggregate GRC knowledge summaries, relevance, relationships, and recommendations for context."""
+        if scope_id and isinstance(scope_id, str):
+            try:
+                scope_id = uuid.UUID(scope_id)
+            except ValueError:
+                pass
+
+        from src.services.knowledge_snapshot_service import KnowledgeSnapshotService
+        from src.services.security_knowledge_service import SecurityKnowledgeService
+        from src.services.knowledge_history_service import KnowledgeHistoryService
+        from src.services.knowledge_relationship_service import KnowledgeRelationshipService
+        from src.services.knowledge_recommendation_service import KnowledgeRecommendationService
+
+        snapshot = KnowledgeSnapshotService.get_snapshot(scope_id)
+        records = SecurityKnowledgeService.get_all_knowledge()
+        if scope_id:
+            records = [r for r in records if r.scope_id == scope_id]
+
+        records_list = []
+        for r in records:
+            rdata = SecurityKnowledgeService.to_response(r).model_dump()
+            rdata["knowledge_id"] = str(r.knowledge_id)
+            rdata["history"] = [
+                {
+                    "timestamp": h.timestamp.isoformat(),
+                    "event_type": h.event_type,
+                    "details": h.details,
+                }
+                for h in KnowledgeHistoryService.get_history(r.knowledge_id)
+            ]
+            rdata["recommendations"] = [
+                rec.model_dump()
+                for rec in KnowledgeRecommendationService.get_recommendations(r.knowledge_id, r.title)
+            ]
+            records_list.append(rdata)
+
+        # Get relationships
+        relationships = [
+            rel.model_dump()
+            for rel in KnowledgeRelationshipService.get_relationships()
+        ]
+
+        return {
+            "knowledge_summary": snapshot["summary"],
+            "average_relevance_score": snapshot["summary"]["average_relevance_score"],
+            "average_confidence_score": snapshot["summary"]["average_confidence_score"],
+            "knowledge_relationships": relationships,
+            "security_knowledge_records": records_list,
+        }
+
+    @classmethod
+    async def _build_global_knowledge_context_block(cls) -> Dict[str, Any]:
+        """Aggregate global GRC knowledge base context summary across all scopes."""
+        return await cls._build_knowledge_context_block(scope_id=None)
