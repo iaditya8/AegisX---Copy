@@ -754,6 +754,26 @@ async def _execute_workflow_async(
                             import logging
                             logging.error(f"Failed to perform cyber resilience intelligence checks: {res_err}")
 
+                        try:
+                            from src.services.security_operations_analytics_service import SecurityOperationsAnalyticsService
+                            from src.services.analyst_performance_service import AnalystPerformanceService
+                            from src.services.operational_kpi_service import OperationalKPIService
+                            from src.services.operational_kri_service import OperationalKRIService
+                            from src.services.soc_drift_service import SOCDriftService
+                            from src.services.soc_snapshot_service import SOCSnapshotService
+
+                            await SecurityOperationsAnalyticsService.sync_analytics(db)
+                            AnalystPerformanceService.calculate()
+                            OperationalKPIService.calculate()
+                            OperationalKRIService.calculate()
+                            
+                            prev_soc_snap = SOCSnapshotService._snapshots.get(scope_id)
+                            await SOCDriftService.process_drift(db, scope_id=scope_id, prev_snapshot=prev_soc_snap)
+                            await SOCSnapshotService.generate_snapshot(db, scope_id)
+                        except Exception as soc_err:
+                            import logging
+                            logging.error(f"Failed to perform SOC analytics intelligence checks: {soc_err}")
+
                     except Exception as refresh_err:
                         import logging
 

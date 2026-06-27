@@ -765,6 +765,7 @@ class AIContextBuilder:
         program_data = await cls._build_global_security_program_context_block()
         exec_data = await cls._build_global_executive_reporting_context_block()
         resilience_data = await cls._build_global_cyber_resilience_context_block()
+        soc_data = await cls._build_global_soc_context_block()
 
         return {
             "context_version": CONTEXT_VERSION,
@@ -784,6 +785,7 @@ class AIContextBuilder:
             **program_data,
             **exec_data,
             **resilience_data,
+            **soc_data,
             "risk": {
                 "risk_distribution": report.get("risk_distribution", {}),
                 "top_risky_assets": report.get("top_risky_assets", []),
@@ -1305,3 +1307,58 @@ class AIContextBuilder:
     async def _build_global_cyber_resilience_context_block(cls) -> Dict[str, Any]:
         """Aggregate global cyber resilience summary across all scopes."""
         return await cls._build_cyber_resilience_context_block(scope_id=None)
+
+    @classmethod
+    async def _build_soc_context_block(
+        cls, scope_id: Optional[uuid.UUID] = None
+    ) -> Dict[str, Any]:
+        """Aggregate SOC summary and details for context."""
+        if scope_id and isinstance(scope_id, str):
+            try:
+                scope_id = uuid.UUID(scope_id)
+            except ValueError:
+                pass
+
+        from src.services.soc_snapshot_service import SOCSnapshotService
+        from src.services.security_operations_analytics_service import SecurityOperationsAnalyticsService
+        from src.services.analytics_history_service import AnalyticsHistoryService
+
+        snapshot = SOCSnapshotService.get_snapshot(scope_id)
+        records = SecurityOperationsAnalyticsService.get_all_analytics()
+        if scope_id:
+            records = [r for r in records if r.scope_id == scope_id]
+
+        records_list = []
+        for r in records:
+            rdata = SecurityOperationsAnalyticsService.to_response(r).model_dump()
+            rdata["analytics_id"] = str(r.analytics_id)
+            rdata["history"] = [
+                {
+                    "timestamp": h.timestamp.isoformat(),
+                    "event_type": h.event_type,
+                    "details": h.details,
+                }
+                for h in AnalyticsHistoryService.get_history(r.analytics_id)
+            ]
+            records_list.append(rdata)
+
+        return {
+            "analyst_performance_summary": snapshot["summary"],
+            "queue_analytics_summary": {
+                "queue_size": snapshot["summary"]["queue_size"],
+                "processing_efficiency": snapshot["summary"]["queue_efficiency"],
+            },
+            "operational_kpis": snapshot["kpis"],
+            "operational_kris": snapshot["kris"],
+            "operational_health_score": snapshot["summary"]["operational_health_score"],
+            "soc_drift_summary": {
+                "total_records": snapshot["summary"]["total_analytics_records"],
+                "active_records": snapshot["summary"]["active_analytics_records"],
+            },
+            "soc_analytics_records": records_list,
+        }
+
+    @classmethod
+    async def _build_global_soc_context_block(cls) -> Dict[str, Any]:
+        """Aggregate global SOC summary across all scopes."""
+        return await cls._build_soc_context_block(scope_id=None)
