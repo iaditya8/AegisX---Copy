@@ -25,6 +25,7 @@ from src.api.v1.routers.security_posture import router as security_posture_route
 from src.api.v1.routers.control_validation import router as control_validation_router
 from src.api.v1.routers.security_program import router as security_program_router
 from src.api.v1.routers.executive_reporting import router as executive_reporting_router
+from src.api.v1.routers.cyber_resilience import router as cyber_resilience_router
 from src.api.v1.routers.plugins import router as plugins_router
 from src.api.v1.routers.recommendations import router as recommendations_router
 from src.api.v1.routers.remediations import router as remediations_router
@@ -88,6 +89,7 @@ app.include_router(security_posture_router, prefix=settings.API_V1_STR)
 app.include_router(control_validation_router, prefix=settings.API_V1_STR)
 app.include_router(security_program_router, prefix=settings.API_V1_STR)
 app.include_router(executive_reporting_router, prefix=settings.API_V1_STR)
+app.include_router(cyber_resilience_router, prefix=settings.API_V1_STR)
 
 
 # Global Exception Handlers for standardizing error shapes

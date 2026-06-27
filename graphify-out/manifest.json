@@ -205,8 +205,8 @@
     "semantic_hash": "cc6a567e71f110d84dc586c96beb901d"
   },
   "backend/src/infrastructure/celery/worker.py": {
-    "mtime": 1782579837.2545824,
-    "ast_hash": "25db00a0b2a10bfea6ac6dcf030fbe7d",
+    "mtime": 1782580428.7886653,
+    "ast_hash": "1e0902e3e685869b92985a0a1b8db165",
     "semantic_hash": ""
   },
   "backend/src/infrastructure/database/models.py": {
@@ -220,8 +220,8 @@
     "semantic_hash": "e9df1259af19fb708350b2b937c006e7"
   },
   "backend/src/main.py": {
-    "mtime": 1782580017.6726038,
-    "ast_hash": "74dcfc5bd59e6070d93b9779dd5919f1",
+    "mtime": 1782580502.5744426,
+    "ast_hash": "d0b58f256b9d69195995e348e830af0a",
     "semantic_hash": ""
   },
   "backend/src/plugins/amass.py": {
@@ -290,8 +290,8 @@
     "semantic_hash": "786254af83392568c552728d126a8c66"
   },
   "backend/src/services/ai_context_builder.py": {
-    "mtime": 1782579949.327675,
-    "ast_hash": "460888b11705083cae50e1372508c610",
+    "mtime": 1782580447.3711333,
+    "ast_hash": "5e1b85701e53b29daf1ab5c8c9966633",
     "semantic_hash": ""
   },
   "backend/src/services/ai_guardrails.py": {
@@ -300,8 +300,8 @@
     "semantic_hash": "cacac50b1dd10c0ccd714ab1b0e10e86"
   },
   "backend/src/services/ai_prompt_builder.py": {
-    "mtime": 1782579978.470852,
-    "ast_hash": "88f5d8db9cceb655219832f79bac9ace",
+    "mtime": 1782580473.0818727,
+    "ast_hash": "5364d0644c048d229e41a1dbf9b6837b",
     "semantic_hash": ""
   },
   "backend/src/services/ai_provider.py": {
@@ -2367,6 +2367,76 @@
   "backend/tests/integration/test_executive_reporting.py": {
     "mtime": 1782580067.2854042,
     "ast_hash": "0051ddae595d99d2045df925c44c9454",
+    "semantic_hash": ""
+  },
+  "backend/src/api/v1/routers/cyber_resilience.py": {
+    "mtime": 1782580539.8229494,
+    "ast_hash": "b027e881d947ac11ef4083bf749738dc",
+    "semantic_hash": ""
+  },
+  "backend/src/domain/entities/cyber_resilience.py": {
+    "mtime": 1782580333.1664915,
+    "ast_hash": "41dda31ce79ab76a354e38d1ba8c85f8",
+    "semantic_hash": ""
+  },
+  "backend/src/services/criticality_registry.py": {
+    "mtime": 1782580352.6176553,
+    "ast_hash": "8de70d46f574c7947de68079c61c8c74",
+    "semantic_hash": ""
+  },
+  "backend/src/services/cyber_resilience_service.py": {
+    "mtime": 1782580407.854665,
+    "ast_hash": "ba2114c279f9d473a30d6bf8771df0bf",
+    "semantic_hash": ""
+  },
+  "backend/src/services/cyber_resilience_snapshot_service.py": {
+    "mtime": 1782580418.1502264,
+    "ast_hash": "64a11d261f11d752043b467c3605e17c",
+    "semantic_hash": ""
+  },
+  "backend/src/services/recovery_objective_registry.py": {
+    "mtime": 1782580361.6863763,
+    "ast_hash": "27aabef6e58624c27cb706df0f4becbb",
+    "semantic_hash": ""
+  },
+  "backend/src/services/recovery_objective_service.py": {
+    "mtime": 1782580388.5423203,
+    "ast_hash": "c64cf24cc41b4d691ec60a4f5302f9de",
+    "semantic_hash": ""
+  },
+  "backend/src/services/resilience_drift_service.py": {
+    "mtime": 1782580412.3012083,
+    "ast_hash": "b40fc114a4a5c09d2de592b1e131675c",
+    "semantic_hash": ""
+  },
+  "backend/src/services/resilience_fingerprint_service.py": {
+    "mtime": 1782580375.6703353,
+    "ast_hash": "015e2004ce304aacfac1de9570130982",
+    "semantic_hash": ""
+  },
+  "backend/src/services/resilience_history_service.py": {
+    "mtime": 1782580380.099233,
+    "ast_hash": "98cc176cf21aad26cbc82d6ea8fcaf51",
+    "semantic_hash": ""
+  },
+  "backend/src/services/resilience_registry.py": {
+    "mtime": 1782580341.5137527,
+    "ast_hash": "e9bb114bbab3b8d59e5bc6711a8d79ea",
+    "semantic_hash": ""
+  },
+  "backend/src/services/resilience_scoring_service.py": {
+    "mtime": 1782580394.2711017,
+    "ast_hash": "b5284bb663dd473451a8f24fcbf14aa0",
+    "semantic_hash": ""
+  },
+  "backend/src/services/service_resilience_service.py": {
+    "mtime": 1782580400.2347155,
+    "ast_hash": "0ab6f5185921a5e0c38d2ae7aca74354",
+    "semantic_hash": ""
+  },
+  "backend/tests/integration/test_cyber_resilience.py": {
+    "mtime": 1782580563.5196528,
+    "ast_hash": "7b565d4580795823b0abdffd18f3d056",
     "semantic_hash": ""
   }
 }

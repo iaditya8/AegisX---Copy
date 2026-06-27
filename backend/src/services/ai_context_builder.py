@@ -764,6 +764,7 @@ class AIContextBuilder:
         control_data = await cls._build_global_control_validation_context_block()
         program_data = await cls._build_global_security_program_context_block()
         exec_data = await cls._build_global_executive_reporting_context_block()
+        resilience_data = await cls._build_global_cyber_resilience_context_block()
 
         return {
             "context_version": CONTEXT_VERSION,
@@ -782,6 +783,7 @@ class AIContextBuilder:
             **control_data,
             **program_data,
             **exec_data,
+            **resilience_data,
             "risk": {
                 "risk_distribution": report.get("risk_distribution", {}),
                 "top_risky_assets": report.get("top_risky_assets", []),
@@ -1252,3 +1254,54 @@ class AIContextBuilder:
     async def _build_global_executive_reporting_context_block(cls) -> Dict[str, Any]:
         """Aggregate global executive reporting summary across all scopes."""
         return await cls._build_executive_reporting_context_block(scope_id=None)
+
+    @classmethod
+    async def _build_cyber_resilience_context_block(
+        cls, scope_id: Optional[uuid.UUID] = None
+    ) -> Dict[str, Any]:
+        """Aggregate cyber resilience summary and details for context."""
+        if scope_id and isinstance(scope_id, str):
+            try:
+                scope_id = uuid.UUID(scope_id)
+            except ValueError:
+                pass
+
+        from src.services.cyber_resilience_snapshot_service import CyberResilienceSnapshotService
+        from src.services.cyber_resilience_service import CyberResilienceService
+        from src.services.resilience_history_service import ResilienceHistoryService
+        from src.services.recovery_objective_service import RecoveryObjectiveService
+
+        snapshot = CyberResilienceSnapshotService.get_snapshot(scope_id)
+        records = CyberResilienceService.get_all_resilience()
+        if scope_id:
+            records = [r for r in records if r.scope_id == scope_id]
+
+        records_list = []
+        for r in records:
+            rdata = CyberResilienceService.to_response(r).model_dump()
+            rdata["resilience_id"] = str(r.resilience_id)
+            rdata["history"] = [
+                {
+                    "timestamp": h.timestamp.isoformat(),
+                    "event_type": h.event_type,
+                    "details": h.details,
+                }
+                for h in ResilienceHistoryService.get_history(r.resilience_id)
+            ]
+            rdata["objectives"] = [
+                o.model_dump() for o in RecoveryObjectiveService.get_objectives(r.resilience_id)
+            ]
+            records_list.append(rdata)
+
+        return {
+            "resilience_summary": snapshot["summary"],
+            "resilience_score": snapshot["summary"]["resilience_score"],
+            "readiness_score": snapshot["summary"]["readiness_score"],
+            "recovery_confidence_score": snapshot["summary"]["recovery_confidence_score"],
+            "resilience_records": records_list,
+        }
+
+    @classmethod
+    async def _build_global_cyber_resilience_context_block(cls) -> Dict[str, Any]:
+        """Aggregate global cyber resilience summary across all scopes."""
+        return await cls._build_cyber_resilience_context_block(scope_id=None)

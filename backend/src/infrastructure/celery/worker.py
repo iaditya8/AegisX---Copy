@@ -740,6 +740,20 @@ async def _execute_workflow_async(
                             import logging
                             logging.error(f"Failed to process executive reporting checks: {exec_err}")
 
+                        try:
+                            from src.services.cyber_resilience_service import CyberResilienceService
+                            from src.services.resilience_drift_service import ResilienceDriftService
+                            from src.services.cyber_resilience_snapshot_service import CyberResilienceSnapshotService
+
+                            await CyberResilienceService.sync_resilience(db)
+
+                            prev_res_snap = CyberResilienceSnapshotService._snapshots.get(scope_id)
+                            await ResilienceDriftService.check_drift(db, scope_id=scope_id, prev_snapshot=prev_res_snap)
+                            await CyberResilienceSnapshotService.generate_snapshot(db, scope_id)
+                        except Exception as res_err:
+                            import logging
+                            logging.error(f"Failed to perform cyber resilience intelligence checks: {res_err}")
+
                     except Exception as refresh_err:
                         import logging
 
