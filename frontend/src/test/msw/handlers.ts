@@ -526,4 +526,191 @@ export const handlers = [
       },
     });
   }),
+
+  // Threat Intelligence
+  http.get('/api/v1/threat-intelligence', () => {
+    return HttpResponse.json([
+      {
+        id: 'threat-123',
+        value: 'APT29 Spearphishing Campaign',
+        indicator_type: 'campaign',
+        status: 'active',
+        source: 'mitre-att&ck',
+        tags: ['phishing', 'apt29'],
+        scope_id: 'scope-123',
+        fusion_score: 82,
+        created_at: '2026-06-20T00:00:00Z',
+        updated_at: '2026-06-20T00:00:00Z',
+      },
+    ]);
+  }),
+
+  http.get('/api/v1/threat-intelligence/active', () => {
+    return HttpResponse.json([
+      {
+        id: 'threat-123',
+        value: 'APT29 Spearphishing Campaign',
+        indicator_type: 'campaign',
+        status: 'active',
+        source: 'mitre-att&ck',
+        tags: ['phishing', 'apt29'],
+        scope_id: 'scope-123',
+        fusion_score: 82,
+        created_at: '2026-06-20T00:00:00Z',
+        updated_at: '2026-06-20T00:00:00Z',
+      },
+    ]);
+  }),
+
+  http.post('/api/v1/threat-intelligence/:id/fuse', async ({ params, request }) => {
+    const body = (await request.json()) as any;
+    return HttpResponse.json({
+      id: params.id,
+      value: 'Fused Threat Indicator',
+      status: 'fused',
+      fusion_score: body.confidence || 90,
+    });
+  }),
+
+  // Cyber Risk Quantification
+  http.get('/api/v1/cyber-risk-quantification', () => {
+    return HttpResponse.json({
+      success: true,
+      data: [
+        {
+          id: 'risk-123',
+          title: 'Database Ransomware Exposure',
+          description: 'Risk of unauthorized access leading to ransomware deployment on DB assets.',
+          scenario_type: 'ransomware',
+          frequency_label: 'high',
+          impact_label: 'critical',
+          exposure_value: 250000,
+          annualized_loss_expectancy: 120000,
+          inherent_risk_score: 85.5,
+          residual_risk_score: 30.0,
+          status: 'open',
+          scope_id: 'scope-123',
+          created_at: '2026-06-20T00:00:00Z',
+        },
+      ],
+    });
+  }),
+
+  http.get('/api/v1/cyber-risk-quantification/forecasts', () => {
+    return HttpResponse.json({
+      success: true,
+      data: [
+        {
+          scenario_type: 'ransomware',
+          p10_loss: 40000,
+          p50_loss: 110000,
+          p90_loss: 230000,
+          simulated_mean: 120000,
+        },
+      ],
+    });
+  }),
+
+  http.get('/api/v1/cyber-risk-quantification/trends', () => {
+    return HttpResponse.json({
+      success: true,
+      data: [85.5, 82.0, 78.5, 75.0],
+    });
+  }),
+
+  http.get('/api/v1/cyber-risk-quantification/summary', () => {
+    return HttpResponse.json({
+      success: true,
+      data: {
+        total_risk_scenarios: 1,
+        average_inherent_score: 85.5,
+        total_exposure_value: 250000,
+      },
+    });
+  }),
+
+  // Security Decisions
+  http.get('/api/v1/security-decision', () => {
+    return HttpResponse.json([
+      {
+        id: 'decision-123',
+        decision_type: 'mitigation_plan',
+        target_entity_id: 'asset-123',
+        option_name: 'Deploy WAF & Restrict Ingress Port 8080',
+        status: 'recommended',
+        scope_id: 'scope-123',
+        created_at: '2026-06-20T00:00:00Z',
+      },
+    ]);
+  }),
+
+  http.get('/api/v1/security-decision/recommended', () => {
+    return HttpResponse.json([
+      {
+        id: 'decision-123',
+        decision_type: 'mitigation_plan',
+        target_entity_id: 'asset-123',
+        option_name: 'Deploy WAF & Restrict Ingress Port 8080',
+        status: 'recommended',
+        scope_id: 'scope-123',
+        created_at: '2026-06-20T00:00:00Z',
+      },
+    ]);
+  }),
+
+  http.post('/api/v1/security-decision/:id/commit', ({ params }) => {
+    return HttpResponse.json({
+      id: params.id,
+      decision_type: 'mitigation_plan',
+      target_entity_id: 'asset-123',
+      option_name: 'Deploy WAF & Restrict Ingress Port 8080',
+      status: 'committed',
+      scope_id: 'scope-123',
+      created_at: '2026-06-20T00:00:00Z',
+    });
+  }),
+
+  // Graph Topology
+  http.get('/api/v1/security-intelligence-graph/topology', () => {
+    return HttpResponse.json({
+      nodes: [
+        {
+          id: 'asset-123',
+          node_type: 'asset',
+          entity_id: 'asset-123',
+          scope_id: 'scope-123',
+          status: 'active',
+        },
+      ],
+      edges: [],
+    });
+  }),
+
+  // Autonomous Planning
+  http.get('/api/v1/autonomous-planning', () => {
+    return HttpResponse.json([
+      {
+        id: 'plan-123',
+        category: 'remediation',
+        name: 'Autonomous Patching for Port 8080 Vulnerability',
+        status: 'pending_approval',
+        priority: 'medium',
+        scope_id: 'scope-123',
+        created_at: '2026-06-20T00:00:00Z',
+      },
+    ]);
+  }),
+
+  http.post('/api/v1/autonomous-planning/:id/approve', ({ params }) => {
+    return HttpResponse.json({
+      id: params.id,
+      category: 'remediation',
+      name: 'Autonomous Patching for Port 8080 Vulnerability',
+      status: 'approved',
+      priority: 'medium',
+      scope_id: 'scope-123',
+      created_at: '2026-06-20T00:00:00Z',
+    });
+  }),
 ];
+

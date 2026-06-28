@@ -26,7 +26,7 @@ class WorkflowEventService:
         event_type: str,
         correlation_id: Optional[uuid.UUID] = None,
         payload: Optional[dict] = None,
-    ) -> Optional[WorkflowEvent]:
+    ) -> Optional['WorkflowEvent']:
         """Query the latest workflow and emit a workflow event attached to it."""
         from src.infrastructure.database.models import Workflow, WorkflowEvent
         

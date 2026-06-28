@@ -19,8 +19,42 @@ depends_on = None
 
 def upgrade() -> None:
     # Drop findings (since it's a dev database and schema is completely restructured)
-    op.drop_table("findings")
+    op.execute("DROP TABLE findings CASCADE")
+    op.create_table(
+        "asset_ports",
+        sa.Column("id", postgresql.UUID(as_uuid=True), server_default=sa.text("gen_random_uuid()"), nullable=False),
+        sa.Column("asset_id", postgresql.UUID(as_uuid=True), nullable=False),
+        sa.Column("port", sa.BigInteger(), nullable=False),
+        sa.Column("protocol", sa.String(), nullable=False),
+        sa.Column("state", sa.String(), nullable=False),
+        sa.Column("evidence", postgresql.JSONB(astext_type=sa.Text()), nullable=True),
+        sa.Column("first_seen", sa.DateTime(timezone=True), server_default=sa.text("now()"), nullable=False),
+        sa.Column("last_seen", sa.DateTime(timezone=True), server_default=sa.text("now()"), nullable=False),
+        sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.text("now()"), nullable=False),
+        sa.Column("updated_at", sa.DateTime(timezone=True), server_default=sa.text("now()"), nullable=False),
+        sa.ForeignKeyConstraint(["asset_id"], ["assets.id"], ondelete="CASCADE"),
+        sa.PrimaryKeyConstraint("id"),
+        sa.UniqueConstraint("asset_id", "port", "protocol", name="uq_asset_port_protocol")
+    )
 
+    op.create_table(
+        "asset_services",
+        sa.Column("id", postgresql.UUID(as_uuid=True), server_default=sa.text("gen_random_uuid()"), nullable=False),
+        sa.Column("asset_port_id", postgresql.UUID(as_uuid=True), nullable=False),
+        sa.Column("service_name", sa.String(), nullable=False),
+        sa.Column("product", sa.String(), nullable=True),
+        sa.Column("version", sa.String(), nullable=True),
+        sa.Column("banner", sa.String(), nullable=True),
+        sa.Column("confidence", sa.Numeric(precision=5, scale=2), nullable=False),
+        sa.Column("evidence", postgresql.JSONB(astext_type=sa.Text()), nullable=True),
+        sa.Column("first_seen", sa.DateTime(timezone=True), server_default=sa.text("now()"), nullable=False),
+        sa.Column("last_seen", sa.DateTime(timezone=True), server_default=sa.text("now()"), nullable=False),
+        sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.text("now()"), nullable=False),
+        sa.Column("updated_at", sa.DateTime(timezone=True), server_default=sa.text("now()"), nullable=False),
+        sa.ForeignKeyConstraint(["asset_port_id"], ["asset_ports.id"], ondelete="CASCADE"),
+        sa.PrimaryKeyConstraint("id"),
+        sa.UniqueConstraint("asset_port_id", "service_name", name="uq_asset_port_service")
+    )
     op.create_table(
         "findings",
         sa.Column(

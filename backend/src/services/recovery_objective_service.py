@@ -1,6 +1,6 @@
 import uuid
 from datetime import datetime, timezone
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Tuple
 from src.domain.entities.cyber_resilience import RecoveryObjectiveType, RecoveryObjectiveResponse
 
 
@@ -26,7 +26,7 @@ class RecoveryObjectiveRecord:
 
 class RecoveryObjectiveService:
     # in-memory store: (resilience_id, objective_type) -> RecoveryObjectiveRecord
-    _objectives: Dict[(uuid.UUID, RecoveryObjectiveType), RecoveryObjectiveRecord] = {}
+    _objectives: Dict[Tuple[uuid.UUID, RecoveryObjectiveType], RecoveryObjectiveRecord] = {}
 
     @classmethod
     def clear_objectives(cls) -> None:

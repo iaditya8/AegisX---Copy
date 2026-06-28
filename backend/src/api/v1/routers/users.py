@@ -56,6 +56,14 @@ async def create_new_user(
     return StandardResponse(data=new_user)
 
 
+@router.get("/me", response_model=StandardResponse[UserResponse])
+async def get_current_user_details(
+    current_user: User = Depends(get_current_user),
+) -> StandardResponse[UserResponse]:
+    """Retrieve details for the currently authenticated user."""
+    return StandardResponse(data=current_user)
+
+
 @router.get("/{user_id}", response_model=StandardResponse[UserResponse])
 async def get_user_details(
     user_id: uuid.UUID,

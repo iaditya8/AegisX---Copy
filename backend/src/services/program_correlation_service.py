@@ -1,6 +1,6 @@
 import uuid
 import copy
-from typing import Dict, List
+from typing import Dict, List, Optional
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.services.incident_service import IncidentService

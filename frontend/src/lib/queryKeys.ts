@@ -29,5 +29,25 @@ export const QUERY_KEYS = {
     relationships: (id: string) => ['assets', 'relationships', id] as const,
     history: (id: string) => ['assets', 'history', id] as const,
     report: (id: string) => ['assets', 'report', id] as const,
-  }
+  },
+  threats: {
+    list: (scopeId?: string) => ['threats', 'list', { scopeId }] as const,
+    active: ['threats', 'active'] as const,
+  },
+  risk: {
+    list: (scopeId?: string) => ['risk', 'list', { scopeId }] as const,
+    forecasts: (riskId: string) => ['risk', 'forecasts', riskId] as const,
+    trends: (riskId: string) => ['risk', 'trends', riskId] as const,
+    summary: (scopeId?: string) => ['risk', 'summary', { scopeId }] as const,
+  },
+  decisions: {
+    list: ['decisions', 'list'] as const,
+    recommended: ['decisions', 'recommended'] as const,
+  },
+  graph: {
+    topology: ['graph', 'topology'] as const,
+  },
+  planning: {
+    list: ['planning', 'list'] as const,
+  },
 } as const;
