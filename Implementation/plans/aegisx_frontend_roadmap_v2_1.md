@@ -8,7 +8,7 @@ This document presents the product architecture correction review (Roadmap V2.1)
 
 The V2 roadmap was a significant improvement over page-centric designs, but it still delayed the flagship **Unified Security Intelligence Workspace** until Sprint 43. This delay meant that the core value proposition of AegisX as a **Security Decision Intelligence Platform** would not be experienced by users until late in the development cycle.
 
-Roadmap V2.1 corrects this sequence. By moving the **Unified Security Intelligence Workspace (MVP)** to **Sprint 40**, we deliver immediate time-to-value. This review justifies this change, outlines the three-panel layout for the unified workspace, designs the new **Executive Decision Intelligence** sprint, and defines the safety boundaries for the **Security Intelligence Copilot** in Sprint 48.
+Roadmap V2.1 corrects this sequence. By moving the **Attack Surface & Security Intelligence Workspace (MVP)** to **Sprint 40**, we deliver immediate time-to-value. This review justifies this change, outlines the three-panel layout for the workspace, designs the new **Executive Decision Intelligence** sprint, and defines the safety boundaries for the **Security Intelligence Copilot** in Sprint 48.
 
 ---
 
@@ -50,16 +50,16 @@ Forcing the user to learn separate screens for risk calculations, decisions, and
 
 We define four primary workspaces to align with the core user journeys:
 
-1. **Unified Security Intelligence Workspace (Flagship)**: The core console for analysts and architects, integrating assets, findings, threats, risks, decisions, and plans into a single screen.
+1. **Attack Surface & Security Intelligence Workspace (Flagship)**: The core console for analysts and architects, integrating asset inventories, attack surface change tracking, findings, threats, risks, decisions, and plans into a single screen.
 2. **Executive Decision Intelligence Workspace**: A dedicated view for CISOs and executives, displaying risk curves, budget tradeoff sliders, and automated narratives.
 3. **GRC & Evidence Workspace**: A workspace for GRC analysts to track framework compliance, manage control checklists, and upload evidence.
 4. **Administration & SSO Workspace**: A dashboard for system administrators to manage tenants, configure SSO, and monitor audit logs.
 
 ---
 
-# Unified Security Intelligence Workspace (MVP Design)
+# Attack Surface & Security Intelligence Workspace (MVP Design)
 
-The MVP version of the Unified Workspace will be delivered in **Sprint 40**, immediately following the foundation and shared component sprints.
+The MVP version of the workspace will be delivered in **Sprint 40**, immediately following the foundation and shared component sprints.
 
 ```
 ┌────────────────────────────────────────────────────────────────────────────────────────┐
@@ -70,22 +70,24 @@ The MVP version of the Unified Workspace will be delivered in **Sprint 40**, imm
 │   ┌────────────────────────┐   ┌───────────────────────────┐   ┌────────────────────┐  │
 │   │ LEFT PANEL             │   │ CENTER PANEL              │   │ RIGHT PANEL        │  │
 │   │                        │   │                           │   │                    │  │
-│   │ [Asset Context]        │   │ [Investigation Context]   │   │ [Decision Context] │  │
+│   │ [Attack Surface & ASM] │   │ [Investigation Context]   │   │ [Decision Context] │  │
 │   │                        │   │                           │   │                    │  │
-│   │ * Target Hosts List    │   │ * Interactive SVG Graph   │   │ * Tradeoff Plot    │  │
-│   │ * Open Vulnerabilities │──▶│   (Asset -> Threat -> Risk)│──▶│ * Commited Plans   │  │
-│   │ * GRC Control Status   │   │ * Exploit Path Highlight  │   │ * LLM Advisory     │  │
+│   │ * Asset Inventory      │   │ * Interactive SVG Graph   │   │ * Tradeoff Plot    │  │
+│   │ * Unmanaged assets     │──▶│   (Asset -> Threat -> Risk)│──▶│ * Commited Plans   │  │
+│   │ * Exposure Summary     │   │ * Exploit Path Highlight  │   │ * LLM Advisory     │  │
 │   │                        │   │                           │   │   Warning          │  │
 │   └────────────────────────┘   └───────────────────────────┘   └────────────────────┘  │
 └────────────────────────────────────────────────────────────────────────────────────────┘
 ```
 
 ### Layout Overview
-A three-panel layout that prevents page switching during active investigations:
+A three-panel layout that integrates the platform's original recon DNA with decision intelligence, preventing page switching:
 
-- **Left Panel (Asset Context - 25% Width)**:
-  - Displays the asset directory and active vulnerabilities.
-  - Lists open findings, port exposures, and related GRC control compliance states.
+- **Left Panel (Attack Surface & ASM - 25% Width)**:
+  - **Asset Inventory**: Lists all active internet-facing target hostnames, IP interfaces, and normalized services.
+  - **Attack Surface Changes**: Highlights delta detections (what changed since last week, new subdomains discovered, ports opened).
+  - **Open Findings**: Highlights critical vulnerability exposures and active exploit alerts.
+  - **Exposure Summary**: Summarizes statistics (managed vs unmanaged assets, scores per business unit or scope context).
 - **Center Panel (Investigation Context - 50% Width)**:
   - Displays an interactive SVG topology map centering on the selected asset.
   - Renders adjacent node relationships (Findings, active Threats, GRC controls).
@@ -96,7 +98,7 @@ A three-panel layout that prevents page switching during active investigations:
   - Displays the action confirmation buttons and active planning milestones.
 
 ### Workflow Navigation
-1. **Trigger**: An analyst selects a vulnerable asset in the **Left Panel**.
+1. **Trigger**: An analyst reviews the **Left Panel** to inspect newly discovered/changed unmanaged assets or critical findings.
 2. **Analysis**: The **Center Panel** focuses on the asset, rendering its relationship graph and highlighting the attack path.
 3. **Evaluation**: The **Right Panel** displays the financial risk impact and recommended mitigations.
 4. **Action**: The analyst commits the approved decision in the **Right Panel**, which schedules the tasks and propagates the updates across the graph.
@@ -108,7 +110,7 @@ A three-panel layout that prevents page switching during active investigations:
 The roadmap sequence is revised to prioritize the flagship workspace and support a workflow-driven layout.
 
 ```
-Sprint 38: Foundation ──▶ Sprint 39: Components ──▶ Sprint 40: Unified Workspace MVP
+Sprint 38: Foundation ──▶ Sprint 39: Components ──▶ Sprint 40: Attack Surface & Security Intelligence Workspace MVP
                                                                │
 ┌──────────────────────────────────────────────────────────────┘
 │
@@ -136,9 +138,9 @@ Sprint 46: SaaS Multi-Tenancy ──▶ Sprint 47: Saved Whiteboards ──▶ S
 - **Objective**: Build the shared UI component framework and integrate MSW mocks to handle scopes onboarding, findings lists, and reports.
 - **Value**: Prepares reusable UI blocks (`DataTable`, `ConfirmDialog`, `EmptyState`, `StatusBadge`).
 
-### Sprint 40: Flagship Unified Security Intelligence Workspace (MVP)
-- **Objective**: Implement the three-panel Unified Workspace layout integrating Asset Context, SVG Relationship Graph, and Decision actions.
-- **Value**: Delivers immediate time-to-value by displaying the complete end-to-end workflow on a single screen.
+### Sprint 40: Attack Surface & Security Intelligence Workspace (MVP)
+- **Objective**: Implement the three-panel Unified Workspace layout integrating Asset Inventory, Attack Surface Changes, SVG Relationship Graph, and Decision actions.
+- **Value**: Delivers immediate time-to-value by combining AegisX's original ASM DNA (internet-facing asset changes, unmanaged targets) with end-to-end decision intelligence on a single screen.
 
 ### Sprint 41: Threat Intelligence & Graph Topology Explorer
 - **Objective**: Deepen threat feeds integration, support SVG/Canvas topology exploration, and implement attack path highlighting.
