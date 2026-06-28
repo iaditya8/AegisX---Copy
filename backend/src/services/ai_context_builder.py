@@ -1829,7 +1829,73 @@ class AIContextBuilder:
         cls, scope_id: Optional[uuid.UUID] = None
     ) -> Dict[str, Any]:
         """Aggregate Autonomous Security Planning context."""
-        return {"planning_summary": {"total_plans": 0, "approved_plans": 0}}
+        if scope_id and isinstance(scope_id, str):
+            try:
+                scope_id = uuid.UUID(scope_id)
+            except ValueError:
+                pass
+
+        from src.services.planning_snapshot_service import PlanningSnapshotService
+        from src.services.autonomous_security_planning_service import AutonomousSecurityPlanningService
+        from src.services.planning_history_service import PlanningHistoryService
+
+        snapshot = await PlanningSnapshotService.get_snapshot(None, scope_id)
+        plans = AutonomousSecurityPlanningService.get_all_plans()
+        if scope_id:
+            plans = [p for p in plans if p.scope_id == scope_id]
+
+        records_list = []
+        for p in plans:
+            rdata = {
+                "plan_id": str(p.plan_id),
+                "plan_fingerprint": p.plan_fingerprint,
+                "category": p.category,
+                "name": p.name,
+                "status": p.status.value,
+                "priority": p.priority.value,
+                "scope_id": str(p.scope_id) if p.scope_id else None,
+                "created_at": p.created_at.isoformat(),
+                "updated_at": p.updated_at.isoformat(),
+                "milestones": [
+                    {
+                        "milestone_id": str(m.milestone_id),
+                        "name": m.name,
+                        "milestone_type": m.milestone_type.value,
+                        "target_entity_id": str(m.target_entity_id),
+                        "status": m.status,
+                        "due_date": m.due_date.isoformat(),
+                        "completed_at": m.completed_at.isoformat() if m.completed_at else None,
+                    }
+                    for m in p.milestones
+                ],
+                "roadmap": {
+                    "roadmap_id": str(p.roadmap.roadmap_id),
+                    "optimized_milestone_ids": [str(mid) for mid in p.roadmap.optimized_milestone_ids],
+                    "estimated_effort_days": p.roadmap.estimated_effort_days,
+                    "resource_utilization_coefficient": p.roadmap.resource_utilization_coefficient,
+                } if p.roadmap else None,
+                "history": [
+                    {
+                        "timestamp": h.timestamp.isoformat(),
+                        "event_type": h.event_type,
+                        "details": h.details,
+                    }
+                    for h in PlanningHistoryService.get_history(p.plan_id)
+                ]
+            }
+            records_list.append(rdata)
+
+        return {
+            "planning_summary": {
+                "total_plans": snapshot.get("total_plans", 0),
+                "approved_plans": snapshot.get("approved_count", 0),
+                "active_plans": snapshot.get("active_count", 0),
+                "closed_plans": snapshot.get("closed_count", 0),
+                "average_progress": snapshot.get("average_progress", 0.0),
+            },
+            "planning_records": records_list,
+        }
+
 
     @classmethod
     async def _build_global_planning_context_block(cls) -> Dict[str, Any]:
@@ -1840,7 +1906,81 @@ class AIContextBuilder:
         cls, scope_id: Optional[uuid.UUID] = None
     ) -> Dict[str, Any]:
         """Aggregate Unified Security Intelligence Fabric context."""
-        return {"fabric_summary": {"total_routes": 0, "active_routes": 0}}
+        if scope_id and isinstance(scope_id, str):
+            try:
+                scope_id = uuid.UUID(scope_id)
+            except ValueError:
+                pass
+
+        from src.services.fabric_snapshot_service import FabricSnapshotService
+        from src.services.unified_security_intelligence_fabric_service import UnifiedSecurityIntelligenceFabricService
+        from src.services.intelligence_propagation_service import IntelligencePropagationService
+        from src.services.fabric_history_service import FabricHistoryService
+
+        snapshot = await FabricSnapshotService.get_snapshot(None, scope_id)
+        nodes = UnifiedSecurityIntelligenceFabricService.get_all_fabric_nodes()
+        if scope_id:
+            nodes = [n for n in nodes if n.scope_id == scope_id]
+
+        records_list = []
+        for n in nodes:
+            rdata = {
+                "node_id": str(n.node_id),
+                "node_fingerprint": n.node_fingerprint,
+                "source_type": n.source_type,
+                "status": n.status.value,
+                "priority": n.priority.value,
+                "scope_id": str(n.scope_id) if n.scope_id else None,
+                "created_at": n.created_at.isoformat(),
+                "updated_at": n.updated_at.isoformat(),
+                "confidence_weights": n.confidence_weights,
+                "target_links": [str(tid) for tid in n.target_links],
+                "history": [
+                    {
+                        "timestamp": h.timestamp.isoformat(),
+                        "event_type": h.event_type,
+                        "details": h.details,
+                    }
+                    for h in FabricHistoryService.get_history(n.node_id)
+                ]
+            }
+            records_list.append(rdata)
+
+        propagations = IntelligencePropagationService.get_propagations()
+        sc_maps = IntelligencePropagationService.calculate_score_maps()
+
+        return {
+            "fabric_summary": {
+                "total_nodes": snapshot.get("total_nodes", 0),
+                "active_nodes": snapshot.get("active_count", 0),
+                "suspended_nodes": snapshot.get("suspended_count", 0),
+                "terminated_nodes": snapshot.get("terminated_count", 0),
+                "average_confidence": snapshot.get("average_confidence", 0.0),
+            },
+            "fabric_nodes": records_list,
+            "fabric_propagations": [
+                {
+                    "propagation_id": str(p.propagation_id),
+                    "source_node_id": str(p.source_node_id),
+                    "target_node_id": str(p.target_node_id),
+                    "mode": p.mode.value,
+                    "confidence_score": p.confidence_score,
+                    "decay_factor": p.decay_factor,
+                    "timestamp": p.timestamp.isoformat(),
+                }
+                for p in propagations
+            ],
+            "fabric_score_maps": [
+                {
+                    "correlation_id": str(sm.correlation_id),
+                    "domain_source": sm.domain_source,
+                    "domain_target": sm.domain_target,
+                    "relationship_strength": sm.relationship_strength,
+                }
+                for sm in sc_maps
+            ],
+        }
+
 
     @classmethod
     async def _build_global_fabric_context_block(cls) -> Dict[str, Any]:

@@ -205,8 +205,8 @@
     "semantic_hash": "cc6a567e71f110d84dc586c96beb901d"
   },
   "backend/src/infrastructure/celery/worker.py": {
-    "mtime": 1782636183.6207483,
-    "ast_hash": "53194dee29a47d7966c160cb405c48dd",
+    "mtime": 1782638943.0684068,
+    "ast_hash": "7a117ba99079434ac822d11579158a11",
     "semantic_hash": ""
   },
   "backend/src/infrastructure/database/models.py": {
@@ -220,8 +220,8 @@
     "semantic_hash": "e9df1259af19fb708350b2b937c006e7"
   },
   "backend/src/main.py": {
-    "mtime": 1782636226.2180717,
-    "ast_hash": "58008aabfb82a6f647d90e05f7bf8a0c",
+    "mtime": 1782638934.3763435,
+    "ast_hash": "5891ea07531d5b50add8c9e13caa3c80",
     "semantic_hash": ""
   },
   "backend/src/plugins/amass.py": {
@@ -290,8 +290,8 @@
     "semantic_hash": "786254af83392568c552728d126a8c66"
   },
   "backend/src/services/ai_context_builder.py": {
-    "mtime": 1782636193.2967865,
-    "ast_hash": "3065dd500388882818e6a6b32994c1e8",
+    "mtime": 1782638953.3852968,
+    "ast_hash": "05de6fe5de526112a865706232aee45d",
     "semantic_hash": ""
   },
   "backend/src/services/ai_guardrails.py": {
@@ -2887,6 +2887,131 @@
   "Implementation/walkthroughs/sprint_34_walkthrough.md": {
     "mtime": 1782636690.4635296,
     "ast_hash": "c64f460e3c7ecd11716cf296112045b1",
+    "semantic_hash": ""
+  },
+  "backend/src/api/v1/routers/security_decision.py": {
+    "mtime": 1782638164.4973023,
+    "ast_hash": "0ea6406b2de3dab5e2d1c52fca848296",
+    "semantic_hash": ""
+  },
+  "backend/src/domain/entities/security_decision.py": {
+    "mtime": 1782638105.6043985,
+    "ast_hash": "b5245e34e7b688b203c463451e673c6c",
+    "semantic_hash": ""
+  },
+  "backend/src/services/decision_drift_service.py": {
+    "mtime": 1782638152.3707721,
+    "ast_hash": "4d291de4925173683812e554aa7fe940",
+    "semantic_hash": ""
+  },
+  "backend/src/services/decision_fingerprint_service.py": {
+    "mtime": 1782638125.6095665,
+    "ast_hash": "36a7d9cbd284b224c29c31feb06f68ec",
+    "semantic_hash": ""
+  },
+  "backend/src/services/decision_history_service.py": {
+    "mtime": 1782638131.6513796,
+    "ast_hash": "26d63b72a67d2267c16ca4e0b8b3a7ef",
+    "semantic_hash": ""
+  },
+  "backend/src/services/decision_impact_registry.py": {
+    "mtime": 1782638116.4243903,
+    "ast_hash": "23e84a9d88420cc2e01096636ae9d272",
+    "semantic_hash": ""
+  },
+  "backend/src/services/decision_snapshot_service.py": {
+    "mtime": 1782638158.446429,
+    "ast_hash": "9965598cd60c67fa59d76841bd7e2d24",
+    "semantic_hash": ""
+  },
+  "backend/src/services/decision_tradeoff_service.py": {
+    "mtime": 1782638144.4224267,
+    "ast_hash": "b17c6aadd71dff5e659f57f61dc1750e",
+    "semantic_hash": ""
+  },
+  "backend/src/services/decision_type_registry.py": {
+    "mtime": 1782638111.3017447,
+    "ast_hash": "ce4897aa592d3c93e9ddf81f8c457c4f",
+    "semantic_hash": ""
+  },
+  "backend/src/services/security_decision_service.py": {
+    "mtime": 1782638486.9920216,
+    "ast_hash": "958fa684144c19285b77474790dfe3a5",
+    "semantic_hash": ""
+  },
+  "backend/src/services/tradeoff_factor_registry.py": {
+    "mtime": 1782638121.2419639,
+    "ast_hash": "86ff555bb63d60f6532f0c03c92ba0e3",
+    "semantic_hash": ""
+  },
+  "backend/tests/integration/test_security_decision.py": {
+    "mtime": 1782638276.052245,
+    "ast_hash": "a77b35411ec00cd987db8007f6852be5",
+    "semantic_hash": ""
+  },
+  "backend/src/api/v1/routers/autonomous_planning.py": {
+    "mtime": 1782638922.5610232,
+    "ast_hash": "f31bb991cb4406b4e2a48b9559196d8d",
+    "semantic_hash": ""
+  },
+  "backend/src/domain/entities/autonomous_planning.py": {
+    "mtime": 1782638855.4439888,
+    "ast_hash": "048f4c4d387fe5a23aac396c8b284c6a",
+    "semantic_hash": ""
+  },
+  "backend/src/services/autonomous_security_planning_service.py": {
+    "mtime": 1782638898.3567123,
+    "ast_hash": "d2f0c9ea965898745aae16f08df37f38",
+    "semantic_hash": ""
+  },
+  "backend/src/services/milestone_type_registry.py": {
+    "mtime": 1782638879.317312,
+    "ast_hash": "dd516ad51dd1c0e87780c325a8a67155",
+    "semantic_hash": ""
+  },
+  "backend/src/services/planning_category_registry.py": {
+    "mtime": 1782638865.0350394,
+    "ast_hash": "21537800d645758963ae25cc088c795b",
+    "semantic_hash": ""
+  },
+  "backend/src/services/planning_drift_service.py": {
+    "mtime": 1782638911.386224,
+    "ast_hash": "6304beb1471cc1c4ed6ea418c71b004d",
+    "semantic_hash": ""
+  },
+  "backend/src/services/planning_fingerprint_service.py": {
+    "mtime": 1782638884.2501514,
+    "ast_hash": "ec5ee337f80f4c4f7207f6844894dc3d",
+    "semantic_hash": ""
+  },
+  "backend/src/services/planning_history_service.py": {
+    "mtime": 1782638890.2595918,
+    "ast_hash": "eed2261487d89e34607b25a9ad6f4012",
+    "semantic_hash": ""
+  },
+  "backend/src/services/planning_optimization_service.py": {
+    "mtime": 1782638905.0856426,
+    "ast_hash": "6d8f6d395ba8b01e585bade5a5f0f98c",
+    "semantic_hash": ""
+  },
+  "backend/src/services/planning_priority_registry.py": {
+    "mtime": 1782638874.161842,
+    "ast_hash": "8b539696fe7f4b24626b79848895dc8e",
+    "semantic_hash": ""
+  },
+  "backend/src/services/planning_snapshot_service.py": {
+    "mtime": 1782638916.1746511,
+    "ast_hash": "2a5c0a6e646169f1463d6f35bd7ef181",
+    "semantic_hash": ""
+  },
+  "backend/tests/integration/test_autonomous_planning.py": {
+    "mtime": 1782638984.408998,
+    "ast_hash": "9f31b1a57ab9c0299cd94c1a7d30accf",
+    "semantic_hash": ""
+  },
+  "Implementation/walkthroughs/sprint_35_walkthrough.md": {
+    "mtime": 1782638579.5232763,
+    "ast_hash": "620818bd63f2d59d766e12ebec32429f",
     "semantic_hash": ""
   }
 }

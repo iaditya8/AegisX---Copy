@@ -905,14 +905,34 @@ async def _execute_workflow_async(
 
                         try:
                             # Sprint 36: Autonomous Security Planning
-                            pass
+                            from src.services.autonomous_security_planning_service import AutonomousSecurityPlanningService
+                            from src.services.planning_optimization_service import PlanningOptimizationService
+                            from src.services.planning_drift_service import PlanningDriftService
+                            from src.services.planning_snapshot_service import PlanningSnapshotService
+
+                            await AutonomousSecurityPlanningService.sync_plans(db)
+                            PlanningOptimizationService.optimize_sequences()
+                            
+                            prev_plan_snap = PlanningSnapshotService._snapshots.get(scope_id)
+                            await PlanningDriftService.process_drift(db, scope_id=scope_id, prev_snapshot=prev_plan_snap)
+                            await PlanningSnapshotService.generate_snapshot(db, scope_id)
                         except Exception as planning_err:
                             import logging
                             logging.error(f"Failed to perform GRC planning checks: {planning_err}")
 
                         try:
                             # Sprint 37: Unified Security Intelligence Fabric
-                            pass
+                            from src.services.unified_security_intelligence_fabric_service import UnifiedSecurityIntelligenceFabricService
+                            from src.services.intelligence_propagation_service import IntelligencePropagationService
+                            from src.services.fabric_drift_service import FabricDriftService
+                            from src.services.fabric_snapshot_service import FabricSnapshotService
+
+                            await UnifiedSecurityIntelligenceFabricService.sync_fabric_state(db)
+                            IntelligencePropagationService.process_propagation()
+                            
+                            prev_fabric_snap = FabricSnapshotService._snapshots.get(scope_id)
+                            await FabricDriftService.process_drift(db, scope_id=scope_id, prev_snapshot=prev_fabric_snap)
+                            await FabricSnapshotService.generate_snapshot(db, scope_id)
                         except Exception as fabric_err:
                             import logging
                             logging.error(f"Failed to perform GRC fabric checks: {fabric_err}")
