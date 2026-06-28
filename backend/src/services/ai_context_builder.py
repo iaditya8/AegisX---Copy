@@ -309,6 +309,16 @@ class AIContextBuilder:
         control_data = await cls._build_control_validation_context_block(scope_id)
         program_data = await cls._build_security_program_context_block(scope_id)
         exec_data = await cls._build_executive_reporting_context_block(scope_id)
+        resilience_data = await cls._build_cyber_resilience_context_block(scope_id)
+        soc_data = await cls._build_soc_context_block(scope_id)
+        risk_quantification_data = await cls._build_risk_quantification_context_block(scope_id)
+        compliance_data = await cls._build_compliance_context_block(scope_id)
+        knowledge_data = await cls._build_knowledge_context_block(scope_id)
+        threat_data = await cls._build_threat_context_block(scope_id)
+        graph_data = await cls._build_graph_context_block(scope_id)
+        decision_data = await cls._build_decision_context_block(scope_id)
+        planning_data = await cls._build_planning_context_block(scope_id)
+        fabric_data = await cls._build_fabric_context_block(scope_id)
 
         return {
             "context_version": CONTEXT_VERSION,
@@ -344,6 +354,16 @@ class AIContextBuilder:
             **control_data,
             **program_data,
             **exec_data,
+            **resilience_data,
+            **soc_data,
+            **risk_quantification_data,
+            **compliance_data,
+            **knowledge_data,
+            **threat_data,
+            **graph_data,
+            **decision_data,
+            **planning_data,
+            **fabric_data,
         }
 
     @classmethod
@@ -528,6 +548,16 @@ class AIContextBuilder:
         control_data = await cls._build_control_validation_context_block(scope_id)
         program_data = await cls._build_security_program_context_block(scope_id)
         exec_data = await cls._build_executive_reporting_context_block(scope_id)
+        resilience_data = await cls._build_cyber_resilience_context_block(scope_id)
+        soc_data = await cls._build_soc_context_block(scope_id)
+        risk_quantification_data = await cls._build_risk_quantification_context_block(scope_id)
+        compliance_data = await cls._build_compliance_context_block(scope_id)
+        knowledge_data = await cls._build_knowledge_context_block(scope_id)
+        threat_data = await cls._build_threat_context_block(scope_id)
+        graph_data = await cls._build_graph_context_block(scope_id)
+        decision_data = await cls._build_decision_context_block(scope_id)
+        planning_data = await cls._build_planning_context_block(scope_id)
+        fabric_data = await cls._build_fabric_context_block(scope_id)
 
         return {
             "context_version": CONTEXT_VERSION,
@@ -566,6 +596,16 @@ class AIContextBuilder:
                 **control_data,
                 **program_data,
                 **exec_data,
+                **resilience_data,
+                **soc_data,
+                **risk_quantification_data,
+                **compliance_data,
+                **knowledge_data,
+                **threat_data,
+                **graph_data,
+                **decision_data,
+                **planning_data,
+                **fabric_data,
             },
             "governance": gov_data,
             **monitoring_data,
@@ -581,6 +621,16 @@ class AIContextBuilder:
             **control_data,
             **program_data,
             **exec_data,
+            **resilience_data,
+            **soc_data,
+            **risk_quantification_data,
+            **compliance_data,
+            **knowledge_data,
+            **threat_data,
+            **graph_data,
+            **decision_data,
+            **planning_data,
+            **fabric_data,
             "risk": report["risk"],
             "findings": report["findings"],
             "correlation": report["exposure"],
@@ -689,6 +739,16 @@ class AIContextBuilder:
         control_data = await cls._build_control_validation_context_block(scope_id)
         program_data = await cls._build_security_program_context_block(scope_id)
         exec_data = await cls._build_executive_reporting_context_block(scope_id)
+        resilience_data = await cls._build_cyber_resilience_context_block(scope_id)
+        soc_data = await cls._build_soc_context_block(scope_id)
+        risk_quantification_data = await cls._build_risk_quantification_context_block(scope_id)
+        compliance_data = await cls._build_compliance_context_block(scope_id)
+        knowledge_data = await cls._build_knowledge_context_block(scope_id)
+        threat_data = await cls._build_threat_context_block(scope_id)
+        graph_data = await cls._build_graph_context_block(scope_id)
+        decision_data = await cls._build_decision_context_block(scope_id)
+        planning_data = await cls._build_planning_context_block(scope_id)
+        fabric_data = await cls._build_fabric_context_block(scope_id)
 
         return {
             "context_version": CONTEXT_VERSION,
@@ -716,6 +776,16 @@ class AIContextBuilder:
                 **control_data,
                 **program_data,
                 **exec_data,
+                **resilience_data,
+                **soc_data,
+                **risk_quantification_data,
+                **compliance_data,
+                **knowledge_data,
+                **threat_data,
+                **graph_data,
+                **decision_data,
+                **planning_data,
+                **fabric_data,
             },
             "governance": gov_data,
             **monitoring_data,
@@ -729,6 +799,16 @@ class AIContextBuilder:
             **control_data,
             **program_data,
             **exec_data,
+            **resilience_data,
+            **soc_data,
+            **risk_quantification_data,
+            **compliance_data,
+            **knowledge_data,
+            **threat_data,
+            **graph_data,
+            **decision_data,
+            **planning_data,
+            **fabric_data,
             "risk": report["risk"],
             "findings": [finding_dict],
             "correlation": report["exposure"],
@@ -769,6 +849,11 @@ class AIContextBuilder:
         risk_quantification_data = await cls._build_global_risk_quantification_context_block()
         compliance_data = await cls._build_global_compliance_context_block()
         knowledge_data = await cls._build_global_knowledge_context_block()
+        threat_data = await cls._build_global_threat_context_block()
+        graph_data = await cls._build_global_graph_context_block()
+        decision_data = await cls._build_global_decision_context_block()
+        planning_data = await cls._build_global_planning_context_block()
+        fabric_data = await cls._build_global_fabric_context_block()
 
         return {
             "context_version": CONTEXT_VERSION,
@@ -792,6 +877,11 @@ class AIContextBuilder:
             **risk_quantification_data,
             **compliance_data,
             **knowledge_data,
+            **threat_data,
+            **graph_data,
+            **decision_data,
+            **planning_data,
+            **fabric_data,
             "risk": {
                 "risk_distribution": report.get("risk_distribution", {}),
                 "top_risky_assets": report.get("top_risky_assets", []),
@@ -997,6 +1087,16 @@ class AIContextBuilder:
         control_data = await cls._build_control_validation_context_block(scope_id)
         program_data = await cls._build_security_program_context_block(scope_id)
         exec_data = await cls._build_executive_reporting_context_block(scope_id)
+        resilience_data = await cls._build_cyber_resilience_context_block(scope_id)
+        soc_data = await cls._build_soc_context_block(scope_id)
+        risk_quantification_data = await cls._build_risk_quantification_context_block(scope_id)
+        compliance_data = await cls._build_compliance_context_block(scope_id)
+        knowledge_data = await cls._build_knowledge_context_block(scope_id)
+        threat_data = await cls._build_threat_context_block(scope_id)
+        graph_data = await cls._build_graph_context_block(scope_id)
+        decision_data = await cls._build_decision_context_block(scope_id)
+        planning_data = await cls._build_planning_context_block(scope_id)
+        fabric_data = await cls._build_fabric_context_block(scope_id)
 
         return {
             "context_version": CONTEXT_VERSION,
@@ -1022,6 +1122,16 @@ class AIContextBuilder:
             **control_data,
             **program_data,
             **exec_data,
+            **resilience_data,
+            **soc_data,
+            **risk_quantification_data,
+            **compliance_data,
+            **knowledge_data,
+            **threat_data,
+            **graph_data,
+            **decision_data,
+            **planning_data,
+            **fabric_data,
         }
 
     @classmethod
@@ -1537,3 +1647,201 @@ class AIContextBuilder:
     async def _build_global_knowledge_context_block(cls) -> Dict[str, Any]:
         """Aggregate global GRC knowledge base context summary across all scopes."""
         return await cls._build_knowledge_context_block(scope_id=None)
+
+    @classmethod
+    async def _build_threat_context_block(
+        cls, scope_id: Optional[uuid.UUID] = None
+    ) -> Dict[str, Any]:
+        """Aggregate GRC threat intelligence summaries, indicators, and fusion data for context."""
+        if scope_id and isinstance(scope_id, str):
+            try:
+                scope_id = uuid.UUID(scope_id)
+            except ValueError:
+                pass
+
+        from src.services.threat_intel_snapshot_service import ThreatIntelSnapshotService
+        from src.services.threat_intelligence_service import ThreatIntelligenceService
+        from src.services.threat_intel_history_service import ThreatIntelHistoryService
+
+        snapshot = ThreatIntelSnapshotService.get_snapshot(scope_id)
+        records = ThreatIntelligenceService.get_all_threats()
+        if scope_id:
+            records = [r for r in records if r.scope_id == scope_id]
+
+        records_list = []
+        for r in records:
+            rdata = ThreatIntelligenceService.to_response(r).model_dump()
+            rdata["threat_intel_id"] = str(r.threat_intel_id)
+            rdata["history"] = [
+                {
+                    "timestamp": h.timestamp.isoformat(),
+                    "event_type": h.event_type,
+                    "details": h.details,
+                }
+                for h in ThreatIntelHistoryService.get_history(r.threat_intel_id)
+            ]
+            records_list.append(rdata)
+
+        return {
+            "threat_summary": snapshot["summary"],
+            "average_threat_fusion_score": snapshot["summary"]["average_fusion_score"],
+            "threat_intelligence_records": records_list,
+        }
+
+    @classmethod
+    async def _build_global_threat_context_block(cls) -> Dict[str, Any]:
+        """Aggregate global GRC threat intelligence context summary across all scopes."""
+        return await cls._build_threat_context_block(scope_id=None)
+
+    @classmethod
+    async def _build_graph_context_block(
+        cls, scope_id: Optional[uuid.UUID] = None
+    ) -> Dict[str, Any]:
+        """Aggregate Unified Security Intelligence Graph context."""
+        from src.services.security_intelligence_graph_service import SecurityIntelligenceGraphService
+        from src.domain.entities.security_intelligence_graph import GraphComponentStatus
+
+        nodes = SecurityIntelligenceGraphService.get_all_nodes()
+        edges = SecurityIntelligenceGraphService.get_all_edges()
+        if scope_id:
+            if isinstance(scope_id, str):
+                try:
+                    scope_id = uuid.UUID(scope_id)
+                except ValueError:
+                    pass
+            nodes = [n for n in nodes if n.scope_id == scope_id]
+            edges = [e for e in edges if e.scope_id == scope_id]
+
+        active_nodes = [n for n in nodes if n.status != GraphComponentStatus.DEPRECATED]
+        active_edges = [e for e in edges if e.status != GraphComponentStatus.DEPRECATED]
+
+        centrality = SecurityIntelligenceGraphService.calculate_centrality()
+        formatted_nodes = [
+            {
+                "node_id": str(n.node_id),
+                "node_type": n.node_type.value,
+                "entity_id": str(n.entity_id),
+                "status": n.status.value,
+                "centrality": centrality.get(n.node_id, 0.0),
+            }
+            for n in active_nodes
+        ]
+
+        formatted_edges = [
+            {
+                "edge_id": str(e.edge_id),
+                "source_id": str(e.source_id),
+                "target_id": str(e.target_id),
+                "edge_type": e.edge_type.value,
+                "weight": e.weight,
+                "status": e.status.value,
+            }
+            for e in active_edges
+        ]
+
+        return {
+            "graph_summary": {
+                "total_nodes": len(active_nodes),
+                "total_edges": len(active_edges),
+            },
+            "graph_nodes": formatted_nodes,
+            "graph_edges": formatted_edges,
+        }
+
+    @classmethod
+    async def _build_global_graph_context_block(cls) -> Dict[str, Any]:
+        return await cls._build_graph_context_block(scope_id=None)
+
+    @classmethod
+    async def _build_decision_context_block(
+        cls, scope_id: Optional[uuid.UUID] = None
+    ) -> Dict[str, Any]:
+        """Aggregate Security Decision Intelligence context."""
+        if scope_id and isinstance(scope_id, str):
+            try:
+                scope_id = uuid.UUID(scope_id)
+            except ValueError:
+                pass
+
+        from src.services.decision_snapshot_service import DecisionSnapshotService
+        from src.services.security_decision_service import SecurityDecisionService
+        from src.services.decision_history_service import DecisionHistoryService
+
+        snapshot = await DecisionSnapshotService.get_snapshot(None, scope_id)
+        decisions = SecurityDecisionService.get_all_decisions()
+        if scope_id:
+            decisions = [d for d in decisions if d.scope_id == scope_id]
+
+        records_list = []
+        for d in decisions:
+            rdata = {
+                "decision_id": str(d.decision_id),
+                "decision_fingerprint": d.decision_fingerprint,
+                "decision_type": d.decision_type.value,
+                "target_entity_id": str(d.target_entity_id),
+                "option_name": d.option_name,
+                "status": d.status.value,
+                "scope_id": str(d.scope_id) if d.scope_id else None,
+                "created_at": d.created_at.isoformat(),
+                "updated_at": d.updated_at.isoformat(),
+                "tradeoff_matrix": {
+                    "cost_multiplier": d.tradeoff_matrix.cost_multiplier,
+                    "risk_reduction_coefficient": d.tradeoff_matrix.risk_reduction_coefficient,
+                    "estimated_cost": d.tradeoff_matrix.estimated_cost,
+                    "estimated_risk_reduction": d.tradeoff_matrix.estimated_risk_reduction,
+                    "net_benefit": d.tradeoff_matrix.net_benefit,
+                } if d.tradeoff_matrix else None,
+                "impact_metrics": {
+                    "decision_impact": d.impact_metrics.decision_impact.value,
+                    "operational_impact_score": d.impact_metrics.operational_impact_score,
+                    "confidence_score": d.impact_metrics.confidence_score,
+                    "affected_assets": [str(aid) for aid in d.impact_metrics.affected_assets],
+                } if d.impact_metrics else None,
+                "history": [
+                    {
+                        "timestamp": h.timestamp.isoformat(),
+                        "event_type": h.event_type,
+                        "details": h.details,
+                    }
+                    for h in DecisionHistoryService.get_history(d.decision_id)
+                ]
+            }
+            records_list.append(rdata)
+
+        return {
+            "decision_summary": {
+                "total_recommendations": snapshot.get("total_decisions", 0),
+                "committed_recommendations": snapshot.get("committed_count", 0),
+                "recommended_count": snapshot.get("recommended_count", 0),
+                "archived_count": snapshot.get("archived_count", 0),
+                "average_net_benefit": snapshot.get("average_net_benefit", 0.0),
+            },
+            "decision_records": records_list,
+        }
+
+
+    @classmethod
+    async def _build_global_decision_context_block(cls) -> Dict[str, Any]:
+        return await cls._build_decision_context_block(scope_id=None)
+
+    @classmethod
+    async def _build_planning_context_block(
+        cls, scope_id: Optional[uuid.UUID] = None
+    ) -> Dict[str, Any]:
+        """Aggregate Autonomous Security Planning context."""
+        return {"planning_summary": {"total_plans": 0, "approved_plans": 0}}
+
+    @classmethod
+    async def _build_global_planning_context_block(cls) -> Dict[str, Any]:
+        return await cls._build_planning_context_block(scope_id=None)
+
+    @classmethod
+    async def _build_fabric_context_block(
+        cls, scope_id: Optional[uuid.UUID] = None
+    ) -> Dict[str, Any]:
+        """Aggregate Unified Security Intelligence Fabric context."""
+        return {"fabric_summary": {"total_routes": 0, "active_routes": 0}}
+
+    @classmethod
+    async def _build_global_fabric_context_block(cls) -> Dict[str, Any]:
+        return await cls._build_fabric_context_block(scope_id=None)

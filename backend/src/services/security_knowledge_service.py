@@ -257,6 +257,48 @@ class SecurityKnowledgeService:
         return record
 
     @classmethod
+    def recalculate_knowledge(cls) -> None:
+        """Recalculate GRC knowledge scores and statuses deterministically (derived intelligence)."""
+        from src.services.knowledge_severity_registry import KnowledgeSeverityRegistry
+
+        for record in cls.get_all_knowledge():
+            if record.status == KnowledgeStatus.ARCHIVED:
+                continue
+
+            old_relevance = record.relevance_score
+            old_confidence = record.confidence_score
+            old_severity = KnowledgeSeverityRegistry.determine_severity(old_relevance)
+
+            # Recalculate
+            new_relevance = KnowledgeRelevanceService.calculate_relevance(record.title, record.content)
+            new_confidence = KnowledgeRelevanceService.calculate_confidence(record.status == KnowledgeStatus.APPROVED)
+            new_severity = KnowledgeSeverityRegistry.determine_severity(new_relevance)
+
+            changed = False
+            if record.relevance_score != new_relevance:
+                record.relevance_score = new_relevance
+                changed = True
+                KnowledgeHistoryService.record_event(
+                    record.knowledge_id, "RELEVANCE_CHANGED", f"Relevance score updated from {old_relevance} to {new_relevance}"
+                )
+
+            if record.confidence_score != new_confidence:
+                record.confidence_score = new_confidence
+                changed = True
+                KnowledgeHistoryService.record_event(
+                    record.knowledge_id, "CONFIDENCE_CHANGED", f"Confidence score updated from {old_confidence} to {new_confidence}"
+                )
+
+            if old_severity != new_severity:
+                changed = True
+                KnowledgeHistoryService.record_event(
+                    record.knowledge_id, "SEVERITY_CHANGED", f"Severity level updated from {old_severity} to {new_severity}"
+                )
+
+            if changed:
+                record.updated_at = datetime.now(timezone.utc)
+
+    @classmethod
     def to_response(cls, record: KnowledgeRecord) -> KnowledgeRecordResponse:
         return KnowledgeRecordResponse(
             knowledge_id=record.knowledge_id,

@@ -275,6 +275,46 @@ class GovernanceRiskComplianceService:
         return record
 
     @classmethod
+    def recalculate_assessments(cls) -> None:
+        """Recalculate GRC assessment scores and statuses deterministically (derived intelligence)."""
+        for record in cls.get_all_assessments():
+            if record.status == ComplianceStatus.CLOSED:
+                continue
+
+            controls = ControlMappingRegistry.get_controls(record.framework_type)
+            control_count = len(controls)
+            evidence_count = len(record.evidence_list)
+
+            scores = ComplianceScoringService.calculate_scores(control_count, evidence_count)
+            readiness = AuditReadinessService.calculate_readiness(
+                scores["compliance_score"], scores["evidence_completeness"]
+            )
+
+            changed = False
+            if record.framework_coverage != scores["framework_coverage"]:
+                record.framework_coverage = scores["framework_coverage"]
+                changed = True
+            if record.compliance_score != scores["compliance_score"]:
+                old_score = record.compliance_score
+                record.compliance_score = scores["compliance_score"]
+                changed = True
+                ComplianceHistoryService.record_event(
+                    record.assessment_id, "RECALCULATED", f"Recalculated compliance score changed from {old_score} to {scores['compliance_score']}"
+                )
+            if record.control_coverage != scores["control_coverage"]:
+                record.control_coverage = scores["control_coverage"]
+                changed = True
+            if record.evidence_completeness != scores["evidence_completeness"]:
+                record.evidence_completeness = scores["evidence_completeness"]
+                changed = True
+            if record.audit_readiness != readiness:
+                record.audit_readiness = readiness
+                changed = True
+
+            if changed:
+                record.updated_at = datetime.now(timezone.utc)
+
+    @classmethod
     def to_response(cls, record: GRCRecord) -> ComplianceAssessmentResponse:
         return ComplianceAssessmentResponse(
             assessment_id=record.assessment_id,

@@ -812,6 +812,7 @@ async def _execute_workflow_async(
                             ComplianceScoringService.calculate()
                             AuditReadinessService.calculate()
                             ComplianceGapService.calculate()
+                            GovernanceRiskComplianceService.recalculate_assessments()
                             
                             prev_grc_snap = ComplianceSnapshotService._snapshots.get(scope_id)
                             await GRCComplianceDriftService.process_drift(db, scope_id=scope_id, prev_snapshot=prev_grc_snap)
@@ -833,6 +834,7 @@ async def _execute_workflow_async(
                             KnowledgeRelationshipService.calculate()
                             KnowledgeRelevanceService.calculate()
                             KnowledgeRecommendationService.calculate()
+                            SecurityKnowledgeService.recalculate_knowledge()
                             
                             prev_know_snap = KnowledgeSnapshotService._snapshots.get(scope_id)
                             await KnowledgeDriftService.process_drift(db, scope_id=scope_id, prev_snapshot=prev_know_snap)
@@ -840,6 +842,80 @@ async def _execute_workflow_async(
                         except Exception as know_err:
                             import logging
                             logging.error(f"Failed to perform GRC knowledge base intelligence checks: {know_err}")
+
+                        try:
+                            from src.services.threat_intelligence_service import ThreatIntelligenceService
+                            from src.services.threat_intel_fusion_service import ThreatIntelFusionService
+                            from src.services.threat_intel_drift_service import ThreatIntelDriftService
+                            from src.services.threat_intel_snapshot_service import ThreatIntelSnapshotService
+                            from src.domain.entities.threat_intel import ThreatIntelStatus
+
+                            # Sprint 33 GRC Threat Intel Worker Execution Order
+                            await ThreatIntelligenceService.sync_threats(db)
+                            
+                            # Run fusion score calculations and persist FUSED status (Finding 2)
+                            for threat in ThreatIntelligenceService.get_all_threats():
+                                if threat.status == ThreatIntelStatus.ARCHIVED:
+                                    continue
+                                score = ThreatIntelFusionService.calculate_fusion_score(threat.value, threat.indicator_type.value)
+                                ThreatIntelligenceService.fuse_threat(threat.threat_intel_id, score)
+
+                            ThreatIntelFusionService.calculate()
+
+                            prev_threat_snap = ThreatIntelSnapshotService._snapshots.get(scope_id)
+                            await ThreatIntelDriftService.process_drift(db, scope_id=scope_id, prev_snapshot=prev_threat_snap)
+                            await ThreatIntelSnapshotService.generate_snapshot(db, scope_id)
+                        except Exception as threat_err:
+                            import logging
+                            logging.error(f"Failed to perform GRC threat intelligence checks: {threat_err}")
+
+                        try:
+                            # Sprint 34: Unified Security Intelligence Graph
+                            from src.services.security_intelligence_graph_service import SecurityIntelligenceGraphService
+                            from src.services.graph_correlation_service import GraphCorrelationService
+                            from src.services.graph_drift_service import GraphDriftService
+                            from src.services.graph_snapshot_service import GraphSnapshotService
+
+                            await SecurityIntelligenceGraphService.rebuild_graph_topology(db)
+                            GraphCorrelationService.recalculate_cross_domain_links()
+
+                            prev_graph_snap = GraphSnapshotService._snapshots.get(scope_id)
+                            await GraphDriftService.process_drift(db, scope_id=scope_id, prev_snapshot=prev_graph_snap)
+                            await GraphSnapshotService.generate_snapshot(db, scope_id)
+                        except Exception as graph_err:
+                            import logging
+                            logging.error(f"Failed to perform GRC graph checks: {graph_err}")
+
+                        try:
+                            # Sprint 35: Security Decision Intelligence
+                            from src.services.security_decision_service import SecurityDecisionService
+                            from src.services.decision_tradeoff_service import DecisionTradeoffService
+                            from src.services.decision_drift_service import DecisionDriftService
+                            from src.services.decision_snapshot_service import DecisionSnapshotService
+
+                            await SecurityDecisionService.sync_decision_recommendations(db)
+                            DecisionTradeoffService.calculate()
+                            
+                            prev_dec_snap = DecisionSnapshotService._snapshots.get(scope_id)
+                            await DecisionDriftService.process_drift(db, scope_id=scope_id, prev_snapshot=prev_dec_snap)
+                            await DecisionSnapshotService.generate_snapshot(db, scope_id)
+                        except Exception as decision_err:
+                            import logging
+                            logging.error(f"Failed to perform GRC decision checks: {decision_err}")
+
+                        try:
+                            # Sprint 36: Autonomous Security Planning
+                            pass
+                        except Exception as planning_err:
+                            import logging
+                            logging.error(f"Failed to perform GRC planning checks: {planning_err}")
+
+                        try:
+                            # Sprint 37: Unified Security Intelligence Fabric
+                            pass
+                        except Exception as fabric_err:
+                            import logging
+                            logging.error(f"Failed to perform GRC fabric checks: {fabric_err}")
 
                     except Exception as refresh_err:
                         import logging

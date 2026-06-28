@@ -30,6 +30,8 @@ from src.api.v1.routers.security_operations_analytics import router as security_
 from src.api.v1.routers.cyber_risk_quantification import router as cyber_risk_quantification_router
 from src.api.v1.routers.governance_risk_compliance import router as governance_risk_compliance_router
 from src.api.v1.routers.security_knowledge import router as security_knowledge_router
+from src.api.v1.routers.security_intelligence_graph import router as security_intelligence_graph_router
+from src.api.v1.routers.security_decision import router as security_decision_router
 from src.api.v1.routers.plugins import router as plugins_router
 from src.api.v1.routers.recommendations import router as recommendations_router
 from src.api.v1.routers.remediations import router as remediations_router
@@ -98,6 +100,8 @@ app.include_router(security_operations_analytics_router, prefix=settings.API_V1_
 app.include_router(cyber_risk_quantification_router, prefix=settings.API_V1_STR)
 app.include_router(governance_risk_compliance_router, prefix=settings.API_V1_STR)
 app.include_router(security_knowledge_router, prefix=settings.API_V1_STR)
+app.include_router(security_intelligence_graph_router, prefix=settings.API_V1_STR)
+app.include_router(security_decision_router, prefix=settings.API_V1_STR)
 
 
 # Global Exception Handlers for standardizing error shapes
