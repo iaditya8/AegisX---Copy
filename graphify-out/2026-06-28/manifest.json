@@ -205,8 +205,8 @@
     "semantic_hash": "cc6a567e71f110d84dc586c96beb901d"
   },
   "backend/src/infrastructure/celery/worker.py": {
-    "mtime": 1782638943.0684068,
-    "ast_hash": "7a117ba99079434ac822d11579158a11",
+    "mtime": 1782639284.147322,
+    "ast_hash": "79eec76db2e220889913e72be00da0fb",
     "semantic_hash": ""
   },
   "backend/src/infrastructure/database/models.py": {
@@ -220,8 +220,8 @@
     "semantic_hash": "e9df1259af19fb708350b2b937c006e7"
   },
   "backend/src/main.py": {
-    "mtime": 1782638934.3763435,
-    "ast_hash": "5891ea07531d5b50add8c9e13caa3c80",
+    "mtime": 1782639273.1028087,
+    "ast_hash": "96bef35d0db897433fc71ad5a3927a8a",
     "semantic_hash": ""
   },
   "backend/src/plugins/amass.py": {
@@ -290,8 +290,8 @@
     "semantic_hash": "786254af83392568c552728d126a8c66"
   },
   "backend/src/services/ai_context_builder.py": {
-    "mtime": 1782638953.3852968,
-    "ast_hash": "05de6fe5de526112a865706232aee45d",
+    "mtime": 1782639300.349865,
+    "ast_hash": "b10f9d7dcd3ce67288a62d9f493f44c6",
     "semantic_hash": ""
   },
   "backend/src/services/ai_guardrails.py": {
@@ -300,8 +300,8 @@
     "semantic_hash": "cacac50b1dd10c0ccd714ab1b0e10e86"
   },
   "backend/src/services/ai_prompt_builder.py": {
-    "mtime": 1782594885.1723487,
-    "ast_hash": "c37c8bbd3ee51cd96436a17a1be60f90",
+    "mtime": 1782639325.1190698,
+    "ast_hash": "1db408e17fe88886ee86cf36c63b4402",
     "semantic_hash": ""
   },
   "backend/src/services/ai_provider.py": {
@@ -3012,6 +3012,71 @@
   "Implementation/walkthroughs/sprint_35_walkthrough.md": {
     "mtime": 1782638579.5232763,
     "ast_hash": "620818bd63f2d59d766e12ebec32429f",
+    "semantic_hash": ""
+  },
+  "backend/src/api/v1/routers/security_intelligence_fabric.py": {
+    "mtime": 1782639260.9777102,
+    "ast_hash": "33089c6e725550a67e048a5a4fdcf127",
+    "semantic_hash": ""
+  },
+  "backend/src/domain/entities/security_intelligence_fabric.py": {
+    "mtime": 1782639202.810894,
+    "ast_hash": "c36c39e601ff6c4f289e4848d3b83559",
+    "semantic_hash": ""
+  },
+  "backend/src/services/confidence_weight_registry.py": {
+    "mtime": 1782639216.7912955,
+    "ast_hash": "63e9a25ec9240a51fd8f5abf5fb9eb34",
+    "semantic_hash": ""
+  },
+  "backend/src/services/fabric_drift_service.py": {
+    "mtime": 1782639249.0175374,
+    "ast_hash": "40ba222ae5c5c756585722417e64b4e3",
+    "semantic_hash": ""
+  },
+  "backend/src/services/fabric_fingerprint_service.py": {
+    "mtime": 1782639221.3061235,
+    "ast_hash": "6d44269f5e6b3ffef3ec4488d18db8ff",
+    "semantic_hash": ""
+  },
+  "backend/src/services/fabric_history_service.py": {
+    "mtime": 1782639226.9980202,
+    "ast_hash": "3d43d8fa56e184f27f69ec164b7ecc4a",
+    "semantic_hash": ""
+  },
+  "backend/src/services/fabric_snapshot_service.py": {
+    "mtime": 1782639254.0352423,
+    "ast_hash": "e7ad5ba9388369ca29692c65a0e719fb",
+    "semantic_hash": ""
+  },
+  "backend/src/services/intelligence_propagation_service.py": {
+    "mtime": 1782639242.9534843,
+    "ast_hash": "d592e0645b201205d76f1aa0f3464770",
+    "semantic_hash": ""
+  },
+  "backend/src/services/intelligence_source_registry.py": {
+    "mtime": 1782639208.371663,
+    "ast_hash": "9817dd271b50cebb8a5bec6db5d44b63",
+    "semantic_hash": ""
+  },
+  "backend/src/services/propagation_direction_registry.py": {
+    "mtime": 1782639212.8414197,
+    "ast_hash": "f9b6d3f3a4cf6721d80cf80ffb2d4d55",
+    "semantic_hash": ""
+  },
+  "backend/src/services/unified_security_intelligence_fabric_service.py": {
+    "mtime": 1782639234.6624029,
+    "ast_hash": "530b1a0efcf480718678302938088bd0",
+    "semantic_hash": ""
+  },
+  "backend/tests/integration/test_security_intelligence_fabric.py": {
+    "mtime": 1782639362.4555733,
+    "ast_hash": "21a4d348146ff620ab3e173edfee2ad2",
+    "semantic_hash": ""
+  },
+  "Implementation/walkthroughs/sprint_36_walkthrough.md": {
+    "mtime": 1782639075.0955198,
+    "ast_hash": "a0093a7b5841251f506d0bcac819ba36",
     "semantic_hash": ""
   }
 }

@@ -19,12 +19,15 @@ from src.services.graph_fingerprint_service import GraphFingerprintService
 from src.services.graph_history_service import GraphHistoryService
 
 
+from src.infrastructure.cache.cache_dict import CacheDict
+
+
 class SecurityIntelligenceGraphService:
     # In-memory graph storage
-    _nodes: Dict[uuid.UUID, GraphNodeResponse] = {}
-    _edges: Dict[uuid.UUID, GraphEdgeResponse] = {}
-    _node_fingerprint_lookup: Dict[str, uuid.UUID] = {}
-    _edge_fingerprint_lookup: Dict[str, uuid.UUID] = {}
+    _nodes = CacheDict("graph_nodes")
+    _edges = CacheDict("graph_edges")
+    _node_fingerprint_lookup = CacheDict("graph_node_fingerprints")
+    _edge_fingerprint_lookup = CacheDict("graph_edge_fingerprints")
 
     @classmethod
     def clear_graph(cls) -> None:

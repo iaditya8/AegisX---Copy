@@ -11,11 +11,14 @@ from src.services.decision_fingerprint_service import DecisionFingerprintService
 from src.services.decision_history_service import DecisionHistoryService
 
 
+from src.infrastructure.cache.cache_dict import CacheDict
+
+
 class SecurityDecisionService:
     # in-memory store: decision_id -> DecisionResponse
-    _decisions: Dict[uuid.UUID, DecisionResponse] = {}
+    _decisions = CacheDict("security_decision")
     # fingerprint -> decision_id
-    _fingerprint_lookup: Dict[str, uuid.UUID] = {}
+    _fingerprint_lookup = CacheDict("security_decision_fingerprints")
 
     @classmethod
     def clear_decisions(cls) -> None:

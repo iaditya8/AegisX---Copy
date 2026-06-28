@@ -36,10 +36,13 @@ class SOCAnalyticsRecord:
         self.updated_at = updated_at or datetime.now(timezone.utc)
 
 
+from src.infrastructure.cache.cache_dict import CacheDict
+
+
 class SecurityOperationsAnalyticsService:
     # in-memory store: analytics_id -> SOCAnalyticsRecord
-    _analytics: Dict[uuid.UUID, SOCAnalyticsRecord] = {}
-    _fingerprint_lookup: Dict[str, uuid.UUID] = {}
+    _analytics = CacheDict("soc_analytics")
+    _fingerprint_lookup = CacheDict("soc_analytics_fingerprints")
 
     ALLOWED_TRANSITIONS = {
         AnalyticsStatus.ACTIVE: {AnalyticsStatus.REVIEW, AnalyticsStatus.COMPLETED, AnalyticsStatus.ARCHIVED},

@@ -13,11 +13,14 @@ from src.services.fabric_history_service import FabricHistoryService
 from src.services.confidence_weight_registry import ConfidenceWeightRegistry
 
 
+from src.infrastructure.cache.cache_dict import CacheDict
+
+
 class UnifiedSecurityIntelligenceFabricService:
     # in-memory store: node_id -> FabricIntelligenceNodeResponse
-    _fabric_nodes: Dict[uuid.UUID, FabricIntelligenceNodeResponse] = {}
+    _fabric_nodes = CacheDict("intelligence_fabric")
     # fingerprint -> node_id
-    _fingerprint_lookup: Dict[str, uuid.UUID] = {}
+    _fingerprint_lookup = CacheDict("intelligence_fabric_fingerprints")
 
     @classmethod
     def clear_fabric(cls) -> None:

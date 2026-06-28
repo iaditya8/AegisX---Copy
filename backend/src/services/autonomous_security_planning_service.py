@@ -14,11 +14,14 @@ from src.services.planning_fingerprint_service import PlanningFingerprintService
 from src.services.planning_history_service import PlanningHistoryService
 
 
+from src.infrastructure.cache.cache_dict import CacheDict
+
+
 class AutonomousSecurityPlanningService:
     # in-memory store: plan_id -> PlanningRecordResponse
-    _plans: Dict[uuid.UUID, PlanningRecordResponse] = {}
+    _plans = CacheDict("autonomous_planning")
     # fingerprint -> plan_id
-    _fingerprint_lookup: Dict[str, uuid.UUID] = {}
+    _fingerprint_lookup = CacheDict("autonomous_planning_fingerprints")
 
     @classmethod
     def clear_plans(cls) -> None:

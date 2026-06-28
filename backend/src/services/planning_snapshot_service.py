@@ -3,9 +3,12 @@ from typing import Dict, Optional
 from src.services.autonomous_security_planning_service import AutonomousSecurityPlanningService
 
 
+from src.infrastructure.cache.cache_dict import CacheDict
+
+
 class PlanningSnapshotService:
     # in-memory snapshot cache: scope_id -> snapshot dict
-    _snapshots: Dict[uuid.UUID, dict] = {}
+    _snapshots = CacheDict("planning_snapshots")
 
     @classmethod
     def clear_snapshots(cls) -> None:

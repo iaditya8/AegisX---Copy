@@ -47,6 +47,15 @@ async def _execute_workflow_async(
     workflow_id: uuid.UUID, scan_run_id: uuid.UUID, scope_id: uuid.UUID
 ):
     async with AsyncSessionLocal() as db:
+        # Cold start recovery check
+        from src.services.unified_security_intelligence_fabric_service import UnifiedSecurityIntelligenceFabricService
+        from src.services.cache_bootstrap_service import CacheBootstrapService
+
+        if len(UnifiedSecurityIntelligenceFabricService.get_all_fabric_nodes()) == 0:
+            import logging
+            logging.info("Cold start detected. Bootstrapping cache recovery pipeline...")
+            await CacheBootstrapService.bootstrap_cache(db, scope_id=scope_id)
+
         workflow = await db.get(Workflow, workflow_id)
         scan_run = await db.get(ScanRun, scan_run_id)
 
@@ -808,9 +817,7 @@ async def _execute_workflow_async(
 
                             # Sprint 31 GRC Worker Execution Order
                             await GovernanceRiskComplianceService.sync_assessments(db)
-                            FrameworkMappingService.calculate()
                             ComplianceScoringService.calculate()
-                            AuditReadinessService.calculate()
                             ComplianceGapService.calculate()
                             GovernanceRiskComplianceService.recalculate_assessments()
                             

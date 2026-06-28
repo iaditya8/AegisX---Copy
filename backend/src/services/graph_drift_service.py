@@ -4,9 +4,12 @@ from typing import Dict, List, Optional
 from sqlalchemy.ext.asyncio import AsyncSession
 
 
+from src.infrastructure.cache.cache_dict import CacheList
+
+
 class GraphDriftService:
     # In-memory drift log
-    _drifts: List[dict] = []
+    _drifts = CacheList("graph_drifts")
 
     @classmethod
     def clear_drifts(cls) -> None:

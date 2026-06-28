@@ -47,10 +47,13 @@ class ThreatRecord:
         self.updated_at = updated_at or datetime.now(timezone.utc)
 
 
+from src.infrastructure.cache.cache_dict import CacheDict
+
+
 class ThreatIntelligenceService:
     # in-memory store: threat_intel_id -> ThreatRecord
-    _threats: Dict[uuid.UUID, ThreatRecord] = {}
-    _fingerprint_lookup: Dict[str, uuid.UUID] = {}
+    _threats = CacheDict("grc_threat")
+    _fingerprint_lookup = CacheDict("grc_threat_fingerprints")
 
     ALLOWED_TRANSITIONS = {
         ThreatIntelStatus.ACTIVE: {

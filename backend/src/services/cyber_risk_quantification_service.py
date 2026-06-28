@@ -53,10 +53,13 @@ class QuantifiedRiskRecord:
         self.updated_at = updated_at or datetime.now(timezone.utc)
 
 
+from src.infrastructure.cache.cache_dict import CacheDict
+
+
 class CyberRiskQuantificationService:
     # in-memory store: risk_id -> QuantifiedRiskRecord
-    _risks: Dict[uuid.UUID, QuantifiedRiskRecord] = {}
-    _fingerprint_lookup: Dict[str, uuid.UUID] = {}
+    _risks = CacheDict("cyber_risk")
+    _fingerprint_lookup = CacheDict("cyber_risk_fingerprints")
 
     ALLOWED_TRANSITIONS = {
         RiskQuantificationStatus.ACTIVE: {

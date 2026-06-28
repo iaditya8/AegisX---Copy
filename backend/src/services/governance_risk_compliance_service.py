@@ -51,10 +51,13 @@ class GRCRecord:
         self.evidence_list: List[ComplianceEvidenceResponse] = []
 
 
+from src.infrastructure.cache.cache_dict import CacheDict
+
+
 class GovernanceRiskComplianceService:
     # in-memory store: assessment_id -> GRCRecord
-    _assessments: Dict[uuid.UUID, GRCRecord] = {}
-    _fingerprint_lookup: Dict[str, uuid.UUID] = {}
+    _assessments = CacheDict("grc_compliance")
+    _fingerprint_lookup = CacheDict("grc_compliance_fingerprints")
 
     ALLOWED_TRANSITIONS = {
         ComplianceStatus.ACTIVE: {

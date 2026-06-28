@@ -46,10 +46,13 @@ class KnowledgeRecord:
         self.updated_at = updated_at or datetime.now(timezone.utc)
 
 
+from src.infrastructure.cache.cache_dict import CacheDict
+
+
 class SecurityKnowledgeService:
     # in-memory store: knowledge_id -> KnowledgeRecord
-    _knowledge: Dict[uuid.UUID, KnowledgeRecord] = {}
-    _fingerprint_lookup: Dict[str, uuid.UUID] = {}
+    _knowledge = CacheDict("security_knowledge")
+    _fingerprint_lookup = CacheDict("security_knowledge_fingerprints")
 
     ALLOWED_TRANSITIONS = {
         KnowledgeStatus.ACTIVE: {

@@ -6,9 +6,12 @@ from src.services.workflow_event_service import WorkflowEventService
 from src.services.planning_snapshot_service import PlanningSnapshotService
 
 
+from src.infrastructure.cache.cache_dict import CacheList
+
+
 class PlanningDriftService:
     # in-memory store for drifts
-    _drifts: List[dict] = []
+    _drifts = CacheList("planning_drifts")
 
     @classmethod
     def get_drifts(cls) -> List[dict]:

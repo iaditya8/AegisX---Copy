@@ -46,10 +46,13 @@ class CyberResilienceRecord:
         self.updated_at = updated_at or datetime.now(timezone.utc)
 
 
+from src.infrastructure.cache.cache_dict import CacheDict
+
+
 class CyberResilienceService:
     # in-memory store: resilience_id -> CyberResilienceRecord
-    _resilience: Dict[uuid.UUID, CyberResilienceRecord] = {}
-    _fingerprint_lookup: Dict[str, uuid.UUID] = {}
+    _resilience = CacheDict("resilience")
+    _fingerprint_lookup = CacheDict("resilience_fingerprints")
 
     ALLOWED_TRANSITIONS = {
         ResilienceStatus.PLANNED: {ResilienceStatus.ACTIVE},

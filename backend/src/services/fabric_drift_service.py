@@ -6,9 +6,12 @@ from src.services.workflow_event_service import WorkflowEventService
 from src.services.fabric_snapshot_service import FabricSnapshotService
 
 
+from src.infrastructure.cache.cache_dict import CacheList
+
+
 class FabricDriftService:
     # in-memory store for drifts
-    _drifts: List[dict] = []
+    _drifts = CacheList("fabric_drifts")
 
     @classmethod
     def get_drifts(cls) -> List[dict]:

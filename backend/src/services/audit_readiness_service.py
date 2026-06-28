@@ -7,5 +7,5 @@ class AuditReadinessService:
 
     @classmethod
     def calculate(cls) -> None:
-        """Run audit readiness calculations (read-only derived intelligence)."""
+        """Deprecated placeholder calculation method."""
         pass
