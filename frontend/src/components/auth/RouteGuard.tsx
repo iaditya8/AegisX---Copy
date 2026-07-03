@@ -2,7 +2,7 @@
 
 import { useAuthStore } from '../../stores/auth';
 import { useRouter } from 'next/navigation';
-import { useEffect, ReactNode } from 'react';
+import { useEffect, ReactNode, useState } from 'react';
 
 interface RouteGuardProps {
   allowedRoles: ('admin' | 'operator' | 'reader')[];
@@ -12,16 +12,23 @@ interface RouteGuardProps {
 export function RouteGuard({ allowedRoles, children }: RouteGuardProps) {
   const { user, accessToken } = useAuthStore();
   const router = useRouter();
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    if (!accessToken) {
-      router.push('/login');
-    } else if (user && !allowedRoles.includes(user.role)) {
-      router.push('/403');
-    }
-  }, [accessToken, user, router, allowedRoles]);
+    setMounted(true);
+  }, []);
 
-  if (!accessToken || (user && !allowedRoles.includes(user.role))) {
+  useEffect(() => {
+    if (mounted) {
+      if (!accessToken) {
+        router.push('/login');
+      } else if (user && !allowedRoles.includes(user.role)) {
+        router.push('/403');
+      }
+    }
+  }, [mounted, accessToken, user, router, allowedRoles]);
+
+  if (!mounted || !accessToken || (user && !allowedRoles.includes(user.role))) {
     return (
       <div className="flex h-screen items-center justify-center bg-zinc-950 text-zinc-200">
         <div className="text-center">
