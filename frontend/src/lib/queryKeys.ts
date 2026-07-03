@@ -51,4 +51,42 @@ export const QUERY_KEYS = {
   planning: {
     list: ['planning', 'list'] as const,
   },
+  grc: {
+    assessments: ['grc', 'assessments'] as const,
+    frameworks: ['grc', 'frameworks'] as const,
+    gaps: (assessmentId: string) => ['grc', 'gaps', assessmentId] as const,
+    summary: (scopeId?: string) => ['grc', 'summary', { scopeId }] as const,
+  },
+  resilience: {
+    list: ['resilience', 'list'] as const,
+    objectives: (resilienceId: string) => ['resilience', 'objectives', resilienceId] as const,
+    summary: (scopeId?: string) => ['resilience', 'summary', { scopeId }] as const,
+  },
+  soc: {
+    queues: ['soc', 'queues'] as const,
+    kpis: ['soc', 'kpis'] as const,
+    analysts: ['soc', 'analysts'] as const,
+  },
+  executive: {
+    reports: ['executive', 'reports'] as const,
+    scorecard: (scopeId?: string) => ['executive', 'scorecard', { scopeId }] as const,
+    heatmap: (scopeId?: string) => ['executive', 'heatmap', { scopeId }] as const,
+  },
+  posture: {
+    summary: (scopeId?: string) => ['posture', 'summary', { scopeId }] as const,
+    list: ['posture', 'list'] as const,
+  },
+  sso: {
+    config: ['sso', 'config'] as const,
+  },
+  tenants: {
+    list: ['tenants', 'list'] as const,
+  },
+  whiteboard: {
+    list: ['whiteboard', 'list'] as const,
+    detail: (id: string) => ['whiteboard', 'detail', id] as const,
+  },
+  copilot: {
+    history: ['copilot', 'history'] as const,
+  },
 } as const;

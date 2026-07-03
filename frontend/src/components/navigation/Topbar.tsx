@@ -4,7 +4,9 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuthStore } from '../../stores/auth';
 import { useScopeStore } from '../../stores/scope';
 import { apiClient, logoutUser } from '../../services/api';
-import { LogOut, User, Target } from 'lucide-react';
+import { LogOut, User, Target, Sparkles } from 'lucide-react';
+import { useCopilotStore } from '../../stores/copilot';
+import { CopilotDrawer } from '../copilot/CopilotDrawer';
 
 interface ScopeItem {
   id: string;
@@ -16,6 +18,7 @@ export function Topbar() {
   const queryClient = useQueryClient();
   const { user } = useAuthStore();
   const { selectedScopeId, setSelectedScopeId } = useScopeStore();
+  const { toggleOpen } = useCopilotStore();
 
   // Fetch all scopes the user has access to
   const { data: scopesResponse, isLoading } = useQuery<any>({
@@ -69,6 +72,16 @@ export function Topbar() {
           </div>
         </div>
 
+        {/* Copilot button */}
+        <button
+          onClick={toggleOpen}
+          className="flex items-center gap-2 text-zinc-500 hover:text-indigo-400 text-sm font-medium transition-colors duration-200 cursor-pointer border-r border-zinc-900 pr-6"
+          title="Ask Copilot"
+        >
+          <Sparkles className="h-4 w-4 text-indigo-400" />
+          <span>Copilot</span>
+        </button>
+
         {/* Logout button */}
         <button
           onClick={handleLogout}
@@ -79,6 +92,7 @@ export function Topbar() {
           <span>Sign Out</span>
         </button>
       </div>
+      <CopilotDrawer />
     </header>
   );
 }

@@ -12,7 +12,11 @@ import {
   Brain,
   Network,
   GitCommit,
-  Calendar
+  Calendar,
+  Activity,
+  TrendingUp,
+  Server,
+  Clipboard
 } from 'lucide-react';
 
 interface SidebarLinkProps {
@@ -81,6 +85,7 @@ export function Sidebar() {
             <SidebarLink href="/workflows" label="Scan Workflows" icon={GitCommit} />
             <SidebarLink href="/planning" label="Remediation Plans" icon={Calendar} />
             <SidebarLink href="/reports" label="Reports & Exports" icon={FileText} />
+            <SidebarLink href="/soc" label="SOC Operations" icon={Activity} />
           </div>
         </div>
 
@@ -91,6 +96,18 @@ export function Sidebar() {
           <div className="space-y-1">
             <SidebarLink href="/threat-intel" label="Threat Intel" icon={Brain} />
             <SidebarLink href="/graph" label="Topology Graph" icon={Network} />
+            <SidebarLink href="/grc" label="GRC Compliance" icon={Shield} />
+            <SidebarLink href="/executive" label="Executive Posture" icon={TrendingUp} />
+            <SidebarLink href="/whiteboards" label="Saved Whiteboards" icon={Clipboard} />
+          </div>
+        </div>
+
+        <div>
+          <div className="px-3 mb-2 text-xs font-semibold text-zinc-500 uppercase tracking-wider">
+            Administration
+          </div>
+          <div className="space-y-1">
+            <SidebarLink href="/admin/sso" label="SSO & Tenants" icon={Server} />
           </div>
         </div>
       </div>

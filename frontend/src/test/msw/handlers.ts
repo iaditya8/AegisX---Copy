@@ -765,5 +765,441 @@ export const handlers = [
       created_at: '2026-06-20T00:00:00Z',
     });
   }),
+
+  // GRC Assessments
+  http.get('/api/v1/governance-risk-compliance', () => {
+    return HttpResponse.json([
+      {
+        id: 'assessment-123',
+        name: 'ISO 27001 Compliance Audit',
+        description: 'Annual ISO 27001 compliance audit for production scopes.',
+        framework_type: 'ISO 27001',
+        status: 'draft',
+        scope_id: 'scope-123',
+        created_at: '2026-06-20T00:00:00Z',
+        updated_at: '2026-06-20T00:00:00Z',
+        evidence_list: [],
+      },
+    ]);
+  }),
+
+  http.get('/api/v1/governance-risk-compliance/frameworks', () => {
+    return HttpResponse.json(['ISO 27001', 'SOC2', 'NIST CSF']);
+  }),
+
+  http.get('/api/v1/governance-risk-compliance/gaps', () => {
+    return HttpResponse.json([
+      {
+        id: 'gap-1',
+        control_code: 'A.12.6.1',
+        control_name: 'Management of technical vulnerabilities',
+        status: 'gap',
+        notes: 'Outdated server versions discovered on public interfaces.',
+        remediation_action: 'Patch Nginx vulnerabilities',
+      },
+      {
+        id: 'gap-2',
+        control_code: 'A.9.1.1',
+        control_name: 'Access control policy',
+        status: 'compliant',
+        notes: 'SSO and IAM roles enforced across all tenant directories.',
+      },
+    ]);
+  }),
+
+  http.post('/api/v1/governance-risk-compliance/:id/:status', ({ params }) => {
+    return HttpResponse.json({
+      id: params.id,
+      name: 'ISO 27001 Compliance Audit',
+      description: 'Annual ISO 27001 compliance audit for production scopes.',
+      framework_type: 'ISO 27001',
+      status: params.status === 'compliant' ? 'compliant' : params.status === 'review' ? 'in_review' : 'closed',
+      scope_id: 'scope-123',
+      created_at: '2026-06-20T00:00:00Z',
+      updated_at: new Date().toISOString(),
+      evidence_list: [],
+    });
+  }),
+
+  http.post('/api/v1/governance-risk-compliance/:id/evidence', async ({ params, request }) => {
+    const body = (await request.json()) as any;
+    return HttpResponse.json({
+      id: 'evidence-999',
+      file_name: body.file_name || 'uploaded_doc.pdf',
+      file_hash: body.file_hash || 'sha256-mock-hash-value',
+      uploaded_at: new Date().toISOString(),
+    });
+  }),
+
+  // SOC Operations & Analytics
+  http.get('/api/v1/security-operations-analytics/queues', () => {
+    return HttpResponse.json({
+      queue_name: 'Primary SOC Triage Queue',
+      active_tickets_count: 14,
+      oldest_ticket_age_hours: 4.5,
+      unassigned_tickets_count: 3,
+      critical_tickets_count: 2,
+      backlog_metrics: {
+        total_backlog_count: 45,
+        growth_rate_percent: 12.5,
+        estimated_clearance_days: 3,
+      },
+    });
+  }),
+
+  http.get('/api/v1/security-operations-analytics/kpis', () => {
+    return HttpResponse.json([
+      {
+        id: 'kpi-1',
+        metric_name: 'Mean Time to Resolution (MTTR)',
+        metric_value: 32,
+        unit: 'm',
+        target_value: 45,
+        status: 'optimal',
+      },
+      {
+        id: 'kpi-2',
+        metric_name: 'Mean Time to Detect (MTTD)',
+        metric_value: 4.5,
+        unit: 'm',
+        target_value: 5,
+        status: 'optimal',
+      },
+    ]);
+  }),
+
+  http.get('/api/v1/security-operations-analytics/analysts', () => {
+    return HttpResponse.json([
+      {
+        id: 'analyst-1',
+        analyst_name: 'Sarah Connor',
+        cases_closed: 24,
+        mean_time_to_resolution_minutes: 28,
+        satisfaction_score: 9.4,
+      },
+      {
+        id: 'analyst-2',
+        analyst_name: 'John Miller',
+        cases_closed: 19,
+        mean_time_to_resolution_minutes: 36,
+        satisfaction_score: 8.8,
+      },
+    ]);
+  }),
+
+  // Cyber Resilience
+  http.get('/api/v1/cyber-resilience', () => {
+    return HttpResponse.json([
+      {
+        id: 'resilience-123',
+        title: 'Primary Database Failover Drill',
+        description: 'Validate secondary DB replication and DNS transition response metrics.',
+        service_name: 'Main Database Cluster',
+        service_criticality: 'critical',
+        status: 'draft',
+        scope_id: 'scope-123',
+        created_at: '2026-06-20T00:00:00Z',
+        updated_at: '2026-06-20T00:00:00Z',
+      },
+    ]);
+  }),
+
+  http.get('/api/v1/cyber-resilience/objectives', () => {
+    return HttpResponse.json([
+      {
+        id: 'obj-1',
+        objective_name: 'DNS Failover Switchover Time',
+        target_rto_minutes: 15,
+        target_rpo_minutes: 5,
+        actual_rto_minutes: 11,
+        actual_rpo_minutes: 2,
+        status: 'achieved',
+      },
+      {
+        id: 'obj-2',
+        objective_name: 'Data Integrity Sync Check',
+        target_rto_minutes: 30,
+        target_rpo_minutes: 10,
+        actual_rto_minutes: 34,
+        actual_rpo_minutes: 4,
+        status: 'missed',
+      },
+    ]);
+  }),
+
+  http.post('/api/v1/cyber-resilience/:id/:action', ({ params }) => {
+    return HttpResponse.json({
+      id: params.id,
+      title: 'Primary Database Failover Drill',
+      description: 'Validate secondary DB replication and DNS transition response metrics.',
+      service_name: 'Main Database Cluster',
+      service_criticality: 'critical',
+      status: params.action === 'activate' ? 'active' : params.action === 'validate' ? 'validated' : params.action === 'complete' ? 'completed' : 'closed',
+      scope_id: 'scope-123',
+      created_at: '2026-06-20T00:00:00Z',
+      updated_at: new Date().toISOString(),
+    });
+  }),
+
+  // Executive Posture & Reports
+  http.get('/api/v1/executive-reporting', () => {
+    return HttpResponse.json([
+      {
+        id: 'report-123',
+        title: 'Q2 2026 Security Posture Review',
+        description: 'Comprehensive posture scorecard review for stakeholders.',
+        report_period: 'Q2 2026',
+        report_type: 'Quarterly',
+        status: 'draft',
+        scope_id: 'scope-123',
+        created_at: '2026-06-20T00:00:00Z',
+      },
+    ]);
+  }),
+
+  http.get('/api/v1/executive-reporting/scorecard', () => {
+    return HttpResponse.json({
+      grade: 'B+',
+      risk_score: 78,
+      total_findings_count: 14,
+      critical_findings_count: 2,
+      high_findings_count: 4,
+      status: 'warning',
+    });
+  }),
+
+  http.get('/api/v1/executive-reporting/heatmap', () => {
+    return HttpResponse.json({
+      coordinates: [
+        { likelihood: 4, impact: 4, count: 2, risk_level: 'high' },
+        { likelihood: 2, impact: 5, count: 1, risk_level: 'high' },
+      ],
+    });
+  }),
+
+  http.post('/api/v1/executive-reporting', async ({ request }) => {
+    const body = (await request.json()) as any;
+    return HttpResponse.json({
+      id: 'report-new',
+      title: body.title || 'Executive Posture Report',
+      description: body.description || 'Auto-generated report',
+      report_period: body.report_period || 'Monthly',
+      report_type: body.report_type || 'Executive Posture',
+      status: 'draft',
+      scope_id: 'scope-123',
+      created_at: new Date().toISOString(),
+    });
+  }),
+
+  http.post('/api/v1/executive-reporting/:id/transition', async ({ params, request }) => {
+    const body = (await request.json()) as any;
+    return HttpResponse.json({
+      id: params.id,
+      title: 'Q2 2026 Security Posture Review',
+      description: 'Comprehensive posture scorecard review for stakeholders.',
+      report_period: 'Q2 2026',
+      report_type: 'Quarterly',
+      status: body.status || 'published',
+      scope_id: 'scope-123',
+      created_at: '2026-06-20T00:00:00Z',
+    });
+  }),
+
+  // Security Postures
+  http.get('/api/v1/security-posture', () => {
+    return HttpResponse.json([
+      {
+        id: 'posture-123',
+        title: 'MFA Disabled on Root Account',
+        description: 'Exposed root admin accounts found without multi-factor authentication enforced.',
+        category: 'Identity Drift',
+        severity: 'critical',
+        status: 'open',
+        risk_source: 'AWS IAM Audit',
+        owner: 'SecOps Team',
+        scope_id: 'scope-123',
+        created_at: '2026-06-20T00:00:00Z',
+      },
+    ]);
+  }),
+
+  http.get('/api/v1/security-posture/summary', () => {
+    return HttpResponse.json({
+      total_count: 6,
+      open_count: 5,
+      critical_count: 1,
+      high_count: 2,
+      medium_count: 2,
+      low_count: 1,
+      drift_index: 8,
+    });
+  }),
+
+  http.get('/api/v1/security-posture/drift', () => {
+    return HttpResponse.json({
+      snapshot: {
+        total_count: 6,
+        open_count: 5,
+        critical_count: 1,
+        high_count: 2,
+        medium_count: 2,
+        low_count: 1,
+        drift_index: 4,
+      },
+    });
+  }),
+
+  http.post('/api/v1/security-posture/:id/:action', ({ params }) => {
+    return HttpResponse.json({
+      id: params.id,
+      title: 'MFA Disabled on Root Account',
+      description: 'Exposed root admin accounts found without multi-factor authentication enforced.',
+      category: 'Identity Drift',
+      severity: 'critical',
+      status: params.action === 'accept' ? 'accepted' : params.action === 'mitigate' ? 'mitigated' : 'closed',
+      risk_source: 'AWS IAM Audit',
+      owner: 'SecOps Team',
+      scope_id: 'scope-123',
+      created_at: '2026-06-20T00:00:00Z',
+    });
+  }),
+
+  // SaaS Tenants & SSO Configuration
+  http.get('/api/v1/tenants', () => {
+    return HttpResponse.json([
+      {
+        id: 'tenant-123',
+        name: 'Aegis Corp Primary',
+        domain_pattern: 'aegiscorp.com',
+        subscription_plan: 'enterprise',
+        status: 'active',
+        created_at: '2026-06-20T00:00:00Z',
+      },
+    ]);
+  }),
+
+  http.post('/api/v1/tenants', async ({ request }) => {
+    const body = (await request.json()) as any;
+    return HttpResponse.json({
+      id: 'tenant-new',
+      name: body.name || 'New Tenant',
+      domain_pattern: body.domain_pattern || 'domain.com',
+      subscription_plan: body.subscription_plan || 'starter',
+      status: 'active',
+      created_at: new Date().toISOString(),
+    });
+  }),
+
+  http.get('/api/v1/sso/config', () => {
+    return HttpResponse.json({
+      id: 'config-123',
+      saml_enabled: true,
+      idp_entity_id: 'urn:amazon:cognito:sp:aegisx',
+      idp_sso_url: 'https://idp.aegiscorp.com/adfs/ls/',
+      x509_certificate: '-----BEGIN CERTIFICATE-----\nMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA...\n-----END CERTIFICATE-----',
+      auto_provision_users: true,
+      enforce_sso_for_operators: false,
+      session_timeout_hours: 12,
+    });
+  }),
+
+  http.post('/api/v1/sso/config', async ({ request }) => {
+    const body = (await request.json()) as any;
+    return HttpResponse.json({
+      id: 'config-123',
+      saml_enabled: body.saml_enabled !== undefined ? body.saml_enabled : true,
+      idp_entity_id: body.idp_entity_id || 'urn:amazon:cognito:sp:aegisx',
+      idp_sso_url: body.idp_sso_url || 'https://idp.aegiscorp.com/adfs/ls/',
+      x509_certificate: body.x509_certificate || '',
+      auto_provision_users: body.auto_provision_users !== undefined ? body.auto_provision_users : true,
+      enforce_sso_for_operators: body.enforce_sso_for_operators !== undefined ? body.enforce_sso_for_operators : false,
+      session_timeout_hours: body.session_timeout_hours || 12,
+    });
+  }),
+
+  // Saved Whiteboards
+  http.get('/api/v1/whiteboards', () => {
+    return HttpResponse.json([
+      {
+        id: 'wb-123',
+        title: 'APT-41 Exploit Path Analysis',
+        description: 'Topology nodes linking compromised web interface to primary databases.',
+        elements: [
+          { id: 'el-1', type: 'asset', label: 'Primary DB Instance', x: 100, y: 150 },
+          { id: 'el-2', type: 'finding', label: 'MFA Disabled on Admin Account', x: 250, y: 150 },
+        ],
+        notes: [
+          { id: 'note-1', note_text: 'Threat correlation shows APT-41 actors leveraging exposed SSH ports.', author: 'analyst_bob', created_at: '2026-06-21T10:00:00Z' },
+        ],
+        created_by: 'analyst_bob',
+        created_at: '2026-06-20T00:00:00Z',
+      },
+    ]);
+  }),
+
+  http.get('/api/v1/whiteboards/:id', ({ params }) => {
+    return HttpResponse.json({
+      id: params.id,
+      title: 'APT-41 Exploit Path Analysis',
+      description: 'Topology nodes linking compromised web interface to primary databases.',
+      elements: [
+        { id: 'el-1', type: 'asset', label: 'Primary DB Instance', x: 100, y: 150 },
+        { id: 'el-2', type: 'finding', label: 'MFA Disabled on Admin Account', x: 250, y: 150 },
+      ],
+      notes: [
+        { id: 'note-1', note_text: 'Threat correlation shows APT-41 actors leveraging exposed SSH ports.', author: 'analyst_bob', created_at: '2026-06-21T10:00:00Z' },
+      ],
+      created_by: 'analyst_bob',
+      created_at: '2026-06-20T00:00:00Z',
+    });
+  }),
+
+  http.post('/api/v1/whiteboards', async ({ request }) => {
+    const body = (await request.json()) as any;
+    return HttpResponse.json({
+      id: 'wb-new',
+      title: body.title || 'New Board',
+      description: body.description || '',
+      elements: body.elements || [],
+      notes: [],
+      created_by: 'analyst_admin',
+      created_at: new Date().toISOString(),
+    });
+  }),
+
+  http.post('/api/v1/whiteboards/:id/notes', async ({ params, request }) => {
+    const body = (await request.json()) as any;
+    return HttpResponse.json({
+      id: 'note-new',
+      note_text: body.note_text || '',
+      author: body.author || 'analyst_admin',
+      created_at: new Date().toISOString(),
+    });
+  }),
+
+  // Copilot
+  http.post('/api/v1/copilot/ask', async ({ request }) => {
+    const body = (await request.json()) as any;
+    return HttpResponse.json({
+      answer: `Based on risk audits, I recommend verifying [MFA Disabled on Admin Account](finding:posture-123) which exposes the [Primary DB Instance](asset:asset-456).`,
+      citations: [
+        { id: 'posture-123', type: 'finding', label: 'MFA Disabled on Admin Account', link_url: '/posture' },
+        { id: 'asset-456', type: 'asset', label: 'Primary DB Instance', link_url: '/inventory' },
+      ],
+    });
+  }),
+
+  http.get('/api/v1/copilot/history', () => {
+    return HttpResponse.json([
+      {
+        id: 'audit-123',
+        user_id: 'user-admin',
+        scope_id: 'scope-123',
+        prompt: 'Show posture issues',
+        response_text: 'Verify MFA Disabled finding.',
+        created_at: '2026-06-20T12:00:00Z',
+      },
+    ]);
+  }),
 ];
 
