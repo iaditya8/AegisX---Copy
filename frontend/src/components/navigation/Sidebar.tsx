@@ -11,7 +11,8 @@ import {
   AlertTriangle,
   Brain,
   Network,
-  GitCommit
+  GitCommit,
+  Calendar
 } from 'lucide-react';
 
 interface SidebarLinkProps {
@@ -78,6 +79,7 @@ export function Sidebar() {
           <div className="space-y-1">
             <SidebarLink href="/findings" label="Findings Log" icon={AlertTriangle} />
             <SidebarLink href="/workflows" label="Scan Workflows" icon={GitCommit} />
+            <SidebarLink href="/planning" label="Remediation Plans" icon={Calendar} />
             <SidebarLink href="/reports" label="Reports & Exports" icon={FileText} />
           </div>
         </div>
@@ -87,8 +89,8 @@ export function Sidebar() {
             Intelligence
           </div>
           <div className="space-y-1">
-            <SidebarLink href="/threat-intel" label="Threat Intel" icon={Brain} disabled />
-            <SidebarLink href="/graph" label="Topology Graph" icon={Network} disabled />
+            <SidebarLink href="/threat-intel" label="Threat Intel" icon={Brain} />
+            <SidebarLink href="/graph" label="Topology Graph" icon={Network} />
           </div>
         </div>
       </div>

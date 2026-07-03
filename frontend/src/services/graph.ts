@@ -29,4 +29,15 @@ export const graphService = {
     const data = response.success !== undefined ? response.data : (response.data || response);
     return data || { nodes: [], edges: [] };
   },
+
+  async getPath(sourceId: string, targetId: string): Promise<GraphTopology> {
+    const response = await apiClient.get<any, any>('/security-intelligence-graph/paths', {
+      params: {
+        source_node_id: sourceId,
+        target_node_id: targetId,
+      },
+    });
+    const data = response.success !== undefined ? response.data : (response.data || response);
+    return data || { nodes: [], edges: [] };
+  },
 };

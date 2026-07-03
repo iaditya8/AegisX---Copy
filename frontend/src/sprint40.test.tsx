@@ -67,8 +67,8 @@ describe('Sprint 40 Service Integrations with MSW Mocks', () => {
 
   it('verifies graph service endpoint integration', async () => {
     const topology = await graphService.getTopology();
-    expect(topology.nodes.length).toBe(1);
-    expect(topology.nodes[0].id).toBe('asset-123');
+    expect(topology.nodes.length).toBeGreaterThan(0);
+    expect(topology.nodes.some(n => n.id === 'asset-123')).toBe(true);
   });
 
   it('verifies planning service endpoint integration', async () => {

@@ -80,6 +80,14 @@ export function useGraphTopology() {
   });
 }
 
+export function useGraphPath(sourceId: string, targetId: string) {
+  return useQuery({
+    queryKey: QUERY_KEYS.graph.path(sourceId, targetId),
+    queryFn: () => graphService.getPath(sourceId, targetId),
+    enabled: !!sourceId && !!targetId,
+  });
+}
+
 export function usePlans() {
   return useQuery({
     queryKey: QUERY_KEYS.planning.list,

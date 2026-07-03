@@ -681,8 +681,61 @@ export const handlers = [
           scope_id: 'scope-123',
           status: 'active',
         },
+        {
+          id: 'threat-123',
+          node_type: 'threat',
+          entity_id: 'threat-123',
+          scope_id: 'scope-123',
+          status: 'active',
+        },
       ],
-      edges: [],
+      edges: [
+        {
+          id: 'edge-123',
+          source_id: 'threat-123',
+          target_id: 'asset-123',
+          edge_type: 'threatens',
+          weight: 85,
+          scope_id: 'scope-123',
+          status: 'active',
+        },
+      ],
+    });
+  }),
+
+  http.get('/api/v1/security-intelligence-graph/paths', () => {
+    return HttpResponse.json({
+      path_id: 'path-123',
+      nodes: [
+        {
+          id: 'node-threat-123',
+          node_type: 'threat',
+          entity_id: 'threat-123',
+          scope_id: 'scope-123',
+          status: 'active',
+        },
+        {
+          id: 'node-asset-123',
+          node_type: 'asset',
+          entity_id: 'asset-123',
+          scope_id: 'scope-123',
+          status: 'active',
+        },
+      ],
+      edges: [
+        {
+          id: 'edge-123',
+          source_id: 'threat-123',
+          target_id: 'asset-123',
+          edge_type: 'threatens',
+          weight: 85,
+          scope_id: 'scope-123',
+          status: 'active',
+        },
+      ],
+      metrics: {
+        cost: 1.5,
+      },
     });
   }),
 

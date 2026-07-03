@@ -46,6 +46,7 @@ export const QUERY_KEYS = {
   },
   graph: {
     topology: ['graph', 'topology'] as const,
+    path: (sourceId: string, targetId: string) => ['graph', 'path', sourceId, targetId] as const,
   },
   planning: {
     list: ['planning', 'list'] as const,
