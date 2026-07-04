@@ -29,6 +29,8 @@ async def get_current_user(
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid API Key"
             )
+        from src.core.tenant import set_current_tenant_id
+        set_current_tenant_id(user.tenant_id)
         return user
 
     # Fallback to JWT Bearer token authentication
@@ -64,6 +66,8 @@ async def get_current_user(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="User not found or has been deleted",
         )
+    from src.core.tenant import set_current_tenant_id
+    set_current_tenant_id(user.tenant_id)
     return user
 
 

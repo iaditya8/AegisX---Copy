@@ -6,12 +6,13 @@ from sqlalchemy import (
     BigInteger,
     DateTime,
     ForeignKey,
+    Integer,
     Numeric,
     String,
     UniqueConstraint,
     text,
 )
-from sqlalchemy.dialects.postgresql import INET, JSONB, UUID
+from sqlalchemy.dialects.postgresql import INET, JSONB, UUID, ARRAY
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
 
@@ -19,8 +20,48 @@ class Base(DeclarativeBase):
     pass
 
 
+class Tenant(Base):
+    __tablename__ = "tenants"
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, server_default=text("gen_random_uuid()")
+    )
+    name: Mapped[str] = mapped_column(String, unique=True, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=text("now()")
+    )
+    deleted_at: Mapped[Optional[datetime]] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+
+
+class IntelligenceEvent(Base):
+    __tablename__ = "intelligence_events"
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, server_default=text("gen_random_uuid()")
+    )
+    tenant_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False
+    )
+    domain: Mapped[str] = mapped_column(String, nullable=False)
+    entity_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False)
+    actor_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True
+    )
+    event_type: Mapped[str] = mapped_column(String, nullable=False)
+    payload: Mapped[Dict[str, Any]] = mapped_column(JSONB, nullable=False)
+    status: Mapped[str] = mapped_column(String, server_default="pending", nullable=False)
+    timestamp: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), primary_key=True, server_default=text("now()")
+    )
+
+
 class User(Base):
     __tablename__ = "users"
+    tenant_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False
+    )
 
     id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), primary_key=True, server_default=text("gen_random_uuid()")
@@ -47,6 +88,9 @@ class User(Base):
 
 class Scope(Base):
     __tablename__ = "scopes"
+    tenant_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False
+    )
 
     id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), primary_key=True, server_default=text("gen_random_uuid()")
@@ -72,6 +116,9 @@ class Scope(Base):
 
 class Asset(Base):
     __tablename__ = "assets"
+    tenant_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False
+    )
 
     id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), primary_key=True, server_default=text("gen_random_uuid()")
@@ -104,6 +151,9 @@ class Asset(Base):
 
 class Workflow(Base):
     __tablename__ = "workflows"
+    tenant_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False
+    )
 
     id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), primary_key=True, server_default=text("gen_random_uuid()")
@@ -124,6 +174,9 @@ class Workflow(Base):
 
 class Plugin(Base):
     __tablename__ = "plugins"
+    tenant_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False
+    )
 
     id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), primary_key=True, server_default=text("gen_random_uuid()")
@@ -147,6 +200,9 @@ class Plugin(Base):
 
 class ScanRun(Base):
     __tablename__ = "scan_runs"
+    tenant_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False
+    )
 
     id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), primary_key=True, server_default=text("gen_random_uuid()")
@@ -182,6 +238,9 @@ class ScanRun(Base):
 
 class Finding(Base):
     __tablename__ = "findings"
+    tenant_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False
+    )
 
     id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), primary_key=True, server_default=text("gen_random_uuid()")
@@ -235,6 +294,9 @@ class Finding(Base):
 
 class FindingEvidence(Base):
     __tablename__ = "finding_evidence"
+    tenant_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False
+    )
 
     id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), primary_key=True, server_default=text("gen_random_uuid()")
@@ -261,6 +323,9 @@ class FindingEvidence(Base):
 
 class FindingHistory(Base):
     __tablename__ = "finding_history"
+    tenant_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False
+    )
 
     id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), primary_key=True, server_default=text("gen_random_uuid()")
@@ -283,6 +348,9 @@ class FindingHistory(Base):
 
 class Report(Base):
     __tablename__ = "reports"
+    tenant_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False
+    )
 
     id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), primary_key=True, server_default=text("gen_random_uuid()")
@@ -302,6 +370,9 @@ class Report(Base):
 
 class Artifact(Base):
     __tablename__ = "artifacts"
+    tenant_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False
+    )
 
     id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), primary_key=True, server_default=text("gen_random_uuid()")
@@ -325,6 +396,9 @@ class Artifact(Base):
 
 class AuditLog(Base):
     __tablename__ = "audit_logs"
+    tenant_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False
+    )
 
     id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), primary_key=True, server_default=text("gen_random_uuid()")
@@ -345,6 +419,9 @@ class AuditLog(Base):
 
 class WorkflowEvent(Base):
     __tablename__ = "workflow_events"
+    tenant_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False
+    )
 
     id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), primary_key=True, server_default=text("gen_random_uuid()")
@@ -366,6 +443,9 @@ class WorkflowEvent(Base):
 
 class PluginEvent(Base):
     __tablename__ = "plugin_events"
+    tenant_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False
+    )
 
     id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), primary_key=True, server_default=text("gen_random_uuid()")
@@ -391,6 +471,9 @@ class PluginEvent(Base):
 
 class AssetRelationship(Base):
     __tablename__ = "asset_relationships"
+    tenant_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False
+    )
 
     id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), primary_key=True, server_default=text("gen_random_uuid()")
@@ -412,6 +495,9 @@ class AssetRelationship(Base):
 
 class AssetHistory(Base):
     __tablename__ = "asset_history"
+    tenant_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False
+    )
 
     id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), primary_key=True, server_default=text("gen_random_uuid()")
@@ -435,6 +521,9 @@ class AssetHistory(Base):
 
 class CorrelatedFinding(Base):
     __tablename__ = "correlated_findings"
+    tenant_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False
+    )
 
     id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), primary_key=True, server_default=text("gen_random_uuid()")
@@ -455,6 +544,9 @@ class CorrelatedFinding(Base):
 
 class RiskScore(Base):
     __tablename__ = "risk_scores"
+    tenant_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False
+    )
 
     id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), primary_key=True, server_default=text("gen_random_uuid()")
@@ -472,6 +564,9 @@ class RiskScore(Base):
 
 class AssetPort(Base):
     __tablename__ = "asset_ports"
+    tenant_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False
+    )
 
     id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), primary_key=True, server_default=text("gen_random_uuid()")
@@ -503,6 +598,9 @@ class AssetPort(Base):
 
 class AssetService(Base):
     __tablename__ = "asset_services"
+    tenant_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False
+    )
 
     id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), primary_key=True, server_default=text("gen_random_uuid()")
@@ -534,3 +632,496 @@ class AssetService(Base):
     __table_args__ = (
         UniqueConstraint("asset_port_id", "service_name", name="uq_asset_port_service"),
     )
+
+
+# ==============================================================================
+# CYBER RESILIENCE DOMAIN
+# ==============================================================================
+
+class CyberResilienceRecord(Base):
+    __tablename__ = "cyber_resilience_records"
+    tenant_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False
+    )
+
+    resilience_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, server_default=text("gen_random_uuid()")
+    )
+    resilience_fingerprint: Mapped[str] = mapped_column(String, unique=True, nullable=False)
+    title: Mapped[str] = mapped_column(String, nullable=False)
+    description: Mapped[str] = mapped_column(String, nullable=False)
+    service_name: Mapped[str] = mapped_column(String, nullable=False)
+    service_criticality: Mapped[str] = mapped_column(String, nullable=False)
+    resilience_score: Mapped[float] = mapped_column(Numeric(5, 2), nullable=False)
+    readiness_score: Mapped[float] = mapped_column(Numeric(5, 2), nullable=False)
+    recovery_confidence_score: Mapped[float] = mapped_column(Numeric(5, 2), nullable=False)
+    status: Mapped[str] = mapped_column(String, nullable=False)
+    scope_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("scopes.id", ondelete="SET NULL"), nullable=True
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=text("now()")
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=text("now()")
+    )
+
+
+class RecoveryObjective(Base):
+    __tablename__ = "cyber_resilience_objectives"
+    tenant_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False
+    )
+
+    objective_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, server_default=text("gen_random_uuid()")
+    )
+    resilience_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("cyber_resilience_records.resilience_id", ondelete="CASCADE"), nullable=False
+    )
+    objective_type: Mapped[str] = mapped_column(String, nullable=False)
+    target_value: Mapped[float] = mapped_column(Numeric(10, 2), nullable=False)
+    current_value: Mapped[float] = mapped_column(Numeric(10, 2), nullable=False)
+    compliance_percentage: Mapped[float] = mapped_column(Numeric(5, 2), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=text("now()")
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=text("now()")
+    )
+
+
+class CyberResilienceHistory(Base):
+    __tablename__ = "cyber_resilience_history"
+    tenant_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, server_default=text("gen_random_uuid()")
+    )
+    resilience_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("cyber_resilience_records.resilience_id", ondelete="CASCADE"), nullable=False
+    )
+    timestamp: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=text("now()")
+    )
+    event_type: Mapped[str] = mapped_column(String, nullable=False)
+    details: Mapped[Dict[str, Any]] = mapped_column(JSONB, nullable=False)
+
+
+# ==============================================================================
+# SOC ANALYTICS DOMAIN
+# ==============================================================================
+
+class SOCAnalyticsRecord(Base):
+    __tablename__ = "soc_analytics_records"
+    tenant_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False
+    )
+
+    analytics_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, server_default=text("gen_random_uuid()")
+    )
+    analytics_fingerprint: Mapped[str] = mapped_column(String, unique=True, nullable=False)
+    analytics_name: Mapped[str] = mapped_column(String, nullable=False)
+    description: Mapped[str] = mapped_column(String, nullable=False)
+    status: Mapped[str] = mapped_column(String, nullable=False)
+    scope_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("scopes.id", ondelete="SET NULL"), nullable=True
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=text("now()")
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=text("now()")
+    )
+
+
+class SOCAnalystPerformance(Base):
+    __tablename__ = "soc_analyst_performance"
+    tenant_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False
+    )
+
+    analyst_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, server_default=text("gen_random_uuid()")
+    )
+    analyst_name: Mapped[str] = mapped_column(String, nullable=False)
+    alerts_handled: Mapped[int] = mapped_column(Integer, nullable=False)
+    incidents_handled: Mapped[int] = mapped_column(Integer, nullable=False)
+    cases_handled: Mapped[int] = mapped_column(Integer, nullable=False)
+    average_response_time: Mapped[float] = mapped_column(Numeric(10, 2), nullable=False)
+    average_resolution_time: Mapped[float] = mapped_column(Numeric(10, 2), nullable=False)
+    analyst_score: Mapped[float] = mapped_column(Numeric(5, 2), nullable=False)
+
+
+class SOCOperationalKPI(Base):
+    __tablename__ = "soc_operational_kpis"
+    tenant_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False
+    )
+
+    kpi_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, server_default=text("gen_random_uuid()")
+    )
+    kpi_name: Mapped[str] = mapped_column(String, nullable=False)
+    current_value: Mapped[float] = mapped_column(Numeric(10, 2), nullable=False)
+    target_value: Mapped[float] = mapped_column(Numeric(10, 2), nullable=False)
+    status: Mapped[str] = mapped_column(String, nullable=False)
+    calculated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=text("now()")
+    )
+
+
+class SOCOperationalKRI(Base):
+    __tablename__ = "soc_operational_kris"
+    tenant_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False
+    )
+
+    kri_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, server_default=text("gen_random_uuid()")
+    )
+    kri_name: Mapped[str] = mapped_column(String, nullable=False)
+    current_value: Mapped[float] = mapped_column(Numeric(10, 2), nullable=False)
+    threshold_value: Mapped[float] = mapped_column(Numeric(10, 2), nullable=False)
+    status: Mapped[str] = mapped_column(String, nullable=False)
+    calculated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=text("now()")
+    )
+
+
+class SOCAnalyticsHistory(Base):
+    __tablename__ = "soc_analytics_history"
+    tenant_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, server_default=text("gen_random_uuid()")
+    )
+    analytics_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("soc_analytics_records.analytics_id", ondelete="CASCADE"), nullable=False
+    )
+    timestamp: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=text("now()")
+    )
+    event_type: Mapped[str] = mapped_column(String, nullable=False)
+    details: Mapped[Dict[str, Any]] = mapped_column(JSONB, nullable=False)
+
+
+# ==============================================================================
+# GRC INTELLIGENCE DOMAIN
+# ==============================================================================
+
+class GRCComplianceAssessment(Base):
+    __tablename__ = "grc_assessments"
+    tenant_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False
+    )
+
+    assessment_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, server_default=text("gen_random_uuid()")
+    )
+    assessment_fingerprint: Mapped[str] = mapped_column(String, unique=True, nullable=False)
+    framework_type: Mapped[str] = mapped_column(String, nullable=False)
+    name: Mapped[str] = mapped_column(String, nullable=False)
+    description: Mapped[str] = mapped_column(String, nullable=False)
+    compliance_score: Mapped[float] = mapped_column(Numeric(5, 2), nullable=False)
+    framework_coverage: Mapped[float] = mapped_column(Numeric(5, 2), nullable=False)
+    control_coverage: Mapped[float] = mapped_column(Numeric(5, 2), nullable=False)
+    evidence_completeness: Mapped[float] = mapped_column(Numeric(5, 2), nullable=False)
+    audit_readiness: Mapped[float] = mapped_column(Numeric(5, 2), nullable=False)
+    status: Mapped[str] = mapped_column(String, nullable=False)
+    scope_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("scopes.id", ondelete="SET NULL"), nullable=True
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=text("now()")
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=text("now()")
+    )
+
+
+class GRCControl(Base):
+    __tablename__ = "grc_framework_controls"
+    tenant_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False
+    )
+
+    control_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, server_default=text("gen_random_uuid()")
+    )
+    assessment_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("grc_assessments.assessment_id", ondelete="CASCADE"), nullable=False
+    )
+    control_name: Mapped[str] = mapped_column(String, nullable=False)
+    framework_type: Mapped[str] = mapped_column(String, nullable=False)
+    requirement_id: Mapped[str] = mapped_column(String, nullable=False)
+    status: Mapped[str] = mapped_column(String, nullable=False)
+
+
+class GRCEvidence(Base):
+    __tablename__ = "grc_evidence"
+    tenant_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False
+    )
+
+    evidence_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, server_default=text("gen_random_uuid()")
+    )
+    assessment_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("grc_assessments.assessment_id", ondelete="CASCADE"), nullable=False
+    )
+    file_name: Mapped[str] = mapped_column(String, nullable=False)
+    file_hash: Mapped[str] = mapped_column(String, unique=True, nullable=False)
+    uploaded_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=text("now()")
+    )
+
+
+class GRCGap(Base):
+    __tablename__ = "grc_gaps"
+    tenant_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False
+    )
+
+    gap_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, server_default=text("gen_random_uuid()")
+    )
+    assessment_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("grc_assessments.assessment_id", ondelete="CASCADE"), nullable=False
+    )
+    gap_type: Mapped[str] = mapped_column(String, nullable=False)
+    description: Mapped[str] = mapped_column(String, nullable=False)
+    remediation_plan: Mapped[str] = mapped_column(String, nullable=False)
+
+
+class GRCComplianceHistory(Base):
+    __tablename__ = "grc_history"
+    tenant_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, server_default=text("gen_random_uuid()")
+    )
+    assessment_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("grc_assessments.assessment_id", ondelete="CASCADE"), nullable=False
+    )
+    timestamp: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=text("now()")
+    )
+    event_type: Mapped[str] = mapped_column(String, nullable=False)
+    details: Mapped[Dict[str, Any]] = mapped_column(JSONB, nullable=False)
+
+
+# ==============================================================================
+# SECURITY KNOWLEDGE DOMAIN
+# ==============================================================================
+
+class SecurityKnowledgeRecord(Base):
+    __tablename__ = "security_knowledge_records"
+    tenant_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False
+    )
+
+    knowledge_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, server_default=text("gen_random_uuid()")
+    )
+    knowledge_fingerprint: Mapped[str] = mapped_column(String, unique=True, nullable=False)
+    knowledge_type: Mapped[str] = mapped_column(String, nullable=False)
+    title: Mapped[str] = mapped_column(String, nullable=False)
+    content: Mapped[str] = mapped_column(String, nullable=False)
+    relevance_score: Mapped[float] = mapped_column(Numeric(5, 2), nullable=False)
+    confidence_score: Mapped[float] = mapped_column(Numeric(5, 2), nullable=False)
+    status: Mapped[str] = mapped_column(String, nullable=False)
+    tags: Mapped[list[str]] = mapped_column(ARRAY(String), nullable=False)
+    scope_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("scopes.id", ondelete="SET NULL"), nullable=True
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=text("now()")
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=text("now()")
+    )
+
+
+class SecurityKnowledgeRelationship(Base):
+    __tablename__ = "security_knowledge_relationships"
+    tenant_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False
+    )
+
+    relationship_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, server_default=text("gen_random_uuid()")
+    )
+    source_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False)
+    source_type: Mapped[str] = mapped_column(String, nullable=False)
+    target_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False)
+    target_type: Mapped[str] = mapped_column(String, nullable=False)
+    relationship_type: Mapped[str] = mapped_column(String, nullable=False)
+    weight: Mapped[float] = mapped_column(Numeric(5, 2), nullable=False)
+
+
+class SecurityKnowledgeRecommendation(Base):
+    __tablename__ = "security_knowledge_recommendations"
+    tenant_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False
+    )
+
+    recommendation_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, server_default=text("gen_random_uuid()")
+    )
+    knowledge_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("security_knowledge_records.knowledge_id", ondelete="CASCADE"), nullable=False
+    )
+    title: Mapped[str] = mapped_column(String, nullable=False)
+    description: Mapped[str] = mapped_column(String, nullable=False)
+    rank: Mapped[int] = mapped_column(Integer, nullable=False)
+
+
+class SecurityKnowledgeHistory(Base):
+    __tablename__ = "security_knowledge_history"
+    tenant_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, server_default=text("gen_random_uuid()")
+    )
+    knowledge_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("security_knowledge_records.knowledge_id", ondelete="CASCADE"), nullable=False
+    )
+    timestamp: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=text("now()")
+    )
+    event_type: Mapped[str] = mapped_column(String, nullable=False)
+    details: Mapped[Dict[str, Any]] = mapped_column(JSONB, nullable=False)
+
+
+# ==============================================================================
+# THREAT INTELLIGENCE DOMAIN
+# ==============================================================================
+
+class ThreatIntelIOC(Base):
+    __tablename__ = "threat_intel_iocs"
+    tenant_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False
+    )
+
+    ioc_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, server_default=text("gen_random_uuid()")
+    )
+    ioc_fingerprint: Mapped[str] = mapped_column(String, unique=True, nullable=False)
+    value: Mapped[str] = mapped_column(String, nullable=False)
+    ioc_type: Mapped[str] = mapped_column(String, nullable=False)
+    severity: Mapped[str] = mapped_column(String, nullable=False)
+    status: Mapped[str] = mapped_column(String, nullable=False)
+    reputation: Mapped[int] = mapped_column(Integer, nullable=False)
+    feed_type: Mapped[str] = mapped_column(String, nullable=False)
+    scope_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("scopes.id", ondelete="SET NULL"), nullable=True
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=text("now()")
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=text("now()")
+    )
+
+
+class ThreatIntelActor(Base):
+    __tablename__ = "threat_intel_actors"
+    tenant_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False
+    )
+
+    actor_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, server_default=text("gen_random_uuid()")
+    )
+    name: Mapped[str] = mapped_column(String, nullable=False)
+    description: Mapped[str] = mapped_column(String, nullable=False)
+    aliases: Mapped[list[str]] = mapped_column(ARRAY(String), nullable=False)
+    severity: Mapped[str] = mapped_column(String, nullable=False)
+    status: Mapped[str] = mapped_column(String, nullable=False)
+
+
+class ThreatIntelCampaign(Base):
+    __tablename__ = "threat_intel_campaigns"
+    tenant_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False
+    )
+
+    campaign_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, server_default=text("gen_random_uuid()")
+    )
+    name: Mapped[str] = mapped_column(String, nullable=False)
+    description: Mapped[str] = mapped_column(String, nullable=False)
+    aliases: Mapped[list[str]] = mapped_column(ARRAY(String), nullable=False)
+    severity: Mapped[str] = mapped_column(String, nullable=False)
+    status: Mapped[str] = mapped_column(String, nullable=False)
+
+
+class ThreatIntelIOCActorMapping(Base):
+    __tablename__ = "threat_intel_ioc_actor_mapping"
+    tenant_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False
+    )
+
+    ioc_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("threat_intel_iocs.ioc_id", ondelete="CASCADE"), primary_key=True
+    )
+    actor_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("threat_intel_actors.actor_id", ondelete="CASCADE"), primary_key=True
+    )
+
+
+class ThreatIntelIOCCampaignMapping(Base):
+    __tablename__ = "threat_intel_ioc_campaign_mapping"
+    tenant_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False
+    )
+
+    ioc_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("threat_intel_iocs.ioc_id", ondelete="CASCADE"), primary_key=True
+    )
+    campaign_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("threat_intel_campaigns.campaign_id", ondelete="CASCADE"), primary_key=True
+    )
+
+
+class ThreatIntelActorCampaignMapping(Base):
+    __tablename__ = "threat_intel_actor_campaign_mapping"
+    tenant_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False
+    )
+
+    actor_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("threat_intel_actors.actor_id", ondelete="CASCADE"), primary_key=True
+    )
+    campaign_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("threat_intel_campaigns.campaign_id", ondelete="CASCADE"), primary_key=True
+    )
+
+
+class ThreatIntelHistory(Base):
+    __tablename__ = "threat_intel_history"
+    tenant_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, server_default=text("gen_random_uuid()")
+    )
+    ioc_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("threat_intel_iocs.ioc_id", ondelete="CASCADE"), nullable=False
+    )
+    timestamp: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=text("now()")
+    )
+    event_type: Mapped[str] = mapped_column(String, nullable=False)
+    details: Mapped[Dict[str, Any]] = mapped_column(JSONB, nullable=False)

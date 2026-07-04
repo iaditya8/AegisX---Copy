@@ -366,7 +366,7 @@ async def test_snapshot_rebuild_after_cache_deletion(mock_db, mock_scope):
 async def test_snapshot_rebuild_after_cache_corruption(mock_db, mock_scope):
     setup_basic_mock_db(mock_db, mock_scope)
     await ExecutiveReportingService.sync_reports(mock_db)
-    ExecutiveSnapshotService._snapshots[None] = "CORRUPTED_CACHE"
+    ExecutiveSnapshotService._snapshots[None] = "CORRUPTED_CACHE"  # type: ignore
     snap = ExecutiveSnapshotService.get_snapshot(None)
     assert snap["summary"]["total_reports"] == 0
 
@@ -384,7 +384,7 @@ async def test_snapshot_not_authoritative(mock_db, mock_scope):
 async def test_snapshot_rebuild_from_source_of_truth(mock_db, mock_scope):
     setup_basic_mock_db(mock_db, mock_scope)
     await ExecutiveReportingService.sync_reports(mock_db)
-    ExecutiveSnapshotService._snapshots[None] = None
+    ExecutiveSnapshotService._snapshots[None] = None  # type: ignore
     await ExecutiveSnapshotService.generate_snapshot(mock_db, None)
     assert ExecutiveSnapshotService.get_snapshot(None)["summary"]["total_reports"] == 2
 

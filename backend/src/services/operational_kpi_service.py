@@ -1,118 +1,142 @@
+from typing import List, Optional
 import uuid
 from datetime import datetime, timezone
-from typing import Dict, List, Optional
+from sqlalchemy.future import select
 from src.domain.entities.security_operations_analytics import (
     KPIStatus,
     OperationalKPIResponse,
 )
 from src.services.soc_kpi_registry import SOCKPIRegistry
-
-
-class KPIRecord:
-    def __init__(
-        self,
-        kpi_id: uuid.UUID,
-        kpi_name: str,
-        current_value: float,
-        target_value: float,
-        status: KPIStatus,
-        calculated_at: Optional[datetime] = None,
-    ):
-        self.kpi_id = kpi_id
-        self.kpi_name = kpi_name
-        self.current_value = current_value
-        self.target_value = target_value
-        self.status = status
-        self.calculated_at = calculated_at or datetime.now(timezone.utc)
+from src.infrastructure.database.models import SOCOperationalKPI
+from src.infrastructure.database.unit_of_work import UnitOfWork
+from src.core.tenant import get_current_tenant_id
 
 
 class OperationalKPIService:
-    # in-memory store: kpi_name -> KPIRecord
-    _kpis: Dict[str, KPIRecord] = {}
-
     @classmethod
-    def clear_kpis(cls) -> None:
+    async def clear_kpis(cls) -> None:
         """Clear the KPI store."""
-        cls._kpis.clear()
+        pass
 
     @classmethod
-    def seed_kpis_if_empty(cls) -> None:
+    async def seed_kpis_if_empty(cls, uow: Optional[UnitOfWork] = None) -> None:
         """Pre-seed standard operational KPIs."""
-        if cls._kpis:
-            return
+        async def _seed(uow_inst: UnitOfWork) -> None:
+            existing = await uow_inst.soc_repo.get_kpis()
+            if existing:
+                return
 
-        for kpi in SOCKPIRegistry.list_types():
-            cls._kpis[kpi] = KPIRecord(
-                kpi_id=uuid.uuid4(),
-                kpi_name=kpi,
-                current_value=15.0 if "Mean Time" in kpi else 85.0,
-                target_value=10.0 if "Mean Time" in kpi else 90.0,
-                status=KPIStatus.AT_RISK,
-            )
-        cls.calculate()
+            tenant_id = get_current_tenant_id() or uuid.UUID("00000000-0000-0000-0000-000000000000")
+            for kpi_name in SOCKPIRegistry.list_types():
+                kpi = SOCOperationalKPI(
+                    kpi_id=uuid.uuid4(),
+                    kpi_name=kpi_name,
+                    current_value=15.0 if "Mean Time" in kpi_name else 85.0,
+                    target_value=10.0 if "Mean Time" in kpi_name else 90.0,
+                    status=KPIStatus.AT_RISK.value,
+                    calculated_at=datetime.now(timezone.utc),
+                    tenant_id=tenant_id
+                )
+                await uow_inst.soc_repo.save_kpi(kpi)
+            await cls.calculate(uow=uow_inst)
+
+        if uow:
+            await _seed(uow)
+        else:
+            async with UnitOfWork() as uow_new:
+                await _seed(uow_new)
+                await uow_new.commit()
 
     @classmethod
-    def calculate(cls) -> None:
+    async def calculate(cls, uow: Optional[UnitOfWork] = None) -> None:
         """Calculate and refresh KPI targets compliance status."""
-        for rec in cls._kpis.values():
-            if "Mean Time" in rec.kpi_name:
-                # For times, smaller is better
-                if rec.current_value <= rec.target_value:
-                    rec.status = KPIStatus.ON_TARGET
-                elif rec.current_value <= rec.target_value * 1.5:
-                    rec.status = KPIStatus.AT_RISK
+        async def _calc(uow_inst: UnitOfWork) -> None:
+            kpis = await uow_inst.soc_repo.get_kpis()
+            for rec in kpis:
+                curr = float(rec.current_value)
+                targ = float(rec.target_value)
+                if "Mean Time" in rec.kpi_name:
+                    if curr <= targ:
+                        rec.status = KPIStatus.ON_TARGET.value
+                    elif curr <= targ * 1.5:
+                        rec.status = KPIStatus.AT_RISK.value
+                    else:
+                        rec.status = KPIStatus.OFF_TARGET.value
                 else:
-                    rec.status = KPIStatus.OFF_TARGET
-            else:
-                # For rates, higher is better
-                if rec.current_value >= rec.target_value:
-                    rec.status = KPIStatus.ON_TARGET
-                elif rec.current_value >= rec.target_value * 0.85:
-                    rec.status = KPIStatus.AT_RISK
-                else:
-                    rec.status = KPIStatus.OFF_TARGET
+                    if curr >= targ:
+                        rec.status = KPIStatus.ON_TARGET.value
+                    elif curr >= targ * 0.85:
+                        rec.status = KPIStatus.AT_RISK.value
+                    else:
+                        rec.status = KPIStatus.OFF_TARGET.value
+                rec.calculated_at = datetime.now(timezone.utc)
 
-            rec.calculated_at = datetime.now(timezone.utc)
+        if uow:
+            await _calc(uow)
+        else:
+            async with UnitOfWork() as uow_new:
+                await _calc(uow_new)
+                await uow_new.commit()
 
     @classmethod
-    def get_kpis(cls) -> List[OperationalKPIResponse]:
+    async def get_kpis(cls) -> List[OperationalKPIResponse]:
         """Get all operational KPIs response schemas."""
-        cls.seed_kpis_if_empty()
-        return [cls.to_response(k) for k in cls._kpis.values()]
+        async with UnitOfWork() as uow:
+            await cls.seed_kpis_if_empty(uow=uow)
+            await uow.commit()
+
+        async with UnitOfWork() as uow2:
+            kpis = await uow2.soc_repo.get_kpis()
+            return [cls.to_response(k) for k in kpis]
 
     @classmethod
-    def set_kpi(
-        cls, kpi_name: str, current_value: float, target_value: float
-    ) -> KPIRecord:
+    async def set_kpi(
+        cls, kpi_name: str, current_value: float, target_value: float, uow: Optional[UnitOfWork] = None
+    ) -> SOCOperationalKPI:
         """Manually update or set a KPI."""
         if not SOCKPIRegistry.validate(kpi_name):
             raise ValueError(f"Invalid KPI: {kpi_name}")
 
-        existing = cls._kpis.get(kpi_name)
-        if existing:
-            existing.current_value = current_value
-            existing.target_value = target_value
-            cls.calculate()
-            return existing
+        tenant_id = get_current_tenant_id() or uuid.UUID("00000000-0000-0000-0000-000000000000")
 
-        record = KPIRecord(
-            kpi_id=uuid.uuid4(),
-            kpi_name=kpi_name,
-            current_value=current_value,
-            target_value=target_value,
-            status=KPIStatus.AT_RISK,
-        )
-        cls._kpis[kpi_name] = record
-        cls.calculate()
-        return record
+        async def _set(uow_inst: UnitOfWork) -> SOCOperationalKPI:
+            stmt = select(SOCOperationalKPI).filter_by(kpi_name=kpi_name)
+            res = await uow_inst.session.execute(stmt)
+            existing = res.scalar_one_or_none()
+            if existing:
+                existing.current_value = current_value
+                existing.target_value = target_value
+                await cls.calculate(uow=uow_inst)
+                return existing
+
+            record = SOCOperationalKPI(
+                kpi_id=uuid.uuid4(),
+                kpi_name=kpi_name,
+                current_value=current_value,
+                target_value=target_value,
+                status=KPIStatus.AT_RISK.value,
+                calculated_at=datetime.now(timezone.utc),
+                tenant_id=tenant_id
+            )
+            await uow_inst.soc_repo.save_kpi(record)
+            await cls.calculate(uow=uow_inst)
+            return record
+
+        if uow:
+            return await _set(uow)
+        else:
+            async with UnitOfWork() as uow_new:
+                rec = await _set(uow_new)
+                await uow_new.commit()
+                return rec
 
     @classmethod
-    def to_response(cls, record: KPIRecord) -> OperationalKPIResponse:
+    def to_response(cls, record: SOCOperationalKPI) -> OperationalKPIResponse:
         return OperationalKPIResponse(
             kpi_id=record.kpi_id,
             kpi_name=record.kpi_name,
-            current_value=record.current_value,
-            target_value=record.target_value,
-            status=record.status,
+            current_value=float(record.current_value),
+            target_value=float(record.target_value),
+            status=KPIStatus(record.status),
             calculated_at=record.calculated_at,
         )

@@ -22,4 +22,4 @@ class SOCKPIRegistry:
     @classmethod
     def validate(cls, kpi_name: str) -> bool:
         """Validate if a KPI is supported."""
-        return str(kpi_name).strip() in cls.KPIS
+        return kpi_name.strip() in cls.KPIS

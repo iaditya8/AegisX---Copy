@@ -18,4 +18,4 @@ class ResilienceRegistry:
     @classmethod
     def validate(cls, category: str) -> bool:
         """Validate if a category is supported."""
-        return str(category).strip() in cls.CATEGORIES
+        return category.strip() in cls.CATEGORIES

@@ -58,6 +58,32 @@ class ExecutiveSummaryResponse(BaseModel):
     notable_changes: List[str]
 
 
+class CopilotAskRequest(BaseModel):
+    prompt: str
+    scope_id: str | None = None
+
+
+class CopilotCitation(BaseModel):
+    id: str
+    type: str
+    label: str
+    link_url: str
+
+
+class CopilotAskResponse(BaseModel):
+    answer: str
+    citations: List[CopilotCitation]
+
+
+class CopilotHistoryResponse(BaseModel):
+    id: str
+    user_id: str
+    scope_id: str | None
+    prompt: str
+    response_text: str
+    created_at: str
+
+
 # --- Helper Enforcements & Event Emission ---
 
 
@@ -317,3 +343,46 @@ async def generate_executive_summary(
             )
 
     return ExecutiveSummaryResponse(**result)
+
+
+@router.post(
+    "/copilot/ask",
+    response_model=CopilotAskResponse,
+)
+async def ask_copilot(
+    request: CopilotAskRequest,
+    current_user: User = Depends(RoleChecker(["admin", "operator"])),
+):
+    """
+    Chat with the AI Copilot Workspace.
+    """
+    # Mocking a static response just like the MSW version, to prevent 404
+    return CopilotAskResponse(
+        answer="Based on risk audits, I recommend verifying [MFA Disabled on Admin Account](finding:posture-123) which exposes the [Primary DB Instance](asset:asset-456).",
+        citations=[
+            CopilotCitation(id="posture-123", type="finding", label="MFA Disabled on Admin Account", link_url="/posture"),
+            CopilotCitation(id="asset-456", type="asset", label="Primary DB Instance", link_url="/inventory")
+        ]
+    )
+
+
+@router.get(
+    "/copilot/history",
+    response_model=List[CopilotHistoryResponse],
+)
+async def get_copilot_history(
+    current_user: User = Depends(RoleChecker(["admin", "operator"])),
+):
+    """
+    Get the current user's AI Copilot chat history.
+    """
+    return [
+        CopilotHistoryResponse(
+            id="audit-123",
+            user_id="user-admin",
+            scope_id="scope-123",
+            prompt="Show posture issues",
+            response_text="Verify MFA Disabled finding.",
+            created_at="2026-06-20T12:00:00Z"
+        )
+    ]
