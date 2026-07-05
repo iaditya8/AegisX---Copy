@@ -136,20 +136,21 @@ def override_auth_dependency():
 
 
 def setup_basic_mock_db(mock_db, *scopes):
-    mock_db.add = MagicMock()
-    mock_db.commit = AsyncMock()
+    orig_add = mock_db.add
+    orig_commit = mock_db.commit
+    orig_execute = mock_db.execute
+    orig_get = mock_db.get
 
     async def mock_get(model, ident):
         if model == Scope:
             for s in scopes:
                 if s.id == ident:
                     return s
-        return None
+        return await orig_get(model, ident)
 
     mock_db.get = AsyncMock(side_effect=mock_get)
 
     async def mock_execute(query, *args, **kwargs):
-        mock_result = MagicMock()
         query_str = str(query).lower()
 
         if "from scopes" in query_str or "from scope" in query_str:
@@ -172,13 +173,17 @@ def setup_basic_mock_db(mock_db, *scopes):
             elif owner_id_val:
                 matched = [s for s in matched if s.owner_id == owner_id_val]
 
+            mock_result = MagicMock()
             mock_result.scalars().all = MagicMock(return_value=matched)
             mock_result.scalar_one_or_none = MagicMock(return_value=matched[0] if matched else None)
-        elif "assets" in query_str:
-            mock_result.scalars().all = MagicMock(return_value=[])
-        else:
-            mock_result.scalars().all = MagicMock(return_value=[])
-            mock_result.scalar_one_or_none = MagicMock(return_value=None)
+            return mock_result
+        
+        if any(table in query_str for table in ["security_program", "security_program_history", "security_program_objectives", "security_program_initiatives"]):
+            return await orig_execute(query, *args, **kwargs)
+
+        mock_result = MagicMock()
+        mock_result.scalars().all = MagicMock(return_value=[])
+        mock_result.scalar_one_or_none = MagicMock(return_value=None)
         return mock_result
 
     mock_db.execute = AsyncMock(side_effect=mock_execute)
@@ -205,7 +210,7 @@ async def test_program_fingerprint_stability():
 async def test_program_activate_transition(mock_db, mock_scope):
     setup_basic_mock_db(mock_db, mock_scope)
     p = await SecurityProgramService.create_or_sync_program("P1", "Desc", "Vulnerability Management", ProgramSeverity.HIGH, [], [])
-    p_trans = SecurityProgramService.transition_program_status(p.program_id, ProgramStatus.ACTIVE)
+    p_trans = await SecurityProgramService.transition_program_status(p.program_id, ProgramStatus.ACTIVE)
     assert p_trans.status == ProgramStatus.ACTIVE
 
 
@@ -213,7 +218,7 @@ async def test_program_activate_transition(mock_db, mock_scope):
 async def test_program_review_transition(mock_db, mock_scope):
     setup_basic_mock_db(mock_db, mock_scope)
     p = await SecurityProgramService.create_or_sync_program("P1", "Desc", "Vulnerability Management", ProgramSeverity.HIGH, [], [])
-    p_trans = SecurityProgramService.transition_program_status(p.program_id, ProgramStatus.UNDER_REVIEW)
+    p_trans = await SecurityProgramService.transition_program_status(p.program_id, ProgramStatus.UNDER_REVIEW)
     assert p_trans.status == ProgramStatus.UNDER_REVIEW
 
 
@@ -221,7 +226,7 @@ async def test_program_review_transition(mock_db, mock_scope):
 async def test_program_complete_transition(mock_db, mock_scope):
     setup_basic_mock_db(mock_db, mock_scope)
     p = await SecurityProgramService.create_or_sync_program("P1", "Desc", "Vulnerability Management", ProgramSeverity.HIGH, [], [])
-    p_trans = SecurityProgramService.transition_program_status(p.program_id, ProgramStatus.COMPLETED)
+    p_trans = await SecurityProgramService.transition_program_status(p.program_id, ProgramStatus.COMPLETED)
     assert p_trans.status == ProgramStatus.COMPLETED
 
 
@@ -229,7 +234,7 @@ async def test_program_complete_transition(mock_db, mock_scope):
 async def test_program_close_transition(mock_db, mock_scope):
     setup_basic_mock_db(mock_db, mock_scope)
     p = await SecurityProgramService.create_or_sync_program("P1", "Desc", "Vulnerability Management", ProgramSeverity.HIGH, [], [])
-    p_trans = SecurityProgramService.transition_program_status(p.program_id, ProgramStatus.CLOSED)
+    p_trans = await SecurityProgramService.transition_program_status(p.program_id, ProgramStatus.CLOSED)
     assert p_trans.status == ProgramStatus.CLOSED
 
 
@@ -237,7 +242,7 @@ async def test_program_close_transition(mock_db, mock_scope):
 async def test_program_identity_preserved_after_completion(mock_db, mock_scope):
     setup_basic_mock_db(mock_db, mock_scope)
     p = await SecurityProgramService.create_or_sync_program("P1", "Desc", "Vulnerability Management", ProgramSeverity.HIGH, [], [])
-    SecurityProgramService.transition_program_status(p.program_id, ProgramStatus.COMPLETED)
+    await SecurityProgramService.transition_program_status(p.program_id, ProgramStatus.COMPLETED)
     p_sync = await SecurityProgramService.create_or_sync_program("P1", "New Desc", "Vulnerability Management", ProgramSeverity.HIGH, [], [])
     assert p_sync.status == ProgramStatus.COMPLETED
     assert p_sync.description == "Desc"
@@ -247,7 +252,7 @@ async def test_program_identity_preserved_after_completion(mock_db, mock_scope):
 async def test_program_identity_preserved_after_closure(mock_db, mock_scope):
     setup_basic_mock_db(mock_db, mock_scope)
     p = await SecurityProgramService.create_or_sync_program("P1", "Desc", "Vulnerability Management", ProgramSeverity.HIGH, [], [])
-    SecurityProgramService.transition_program_status(p.program_id, ProgramStatus.CLOSED)
+    await SecurityProgramService.transition_program_status(p.program_id, ProgramStatus.CLOSED)
     p_sync = await SecurityProgramService.create_or_sync_program("P1", "New Desc", "Vulnerability Management", ProgramSeverity.HIGH, [], [])
     assert p_sync.status == ProgramStatus.CLOSED
     assert p_sync.description == "Desc"
@@ -283,7 +288,7 @@ async def test_rbac_program_scope_validation(client, mock_db, mock_scope, mock_s
 async def test_program_terminal_state_not_reactivated_by_sync(mock_db, mock_scope):
     setup_basic_mock_db(mock_db, mock_scope)
     p = await SecurityProgramService.create_or_sync_program("Vulnerability Management Program", "Desc", "Vulnerability Management", ProgramSeverity.HIGH, [], [])
-    SecurityProgramService.transition_program_status(p.program_id, ProgramStatus.COMPLETED)
+    await SecurityProgramService.transition_program_status(p.program_id, ProgramStatus.COMPLETED)
     await SecurityProgramService.sync_programs(mock_db)
     assert p.status == ProgramStatus.COMPLETED
 
@@ -334,7 +339,7 @@ async def test_program_duplicate_prevention(mock_db, mock_scope):
 async def test_program_history_preserved(mock_db, mock_scope):
     setup_basic_mock_db(mock_db, mock_scope)
     p = await SecurityProgramService.create_or_sync_program("History test", "Desc", "Vulnerability Management", ProgramSeverity.HIGH, [], [])
-    hist = ProgramHistoryService.get_history(p.program_id)
+    hist = await ProgramHistoryService.get_history(p.program_id)
     assert len(hist) > 0
     assert hist[0].event_type == "CREATED"
 
@@ -520,7 +525,7 @@ async def test_worker_integration(mock_db, mock_scope):
 async def test_completed_program_not_reactivated_by_worker(mock_db, mock_scope):
     setup_basic_mock_db(mock_db, mock_scope)
     p = await SecurityProgramService.create_or_sync_program("Vulnerability Management Program", "Desc", "Vulnerability Management", ProgramSeverity.HIGH, [], [])
-    SecurityProgramService.transition_program_status(p.program_id, ProgramStatus.COMPLETED)
+    await SecurityProgramService.transition_program_status(p.program_id, ProgramStatus.COMPLETED)
     
     from src.services.continuous_refresh_service import ContinuousRefreshService
     await ContinuousRefreshService.refresh_all(mock_db)
@@ -531,7 +536,7 @@ async def test_completed_program_not_reactivated_by_worker(mock_db, mock_scope):
 async def test_closed_program_not_reactivated_by_worker(mock_db, mock_scope):
     setup_basic_mock_db(mock_db, mock_scope)
     p = await SecurityProgramService.create_or_sync_program("Vulnerability Management Program", "Desc", "Vulnerability Management", ProgramSeverity.HIGH, [], [])
-    SecurityProgramService.transition_program_status(p.program_id, ProgramStatus.CLOSED)
+    await SecurityProgramService.transition_program_status(p.program_id, ProgramStatus.CLOSED)
     
     from src.services.continuous_refresh_service import ContinuousRefreshService
     await ContinuousRefreshService.refresh_all(mock_db)
@@ -542,7 +547,7 @@ async def test_closed_program_not_reactivated_by_worker(mock_db, mock_scope):
 async def test_completed_program_not_reactivated_by_snapshot(mock_db, mock_scope):
     setup_basic_mock_db(mock_db, mock_scope)
     p = await SecurityProgramService.create_or_sync_program("P1", "Desc", "Vulnerability Management", ProgramSeverity.HIGH, [], [])
-    SecurityProgramService.transition_program_status(p.program_id, ProgramStatus.COMPLETED)
+    await SecurityProgramService.transition_program_status(p.program_id, ProgramStatus.COMPLETED)
     await SecurityProgramSnapshotService.generate_snapshot(mock_db, None)
     assert p.status == ProgramStatus.COMPLETED
 
@@ -551,7 +556,7 @@ async def test_completed_program_not_reactivated_by_snapshot(mock_db, mock_scope
 async def test_closed_program_not_reactivated_by_snapshot(mock_db, mock_scope):
     setup_basic_mock_db(mock_db, mock_scope)
     p = await SecurityProgramService.create_or_sync_program("P1", "Desc", "Vulnerability Management", ProgramSeverity.HIGH, [], [])
-    SecurityProgramService.transition_program_status(p.program_id, ProgramStatus.CLOSED)
+    await SecurityProgramService.transition_program_status(p.program_id, ProgramStatus.CLOSED)
     await SecurityProgramSnapshotService.generate_snapshot(mock_db, None)
     assert p.status == ProgramStatus.CLOSED
 
@@ -560,7 +565,7 @@ async def test_closed_program_not_reactivated_by_snapshot(mock_db, mock_scope):
 async def test_completed_program_not_reactivated_by_drift(mock_db, mock_scope):
     setup_basic_mock_db(mock_db, mock_scope)
     p = await SecurityProgramService.create_or_sync_program("P1", "Desc", "Vulnerability Management", ProgramSeverity.HIGH, [], [])
-    SecurityProgramService.transition_program_status(p.program_id, ProgramStatus.COMPLETED)
+    await SecurityProgramService.transition_program_status(p.program_id, ProgramStatus.COMPLETED)
     await ProgramDriftService.check_drift(mock_db, None, {"summary": {"average_program_score": 10.0}})
     assert p.status == ProgramStatus.COMPLETED
 
@@ -569,7 +574,7 @@ async def test_completed_program_not_reactivated_by_drift(mock_db, mock_scope):
 async def test_closed_program_not_reactivated_by_drift(mock_db, mock_scope):
     setup_basic_mock_db(mock_db, mock_scope)
     p = await SecurityProgramService.create_or_sync_program("P1", "Desc", "Vulnerability Management", ProgramSeverity.HIGH, [], [])
-    SecurityProgramService.transition_program_status(p.program_id, ProgramStatus.CLOSED)
+    await SecurityProgramService.transition_program_status(p.program_id, ProgramStatus.CLOSED)
     await ProgramDriftService.check_drift(mock_db, None, {"summary": {"average_program_score": 10.0}})
     assert p.status == ProgramStatus.CLOSED
 
@@ -578,7 +583,7 @@ async def test_closed_program_not_reactivated_by_drift(mock_db, mock_scope):
 async def test_completed_program_not_reactivated_by_kpi_refresh(mock_db, mock_scope):
     setup_basic_mock_db(mock_db, mock_scope)
     p = await SecurityProgramService.create_or_sync_program("P1", "Desc", "Vulnerability Management", ProgramSeverity.HIGH, [], [])
-    SecurityProgramService.transition_program_status(p.program_id, ProgramStatus.COMPLETED)
+    await SecurityProgramService.transition_program_status(p.program_id, ProgramStatus.COMPLETED)
     KPIService.calculate_kpis(SCOPE_ID)
     assert p.status == ProgramStatus.COMPLETED
 
@@ -587,7 +592,7 @@ async def test_completed_program_not_reactivated_by_kpi_refresh(mock_db, mock_sc
 async def test_closed_program_not_reactivated_by_kpi_refresh(mock_db, mock_scope):
     setup_basic_mock_db(mock_db, mock_scope)
     p = await SecurityProgramService.create_or_sync_program("P1", "Desc", "Vulnerability Management", ProgramSeverity.HIGH, [], [])
-    SecurityProgramService.transition_program_status(p.program_id, ProgramStatus.CLOSED)
+    await SecurityProgramService.transition_program_status(p.program_id, ProgramStatus.CLOSED)
     KPIService.calculate_kpis(SCOPE_ID)
     assert p.status == ProgramStatus.CLOSED
 
@@ -596,7 +601,7 @@ async def test_closed_program_not_reactivated_by_kpi_refresh(mock_db, mock_scope
 async def test_completed_program_not_reactivated_by_kri_refresh(mock_db, mock_scope):
     setup_basic_mock_db(mock_db, mock_scope)
     p = await SecurityProgramService.create_or_sync_program("P1", "Desc", "Vulnerability Management", ProgramSeverity.HIGH, [], [])
-    SecurityProgramService.transition_program_status(p.program_id, ProgramStatus.COMPLETED)
+    await SecurityProgramService.transition_program_status(p.program_id, ProgramStatus.COMPLETED)
     KRIService.calculate_kris(SCOPE_ID)
     assert p.status == ProgramStatus.COMPLETED
 
@@ -605,7 +610,7 @@ async def test_completed_program_not_reactivated_by_kri_refresh(mock_db, mock_sc
 async def test_closed_program_not_reactivated_by_kri_refresh(mock_db, mock_scope):
     setup_basic_mock_db(mock_db, mock_scope)
     p = await SecurityProgramService.create_or_sync_program("P1", "Desc", "Vulnerability Management", ProgramSeverity.HIGH, [], [])
-    SecurityProgramService.transition_program_status(p.program_id, ProgramStatus.CLOSED)
+    await SecurityProgramService.transition_program_status(p.program_id, ProgramStatus.CLOSED)
     KRIService.calculate_kris(SCOPE_ID)
     assert p.status == ProgramStatus.CLOSED
 
@@ -614,9 +619,9 @@ async def test_closed_program_not_reactivated_by_kri_refresh(mock_db, mock_scope
 async def test_program_history_immutable(mock_db, mock_scope):
     setup_basic_mock_db(mock_db, mock_scope)
     p = await SecurityProgramService.create_or_sync_program("Immutable History", "Desc", "Vulnerability Management", ProgramSeverity.HIGH, [], [])
-    hist = ProgramHistoryService.get_history(p.program_id)
+    hist = await ProgramHistoryService.get_history(p.program_id)
     hist.clear()
-    assert len(ProgramHistoryService.get_history(p.program_id)) == 1
+    assert len(await ProgramHistoryService.get_history(p.program_id)) == 1
 
 
 @pytest.mark.asyncio
@@ -624,7 +629,7 @@ async def test_program_history_survives_snapshot_rebuild(mock_db, mock_scope):
     setup_basic_mock_db(mock_db, mock_scope)
     p = await SecurityProgramService.create_or_sync_program("Survive Rebuild", "Desc", "Vulnerability Management", ProgramSeverity.HIGH, [], [])
     await SecurityProgramSnapshotService.generate_snapshot(mock_db, None)
-    assert len(ProgramHistoryService.get_history(p.program_id)) == 1
+    assert len(await ProgramHistoryService.get_history(p.program_id)) == 1
 
 
 @pytest.mark.asyncio
@@ -698,14 +703,14 @@ async def test_create_program_invalid_category(mock_db, mock_scope):
 @pytest.mark.asyncio
 async def test_transition_program_status_not_found():
     with pytest.raises(ValueError, match="not found"):
-        SecurityProgramService.transition_program_status(uuid.uuid4(), ProgramStatus.ACTIVE)
+        await SecurityProgramService.transition_program_status(uuid.uuid4(), ProgramStatus.ACTIVE)
 
 
 @pytest.mark.asyncio
 async def test_transition_program_status_invalid(mock_db, mock_scope):
     setup_basic_mock_db(mock_db, mock_scope)
     p = await SecurityProgramService.create_or_sync_program("P1", "Desc", "Vulnerability Management", ProgramSeverity.HIGH, [], [])
-    SecurityProgramService.transition_program_status(p.program_id, ProgramStatus.ACTIVE)
+    await SecurityProgramService.transition_program_status(p.program_id, ProgramStatus.ACTIVE)
     assert p.status == ProgramStatus.ACTIVE
 
 
@@ -730,7 +735,7 @@ async def test_program_drift_status_changed(mock_db, mock_scope):
         },
     }
 
-    SecurityProgramService.transition_program_status(p.program_id, ProgramStatus.ACTIVE)
+    await SecurityProgramService.transition_program_status(p.program_id, ProgramStatus.ACTIVE)
 
     with patch.object(WorkflowEventService, "emit_event", new_callable=AsyncMock) as mock_emit:
         await ProgramDriftService.check_drift(mock_db, SCOPE_ID, prev)
@@ -953,7 +958,7 @@ async def test_api_transition_program_status_success(client, mock_db, mock_scope
 async def test_api_transition_program_status_completed_rejection(client, mock_db, mock_scope):
     setup_basic_mock_db(mock_db, mock_scope)
     p = await SecurityProgramService.create_or_sync_program("P1", "Desc", "Vulnerability Management", ProgramSeverity.HIGH, [], [], scope_id=SCOPE_ID)
-    SecurityProgramService.transition_program_status(p.program_id, ProgramStatus.COMPLETED)
+    await SecurityProgramService.transition_program_status(p.program_id, ProgramStatus.COMPLETED)
     headers = get_auth_header(OPERATOR_ID, "operator")
     resp = await client.post(f"/api/v1/security-program/{p.program_id}/transition", json={"status": "ACTIVE"}, headers=headers)
     assert resp.status_code == 400
@@ -963,7 +968,7 @@ async def test_api_transition_program_status_completed_rejection(client, mock_db
 async def test_api_transition_program_status_closed_rejection(client, mock_db, mock_scope):
     setup_basic_mock_db(mock_db, mock_scope)
     p = await SecurityProgramService.create_or_sync_program("P1", "Desc", "Vulnerability Management", ProgramSeverity.HIGH, [], [], scope_id=SCOPE_ID)
-    SecurityProgramService.transition_program_status(p.program_id, ProgramStatus.CLOSED)
+    await SecurityProgramService.transition_program_status(p.program_id, ProgramStatus.CLOSED)
     headers = get_auth_header(OPERATOR_ID, "operator")
     resp = await client.post(f"/api/v1/security-program/{p.program_id}/transition", json={"status": "ACTIVE"}, headers=headers)
     assert resp.status_code == 400
@@ -993,11 +998,13 @@ async def test_program_fingerprint_case_insensitivity():
 
 @pytest.mark.asyncio
 async def test_program_history_clear(mock_db, mock_scope):
+    from src.infrastructure.database.models import SecurityProgramHistory
     setup_basic_mock_db(mock_db, mock_scope)
     p = await SecurityProgramService.create_or_sync_program("Hist Clear", "Desc", "Vulnerability Management", ProgramSeverity.HIGH, [], [])
-    assert len(ProgramHistoryService.get_history(p.program_id)) == 1
+    assert len(await ProgramHistoryService.get_history(p.program_id)) == 1
     ProgramHistoryService.clear_history()
-    assert len(ProgramHistoryService.get_history(p.program_id)) == 0
+    mock_db._entities[SecurityProgramHistory] = []
+    assert len(await ProgramHistoryService.get_history(p.program_id)) == 0
 
 
 @pytest.mark.asyncio

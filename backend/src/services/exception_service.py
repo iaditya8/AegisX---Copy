@@ -37,18 +37,49 @@ class ExceptionService:
         remediation.exception_approved_at = datetime.now(timezone.utc)
         remediation.updated_at = datetime.now(timezone.utc)
 
-        # Record history event
-        RemediationHistoryService.record_event(
-            remediation_id=remediation.remediation_id,
-            history_type=RemediationHistoryType.EXCEPTION,
-            old_value={"status": old_status.value},
-            new_value={
-                "status": new_status.value,
-                "reason": reason,
-                "approved_by": approved_by,
-            },
-            actor_id=actor_id,
-        )
+        # Update in PostgreSQL
+        from src.infrastructure.database.unit_of_work import UnitOfWork
+        from src.infrastructure.database.models import IntelligenceEvent
+        from src.core.tenant import get_current_tenant_id
+        
+        tenant_id = get_current_tenant_id() or uuid.UUID("00000000-0000-0000-0000-000000000000")
+        async with UnitOfWork() as uow:
+            db_rem = await uow.remediation_repo.get(remediation.remediation_id)
+            if db_rem:
+                db_rem.status = new_status.value
+                db_rem.reason = reason
+                db_rem.approved_by = approved_by
+                db_rem.exception_approved_at = remediation.exception_approved_at
+                db_rem.updated_at = remediation.updated_at
+                db_rem.updated_by = actor_id
+                
+                # Record history event
+                await RemediationHistoryService.record_event(
+                    remediation_id=remediation.remediation_id,
+                    history_type=RemediationHistoryType.EXCEPTION,
+                    old_value={"status": old_status.value},
+                    new_value={
+                        "status": new_status.value,
+                        "reason": reason,
+                        "approved_by": approved_by,
+                    },
+                    actor_id=actor_id,
+                    uow=uow,
+                )
+
+                # Stage outbox event
+                outbox_evt = IntelligenceEvent(
+                    tenant_id=tenant_id,
+                    event_type=f"remediation.{new_status.value.lower()}",
+                    payload={
+                        "remediation_id": str(remediation.remediation_id),
+                        "status": new_status.value,
+                        "reason": reason,
+                        "approved_by": approved_by,
+                    }
+                )
+                uow.session.add(outbox_evt)
+                await uow.commit()
 
         # Emit workflow event
         event_name = f"remediation.{new_status.value.lower()}"

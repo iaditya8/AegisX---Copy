@@ -8,6 +8,9 @@ from src.domain.entities.remediation import RemediationStatus
 from src.services.audit_service import create_audit_entry
 from src.services.risk_acceptance_registry import RISK_ACCEPTANCE_DAYS
 from src.services.workflow_event_service import WorkflowEventService
+from src.infrastructure.database.unit_of_work import UnitOfWork
+from src.infrastructure.database.models import RiskAcceptance as DBRiskAcceptance, IntelligenceEvent
+from src.core.tenant import get_current_tenant_id
 
 
 class RiskAcceptanceRecord:
@@ -47,6 +50,30 @@ class RiskAcceptanceService:
         """Clear all in-memory risk acceptances."""
         cls._acceptances.clear()
         cls._fingerprint_acceptances.clear()
+
+    @classmethod
+    async def bootstrap(cls, db: AsyncSession) -> None:
+        """Bootstrap the L2 cache from PostgreSQL database."""
+        cls.clear_acceptances()
+        async with UnitOfWork() as uow:
+            db_acceptances = await uow.risk_acceptance_repo.list()
+            for db_acc in db_acceptances:
+                record = RiskAcceptanceRecord(
+                    acceptance_id=db_acc.id,
+                    asset_id=db_acc.asset_id,
+                    finding_id=db_acc.finding_id,
+                    recommendation_id=db_acc.recommendation_id,
+                    recommendation_fingerprint=db_acc.recommendation_fingerprint,
+                    approved_by=db_acc.approved_by,
+                    approved_at=db_acc.approved_at,
+                    expiration_date=db_acc.expiration_date,
+                    status=RiskAcceptanceStatus(db_acc.status),
+                    reason=db_acc.reason,
+                )
+                cls._acceptances[db_acc.id] = record
+                if db_acc.recommendation_fingerprint not in cls._fingerprint_acceptances:
+                    cls._fingerprint_acceptances[db_acc.recommendation_fingerprint] = []
+                cls._fingerprint_acceptances[db_acc.recommendation_fingerprint].append(db_acc.id)
 
     @classmethod
     def get_all_acceptances(cls) -> List[RiskAcceptanceRecord]:
@@ -104,7 +131,6 @@ class RiskAcceptanceService:
         severity = "MEDIUM"
         if finding_id:
             from src.infrastructure.database.models import Finding
-
             finding = await db.get(Finding, finding_id)
             if finding:
                 severity = finding.severity.upper()
@@ -117,11 +143,9 @@ class RiskAcceptanceService:
         # 3. Handle remediation linkage
         rem_id = RemediationService._fingerprint_lookup.get(recommendation_fingerprint)
         if not rem_id:
-            # Sync recommendation first to auto-create the remediation
             title = f"Remediation for {recommendation_fingerprint[:8]}"
             if finding_id:
                 from src.infrastructure.database.models import Finding
-
                 finding = await db.get(Finding, finding_id)
                 if finding:
                     title = finding.title
@@ -153,35 +177,72 @@ class RiskAcceptanceService:
             actor_id=actor_id,
         )
 
+        tenant_id = get_current_tenant_id() or uuid.UUID("00000000-0000-0000-0000-000000000000")
+
         # 5. Revoke any prior active/expiring acceptances for this fingerprint
         existing_ids = cls._fingerprint_acceptances.get(recommendation_fingerprint, [])
-        for old_id in existing_ids:
-            old_acc = cls._acceptances.get(old_id)
-            if old_acc and old_acc.status in [
-                RiskAcceptanceStatus.ACTIVE,
-                RiskAcceptanceStatus.EXPIRING,
-            ]:
-                old_acc.status = RiskAcceptanceStatus.REVOKED
+        async with UnitOfWork() as uow:
+            for old_id in existing_ids:
+                old_acc = cls._acceptances.get(old_id)
+                if old_acc and old_acc.status in [
+                    RiskAcceptanceStatus.ACTIVE,
+                    RiskAcceptanceStatus.EXPIRING,
+                ]:
+                    old_acc.status = RiskAcceptanceStatus.REVOKED
+                    db_old_acc = await uow.risk_acceptance_repo.get(old_id)
+                    if db_old_acc:
+                        db_old_acc.status = RiskAcceptanceStatus.REVOKED.value
+                        db_old_acc.updated_at = now
+                        db_old_acc.updated_by = actor_id
 
-        # 6. Create Risk Acceptance Record
-        acceptance_id = uuid.uuid4()
-        record = RiskAcceptanceRecord(
-            acceptance_id=acceptance_id,
-            asset_id=asset_id,
-            finding_id=finding_id,
-            recommendation_id=recommendation_id,
-            recommendation_fingerprint=recommendation_fingerprint,
-            approved_by=approved_by,
-            approved_at=now,
-            expiration_date=expiration_date,
-            status=RiskAcceptanceStatus.ACTIVE,
-            reason=reason,
-        )
+            # 6. Create Risk Acceptance Record
+            acceptance_id = uuid.uuid4()
+            record = RiskAcceptanceRecord(
+                acceptance_id=acceptance_id,
+                asset_id=asset_id,
+                finding_id=finding_id,
+                recommendation_id=recommendation_id,
+                recommendation_fingerprint=recommendation_fingerprint,
+                approved_by=approved_by,
+                approved_at=now,
+                expiration_date=expiration_date,
+                status=RiskAcceptanceStatus.ACTIVE,
+                reason=reason,
+            )
 
-        cls._acceptances[acceptance_id] = record
-        if recommendation_fingerprint not in cls._fingerprint_acceptances:
-            cls._fingerprint_acceptances[recommendation_fingerprint] = []
-        cls._fingerprint_acceptances[recommendation_fingerprint].append(acceptance_id)
+            cls._acceptances[acceptance_id] = record
+            if recommendation_fingerprint not in cls._fingerprint_acceptances:
+                cls._fingerprint_acceptances[recommendation_fingerprint] = []
+            cls._fingerprint_acceptances[recommendation_fingerprint].append(acceptance_id)
+
+            db_acc = DBRiskAcceptance(
+                tenant_id=tenant_id,
+                id=acceptance_id,
+                asset_id=asset_id,
+                finding_id=finding_id,
+                recommendation_id=recommendation_id,
+                recommendation_fingerprint=recommendation_fingerprint,
+                approved_by=approved_by,
+                approved_at=now,
+                expiration_date=expiration_date,
+                status=RiskAcceptanceStatus.ACTIVE.value,
+                reason=reason,
+            )
+            await uow.risk_acceptance_repo.save(db_acc)
+
+            # Stage outbox event
+            outbox_evt = IntelligenceEvent(
+                tenant_id=tenant_id,
+                event_type="risk_acceptance.created",
+                payload={
+                    "acceptance_id": str(acceptance_id),
+                    "asset_id": str(asset_id),
+                    "recommendation_fingerprint": recommendation_fingerprint,
+                    "status": record.status.value,
+                }
+            )
+            uow.session.add(outbox_evt)
+            await uow.commit()
 
         # 7. Workflow event
         await WorkflowEventService.emit_event(
@@ -236,7 +297,30 @@ class RiskAcceptanceService:
                 f"Cannot revoke risk acceptance in status {record.status.value}"
             )
 
+        now = datetime.now(timezone.utc)
         record.status = RiskAcceptanceStatus.REVOKED
+
+        tenant_id = get_current_tenant_id() or uuid.UUID("00000000-0000-0000-0000-000000000000")
+        async with UnitOfWork() as uow:
+            db_acc = await uow.risk_acceptance_repo.get(acceptance_id)
+            if db_acc:
+                db_acc.status = RiskAcceptanceStatus.REVOKED.value
+                db_acc.updated_at = now
+                db_acc.updated_by = actor_id
+
+            # Stage outbox event
+            outbox_evt = IntelligenceEvent(
+                tenant_id=tenant_id,
+                event_type="risk_acceptance.revoked",
+                payload={
+                    "acceptance_id": str(acceptance_id),
+                    "asset_id": str(record.asset_id),
+                    "recommendation_fingerprint": record.recommendation_fingerprint,
+                    "status": record.status.value,
+                }
+            )
+            uow.session.add(outbox_evt)
+            await uow.commit()
 
         # Revert remediation status back to OPEN
         rem_id = RemediationService._fingerprint_lookup.get(
@@ -296,7 +380,30 @@ class RiskAcceptanceService:
         if not record:
             raise ValueError(f"Risk acceptance {acceptance_id} not found")
 
+        now = datetime.now(timezone.utc)
         record.status = RiskAcceptanceStatus.EXPIRED
+
+        tenant_id = get_current_tenant_id() or uuid.UUID("00000000-0000-0000-0000-000000000000")
+        async with UnitOfWork() as uow:
+            db_acc = await uow.risk_acceptance_repo.get(acceptance_id)
+            if db_acc:
+                db_acc.status = RiskAcceptanceStatus.EXPIRED.value
+                db_acc.updated_at = now
+                db_acc.updated_by = actor_id
+
+            # Stage outbox event
+            outbox_evt = IntelligenceEvent(
+                tenant_id=tenant_id,
+                event_type="risk_acceptance.expired",
+                payload={
+                    "acceptance_id": str(acceptance_id),
+                    "asset_id": str(record.asset_id),
+                    "recommendation_fingerprint": record.recommendation_fingerprint,
+                    "status": record.status.value,
+                }
+            )
+            uow.session.add(outbox_evt)
+            await uow.commit()
 
         # Revert remediation status back to OPEN
         rem_id = RemediationService._fingerprint_lookup.get(
@@ -352,6 +459,8 @@ class RiskAcceptanceService:
         from src.services.remediation_service import RemediationService
 
         now = datetime.now(timezone.utc)
+        tenant_id = get_current_tenant_id() or uuid.UUID("00000000-0000-0000-0000-000000000000")
+        
         for record in list(cls._acceptances.values()):
             if record.status not in [
                 RiskAcceptanceStatus.ACTIVE,
@@ -364,6 +473,27 @@ class RiskAcceptanceService:
             if time_remaining <= timedelta(seconds=0):
                 # Expired!
                 record.status = RiskAcceptanceStatus.EXPIRED
+
+                async with UnitOfWork() as uow:
+                    db_acc = await uow.risk_acceptance_repo.get(record.acceptance_id)
+                    if db_acc:
+                        db_acc.status = RiskAcceptanceStatus.EXPIRED.value
+                        db_acc.updated_at = now
+                        db_acc.updated_by = actor_id
+
+                    # Stage outbox event
+                    outbox_evt = IntelligenceEvent(
+                        tenant_id=tenant_id,
+                        event_type="risk_acceptance.expired",
+                        payload={
+                            "acceptance_id": str(record.acceptance_id),
+                            "asset_id": str(record.asset_id),
+                            "recommendation_fingerprint": record.recommendation_fingerprint,
+                            "status": record.status.value,
+                        }
+                    )
+                    uow.session.add(outbox_evt)
+                    await uow.commit()
 
                 # Revert remediation status back to OPEN
                 rem_id = RemediationService._fingerprint_lookup.get(
@@ -409,6 +539,27 @@ class RiskAcceptanceService:
             ):
                 # Transitioning from ACTIVE to EXPIRING
                 record.status = RiskAcceptanceStatus.EXPIRING
+
+                async with UnitOfWork() as uow:
+                    db_acc = await uow.risk_acceptance_repo.get(record.acceptance_id)
+                    if db_acc:
+                        db_acc.status = RiskAcceptanceStatus.EXPIRING.value
+                        db_acc.updated_at = now
+                        db_acc.updated_by = actor_id
+
+                    # Stage outbox event
+                    outbox_evt = IntelligenceEvent(
+                        tenant_id=tenant_id,
+                        event_type="risk_acceptance.expiring",
+                        payload={
+                            "acceptance_id": str(record.acceptance_id),
+                            "asset_id": str(record.asset_id),
+                            "recommendation_fingerprint": record.recommendation_fingerprint,
+                            "status": record.status.value,
+                        }
+                    )
+                    uow.session.add(outbox_evt)
+                    await uow.commit()
 
                 # Event and audit
                 await WorkflowEventService.emit_event(

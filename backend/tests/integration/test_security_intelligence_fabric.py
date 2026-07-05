@@ -44,9 +44,10 @@ def get_auth_header(user_id: uuid.UUID, role: str) -> dict:
 
 # --- Fabric Structures & Lifecycle ---
 
-def test_fabric_auto_creation():
+@pytest.mark.asyncio
+async def test_fabric_auto_creation(mock_db):
     """Verify fabric nodes can be created and validate categories."""
-    n = UnifiedSecurityIntelligenceFabricService.create_or_sync_fabric_node(
+    n = await UnifiedSecurityIntelligenceFabricService.create_or_sync_fabric_node(
         source_type="THREAT_INTEL",
         scope_id=SCOPE_ID,
         target_links=[uuid.uuid4()],
@@ -56,15 +57,16 @@ def test_fabric_auto_creation():
 
     # Invalid source
     with pytest.raises(ValueError):
-        UnifiedSecurityIntelligenceFabricService.create_or_sync_fabric_node(
+        await UnifiedSecurityIntelligenceFabricService.create_or_sync_fabric_node(
             source_type="INVALID_SOURCE",
             target_links=[],
         )
 
 
-def test_propagation_route_auto_creation():
+@pytest.mark.asyncio
+async def test_propagation_route_auto_creation(mock_db):
     """Verify propagation route objects are automatically generated."""
-    n = UnifiedSecurityIntelligenceFabricService.create_or_sync_fabric_node(
+    n = await UnifiedSecurityIntelligenceFabricService.create_or_sync_fabric_node(
         source_type="THREAT_INTEL",
         scope_id=SCOPE_ID,
         target_links=[uuid.uuid4()],
@@ -74,83 +76,90 @@ def test_propagation_route_auto_creation():
     assert routes[0].source_node_id == n.node_id
 
 
-def test_fabric_fingerprint_stability():
+@pytest.mark.asyncio
+async def test_fabric_fingerprint_stability(mock_db):
     """Verify SHA-256 fingerprints are deterministic and stable."""
     src = "RISK"
-    n1 = UnifiedSecurityIntelligenceFabricService.create_or_sync_fabric_node(src, SCOPE_ID, rules_hash="123")
-    n2 = UnifiedSecurityIntelligenceFabricService.create_or_sync_fabric_node(src, SCOPE_ID, rules_hash="123")
+    n1 = await UnifiedSecurityIntelligenceFabricService.create_or_sync_fabric_node(src, SCOPE_ID, rules_hash="123")
+    n2 = await UnifiedSecurityIntelligenceFabricService.create_or_sync_fabric_node(src, SCOPE_ID, rules_hash="123")
     assert n1.node_fingerprint == n2.node_fingerprint
     assert n1.node_id == n2.node_id
 
 
-def test_fabric_identity_preservation():
+@pytest.mark.asyncio
+async def test_fabric_identity_preservation(mock_db):
     """Verify syncing identical elements preserves ids and history."""
     src = "RISK"
-    n1 = UnifiedSecurityIntelligenceFabricService.create_or_sync_fabric_node(src, SCOPE_ID, rules_hash="456")
-    history1 = FabricHistoryService.get_history(n1.node_id)
+    n1 = await UnifiedSecurityIntelligenceFabricService.create_or_sync_fabric_node(src, SCOPE_ID, rules_hash="456")
+    history1 = await FabricHistoryService.get_history(n1.node_id)
 
-    n2 = UnifiedSecurityIntelligenceFabricService.create_or_sync_fabric_node(src, SCOPE_ID, rules_hash="456")
+    n2 = await UnifiedSecurityIntelligenceFabricService.create_or_sync_fabric_node(src, SCOPE_ID, rules_hash="456")
     assert n1.node_id == n2.node_id
-    assert FabricHistoryService.get_history(n2.node_id) == history1
+    assert await FabricHistoryService.get_history(n2.node_id) == history1
 
 
-def test_fabric_duplicate_prevention():
+@pytest.mark.asyncio
+async def test_fabric_duplicate_prevention(mock_db):
     """Verify that redundant sync calls do not add duplicate items."""
     src = "RISK"
     for _ in range(5):
-        UnifiedSecurityIntelligenceFabricService.create_or_sync_fabric_node(src, SCOPE_ID, rules_hash="AD")
+        await UnifiedSecurityIntelligenceFabricService.create_or_sync_fabric_node(src, SCOPE_ID, rules_hash="AD")
     
     nodes = UnifiedSecurityIntelligenceFabricService.get_all_fabric_nodes()
     assert len(nodes) == 1
 
 
-def test_fabric_suspend_transition():
+@pytest.mark.asyncio
+async def test_fabric_suspend_transition(mock_db):
     """Verify transition to SUSPENDED status."""
-    n = UnifiedSecurityIntelligenceFabricService.create_or_sync_fabric_node("RISK", SCOPE_ID, rules_hash="AD")
-    updated = UnifiedSecurityIntelligenceFabricService.suspend_fabric_node(n.node_id)
+    n = await UnifiedSecurityIntelligenceFabricService.create_or_sync_fabric_node("RISK", SCOPE_ID, rules_hash="AD")
+    updated = await UnifiedSecurityIntelligenceFabricService.suspend_fabric_node(n.node_id)
     assert updated.status == FabricStatus.SUSPENDED
 
-    history = FabricHistoryService.get_history(n.node_id)
+    history = await FabricHistoryService.get_history(n.node_id)
     event_types = [h.event_type for h in history]
     assert "SUSPENDED" in event_types
 
 
-def test_fabric_terminate_transition():
+@pytest.mark.asyncio
+async def test_fabric_terminate_transition(mock_db):
     """Verify transition to TERMINATED status."""
-    n = UnifiedSecurityIntelligenceFabricService.create_or_sync_fabric_node("RISK", SCOPE_ID, rules_hash="AD")
-    updated = UnifiedSecurityIntelligenceFabricService.terminate_fabric_node(n.node_id)
+    n = await UnifiedSecurityIntelligenceFabricService.create_or_sync_fabric_node("RISK", SCOPE_ID, rules_hash="AD")
+    updated = await UnifiedSecurityIntelligenceFabricService.terminate_fabric_node(n.node_id)
     assert updated.status == FabricStatus.TERMINATED
 
-    history = FabricHistoryService.get_history(n.node_id)
+    history = await FabricHistoryService.get_history(n.node_id)
     event_types = [h.event_type for h in history]
     assert "TERMINATED" in event_types
 
 
 # --- Fabric Terminal State Enforcement ---
 
-def test_fabric_terminal_state_enforcement():
+@pytest.mark.asyncio
+async def test_fabric_terminal_state_enforcement(mock_db):
     """Verify that a terminated node rejects transitions."""
-    n = UnifiedSecurityIntelligenceFabricService.create_or_sync_fabric_node("RISK", SCOPE_ID, rules_hash="AD")
-    UnifiedSecurityIntelligenceFabricService.terminate_fabric_node(n.node_id)
+    n = await UnifiedSecurityIntelligenceFabricService.create_or_sync_fabric_node("RISK", SCOPE_ID, rules_hash="AD")
+    await UnifiedSecurityIntelligenceFabricService.terminate_fabric_node(n.node_id)
 
-    res_sus = UnifiedSecurityIntelligenceFabricService.suspend_fabric_node(n.node_id)
+    res_sus = await UnifiedSecurityIntelligenceFabricService.suspend_fabric_node(n.node_id)
     assert res_sus.status == FabricStatus.TERMINATED
 
 
-def test_terminated_fabric_not_reactivated_by_sync():
+@pytest.mark.asyncio
+async def test_terminated_fabric_not_reactivated_by_sync(mock_db):
     """Verify sync doesn't reactivate terminated nodes."""
-    n = UnifiedSecurityIntelligenceFabricService.create_or_sync_fabric_node("RISK", SCOPE_ID, rules_hash="AD")
-    UnifiedSecurityIntelligenceFabricService.terminate_fabric_node(n.node_id)
+    n = await UnifiedSecurityIntelligenceFabricService.create_or_sync_fabric_node("RISK", SCOPE_ID, rules_hash="AD")
+    await UnifiedSecurityIntelligenceFabricService.terminate_fabric_node(n.node_id)
 
-    res = UnifiedSecurityIntelligenceFabricService.create_or_sync_fabric_node(n.source_type, SCOPE_ID, rules_hash="AD")
+    res = await UnifiedSecurityIntelligenceFabricService.create_or_sync_fabric_node(n.source_type, SCOPE_ID, rules_hash="AD")
     assert res.status == FabricStatus.TERMINATED
 
 
 @pytest.mark.asyncio
 async def test_terminated_fabric_not_reactivated_by_worker(mock_db):
     """Verify background worker refresh does not reactivate terminated nodes."""
-    n = UnifiedSecurityIntelligenceFabricService.create_or_sync_fabric_node("RISK", SCOPE_ID, rules_hash="AD")
-    UnifiedSecurityIntelligenceFabricService.terminate_fabric_node(n.node_id)
+    n = await UnifiedSecurityIntelligenceFabricService.create_or_sync_fabric_node("RISK", SCOPE_ID, rules_hash="AD")
+    await UnifiedSecurityIntelligenceFabricService.terminate_fabric_node(n.node_id)
 
     await UnifiedSecurityIntelligenceFabricService.sync_fabric_state(mock_db)
     assert n.status == FabricStatus.TERMINATED
@@ -159,8 +168,8 @@ async def test_terminated_fabric_not_reactivated_by_worker(mock_db):
 @pytest.mark.asyncio
 async def test_terminated_fabric_not_reactivated_by_snapshot(mock_db):
     """Verify snapshot rebuild logic respects terminal terminated states."""
-    n = UnifiedSecurityIntelligenceFabricService.create_or_sync_fabric_node("RISK", SCOPE_ID, rules_hash="AD")
-    UnifiedSecurityIntelligenceFabricService.terminate_fabric_node(n.node_id)
+    n = await UnifiedSecurityIntelligenceFabricService.create_or_sync_fabric_node("RISK", SCOPE_ID, rules_hash="AD")
+    await UnifiedSecurityIntelligenceFabricService.terminate_fabric_node(n.node_id)
 
     snap = await FabricSnapshotService.generate_snapshot(mock_db, SCOPE_ID)
     assert snap["terminated_count"] == 1
@@ -170,8 +179,8 @@ async def test_terminated_fabric_not_reactivated_by_snapshot(mock_db):
 @pytest.mark.asyncio
 async def test_terminated_fabric_not_reactivated_by_drift(mock_db):
     """Verify drift updates ignore terminated nodes and preserve terminal status."""
-    n = UnifiedSecurityIntelligenceFabricService.create_or_sync_fabric_node("RISK", SCOPE_ID, rules_hash="AD")
-    UnifiedSecurityIntelligenceFabricService.terminate_fabric_node(n.node_id)
+    n = await UnifiedSecurityIntelligenceFabricService.create_or_sync_fabric_node("RISK", SCOPE_ID, rules_hash="AD")
+    await UnifiedSecurityIntelligenceFabricService.terminate_fabric_node(n.node_id)
 
     prev_snap = {
         "total_nodes": 1,
@@ -185,10 +194,11 @@ async def test_terminated_fabric_not_reactivated_by_drift(mock_db):
     assert n.status == FabricStatus.TERMINATED
 
 
-def test_terminated_fabric_not_reactivated_by_propagation():
+@pytest.mark.asyncio
+async def test_terminated_fabric_not_reactivated_by_propagation(mock_db):
     """Verify propagation updates ignore terminated nodes."""
-    n = UnifiedSecurityIntelligenceFabricService.create_or_sync_fabric_node("RISK", SCOPE_ID, rules_hash="AD")
-    UnifiedSecurityIntelligenceFabricService.terminate_fabric_node(n.node_id)
+    n = await UnifiedSecurityIntelligenceFabricService.create_or_sync_fabric_node("RISK", SCOPE_ID, rules_hash="AD")
+    await UnifiedSecurityIntelligenceFabricService.terminate_fabric_node(n.node_id)
 
     IntelligencePropagationService.process_propagation()
     assert n.status == FabricStatus.TERMINATED
@@ -197,40 +207,44 @@ def test_terminated_fabric_not_reactivated_by_propagation():
 
 # --- Immutable History preservation ---
 
-def test_fabric_history_preserved():
+@pytest.mark.asyncio
+async def test_fabric_history_preserved(mock_db):
     """Verify history appends events but never overwrites previous history."""
-    n = UnifiedSecurityIntelligenceFabricService.create_or_sync_fabric_node("RISK", SCOPE_ID, rules_hash="AD")
-    UnifiedSecurityIntelligenceFabricService.terminate_fabric_node(n.node_id)
+    n = await UnifiedSecurityIntelligenceFabricService.create_or_sync_fabric_node("RISK", SCOPE_ID, rules_hash="AD")
+    await UnifiedSecurityIntelligenceFabricService.terminate_fabric_node(n.node_id)
 
-    history = FabricHistoryService.get_history(n.node_id)
+    history = await FabricHistoryService.get_history(n.node_id)
     assert len(history) == 2
     assert history[0].event_type == "FABRIC_CREATED"
     assert history[1].event_type == "TERMINATED"
 
 
-def test_fabric_history_immutable():
+@pytest.mark.asyncio
+async def test_fabric_history_immutable(mock_db):
     """Verify history entries are deep copies."""
-    n = UnifiedSecurityIntelligenceFabricService.create_or_sync_fabric_node("RISK", SCOPE_ID, rules_hash="AD")
-    history = FabricHistoryService.get_history(n.node_id)
+    n = await UnifiedSecurityIntelligenceFabricService.create_or_sync_fabric_node("RISK", SCOPE_ID, rules_hash="AD")
+    history = await FabricHistoryService.get_history(n.node_id)
     
     with pytest.raises(TypeError):
         history[0] = "MUTATED"
 
 
-def test_fabric_history_order_preserved():
+@pytest.mark.asyncio
+async def test_fabric_history_order_preserved(mock_db):
     """Verify history log entries are sorted chronologically."""
-    n = UnifiedSecurityIntelligenceFabricService.create_or_sync_fabric_node("RISK", SCOPE_ID, rules_hash="AD")
-    UnifiedSecurityIntelligenceFabricService.terminate_fabric_node(n.node_id)
+    n = await UnifiedSecurityIntelligenceFabricService.create_or_sync_fabric_node("RISK", SCOPE_ID, rules_hash="AD")
+    await UnifiedSecurityIntelligenceFabricService.terminate_fabric_node(n.node_id)
 
-    history = FabricHistoryService.get_history(n.node_id)
+    history = await FabricHistoryService.get_history(n.node_id)
     assert history[0].timestamp <= history[1].timestamp
 
 
 # --- Scoring Determinism & Derived Calculations ---
 
-def test_propagation_schedule_deterministic():
+@pytest.mark.asyncio
+async def test_propagation_schedule_deterministic(mock_db):
     """Verify propagation sequencing calculations are deterministic."""
-    n = UnifiedSecurityIntelligenceFabricService.create_or_sync_fabric_node("RISK", SCOPE_ID, rules_hash="AD")
+    n = await UnifiedSecurityIntelligenceFabricService.create_or_sync_fabric_node("RISK", SCOPE_ID, rules_hash="AD")
     
     IntelligencePropagationService.process_propagation()
     c1 = n.confidence_weights.get("current_confidence")
@@ -241,17 +255,19 @@ def test_propagation_schedule_deterministic():
     assert c1 == c2
 
 
-def test_confidence_weight_consistency():
+@pytest.mark.asyncio
+async def test_confidence_weight_consistency(mock_db):
     """Verify confidence modifiers and decays map consistently."""
-    n = UnifiedSecurityIntelligenceFabricService.create_or_sync_fabric_node("THREAT_INTEL", SCOPE_ID, rules_hash="AD")
+    n = await UnifiedSecurityIntelligenceFabricService.create_or_sync_fabric_node("THREAT_INTEL", SCOPE_ID, rules_hash="AD")
     IntelligencePropagationService.process_propagation()
     conf = n.confidence_weights.get("current_confidence")
     assert conf is not None
 
 
-def test_intelligence_propagation_impact():
+@pytest.mark.asyncio
+async def test_intelligence_propagation_impact(mock_db):
     """Verify decay parameters decay confidence scores correctly."""
-    n = UnifiedSecurityIntelligenceFabricService.create_or_sync_fabric_node("RISK", SCOPE_ID, rules_hash="AD")
+    n = await UnifiedSecurityIntelligenceFabricService.create_or_sync_fabric_node("RISK", SCOPE_ID, rules_hash="AD")
     IntelligencePropagationService.process_propagation()
     conf = n.confidence_weights.get("current_confidence")
     assert conf < 1.0 # 1.0 - 0.08 decay = 0.92 (or base_modifier * ... - decay)
@@ -262,7 +278,7 @@ def test_intelligence_propagation_impact():
 @pytest.mark.asyncio
 async def test_fabric_drift_detection(mock_db):
     """Verify structural drift logic detects node and score shifts."""
-    n = UnifiedSecurityIntelligenceFabricService.create_or_sync_fabric_node("RISK", SCOPE_ID, rules_hash="AD")
+    n = await UnifiedSecurityIntelligenceFabricService.create_or_sync_fabric_node("RISK", SCOPE_ID, rules_hash="AD")
     IntelligencePropagationService.process_propagation()
 
     prev_snap = {
@@ -293,10 +309,10 @@ def test_fabric_drift_clearing():
 @pytest.mark.asyncio
 async def test_snapshot_rebuild_consistency(mock_db):
     """Verify snapshot generation computes counts and average confidence correctly."""
-    n1 = UnifiedSecurityIntelligenceFabricService.create_or_sync_fabric_node("RISK", SCOPE_ID, rules_hash="AD1")
-    n2 = UnifiedSecurityIntelligenceFabricService.create_or_sync_fabric_node("POSTURE", SCOPE_ID, rules_hash="AD2")
+    n1 = await UnifiedSecurityIntelligenceFabricService.create_or_sync_fabric_node("RISK", SCOPE_ID, rules_hash="AD1")
+    n2 = await UnifiedSecurityIntelligenceFabricService.create_or_sync_fabric_node("POSTURE", SCOPE_ID, rules_hash="AD2")
     
-    UnifiedSecurityIntelligenceFabricService.suspend_fabric_node(n1.node_id)
+    await UnifiedSecurityIntelligenceFabricService.suspend_fabric_node(n1.node_id)
 
     snap = await FabricSnapshotService.generate_snapshot(mock_db, SCOPE_ID)
     assert snap["total_nodes"] == 2
@@ -307,7 +323,7 @@ async def test_snapshot_rebuild_consistency(mock_db):
 @pytest.mark.asyncio
 async def test_snapshot_rebuild_after_cache_deletion(mock_db):
     """Verify get_snapshot rebuilds from source if the cache is missing or deleted."""
-    UnifiedSecurityIntelligenceFabricService.create_or_sync_fabric_node("RISK", SCOPE_ID, rules_hash="AD")
+    await UnifiedSecurityIntelligenceFabricService.create_or_sync_fabric_node("RISK", SCOPE_ID, rules_hash="AD")
     FabricSnapshotService.clear_snapshots()
 
     snap = await FabricSnapshotService.get_snapshot(mock_db, SCOPE_ID)
@@ -318,7 +334,7 @@ async def test_snapshot_rebuild_after_cache_deletion(mock_db):
 async def test_snapshot_rebuild_after_cache_corruption(mock_db):
     """Verify snapshot rebuilds if cache exists but keys are corrupted/missing."""
     FabricSnapshotService._snapshots[SCOPE_ID] = {"corrupted": True}
-    UnifiedSecurityIntelligenceFabricService.create_or_sync_fabric_node("RISK", SCOPE_ID, rules_hash="AD")
+    await UnifiedSecurityIntelligenceFabricService.create_or_sync_fabric_node("RISK", SCOPE_ID, rules_hash="AD")
 
     snap = await FabricSnapshotService.get_snapshot(mock_db, SCOPE_ID)
     assert "total_nodes" in snap
@@ -328,7 +344,7 @@ async def test_snapshot_rebuild_after_cache_corruption(mock_db):
 @pytest.mark.asyncio
 async def test_snapshot_not_authoritative(mock_db):
     """Verify snapshot doesn't store state exclusively; clearing snapshots doesn't delete active nodes."""
-    UnifiedSecurityIntelligenceFabricService.create_or_sync_fabric_node("RISK", SCOPE_ID, rules_hash="AD")
+    await UnifiedSecurityIntelligenceFabricService.create_or_sync_fabric_node("RISK", SCOPE_ID, rules_hash="AD")
     await FabricSnapshotService.generate_snapshot(mock_db, SCOPE_ID)
 
     FabricSnapshotService.clear_snapshots()
@@ -338,7 +354,7 @@ async def test_snapshot_not_authoritative(mock_db):
 @pytest.mark.asyncio
 async def test_snapshot_rebuild_from_source_of_truth(mock_db):
     """Verify get_snapshot loads from the source of truth when cache is empty."""
-    UnifiedSecurityIntelligenceFabricService.create_or_sync_fabric_node("RISK", SCOPE_ID, rules_hash="AD")
+    await UnifiedSecurityIntelligenceFabricService.create_or_sync_fabric_node("RISK", SCOPE_ID, rules_hash="AD")
     
     FabricSnapshotService.clear_snapshots()
     snap = await FabricSnapshotService.get_snapshot(mock_db, SCOPE_ID)
@@ -371,7 +387,7 @@ async def test_ai_context_fabric_injection(mock_db):
         "ports": [], "services": [], "technologies": [], "risk": {}, "findings": [], "exposure": {}
     })
 
-    UnifiedSecurityIntelligenceFabricService.create_or_sync_fabric_node("RISK", SCOPE_ID, rules_hash="AD")
+    await UnifiedSecurityIntelligenceFabricService.create_or_sync_fabric_node("RISK", SCOPE_ID, rules_hash="AD")
 
     try:
         ctx = await AIContextBuilder.build_asset_context(mock_db, uuid.uuid4())
@@ -398,7 +414,7 @@ async def test_rbac_fabric_scope_validation(mock_db):
     from src.api.v1.dependencies.auth import get_current_user
     import src.api.v1.routers.security_intelligence_fabric as fb_router
 
-    n = UnifiedSecurityIntelligenceFabricService.create_or_sync_fabric_node("RISK", SCOPE_ID, rules_hash="AD")
+    n = await UnifiedSecurityIntelligenceFabricService.create_or_sync_fabric_node("RISK", SCOPE_ID, rules_hash="AD")
 
     client = TestClient(app)
 
@@ -465,43 +481,44 @@ async def test_rbac_fabric_scope_validation(mock_db):
 @pytest.mark.asyncio
 async def test_fabric_identity_preserved_after_worker_refresh(mock_db):
     """Verify that worker refresh preserves fabric identity and history."""
-    n = UnifiedSecurityIntelligenceFabricService.create_or_sync_fabric_node("RISK", SCOPE_ID, rules_hash="AD")
-    history1 = FabricHistoryService.get_history(n.node_id)
+    n = await UnifiedSecurityIntelligenceFabricService.create_or_sync_fabric_node("RISK", SCOPE_ID, rules_hash="AD")
+    history1 = await FabricHistoryService.get_history(n.node_id)
 
     await UnifiedSecurityIntelligenceFabricService.sync_fabric_state(mock_db)
     
     assert n.node_id is not None
-    assert FabricHistoryService.get_history(n.node_id) == history1
+    assert await FabricHistoryService.get_history(n.node_id) == history1
 
 
-def test_fabric_identity_preserved_after_propagation_refresh():
+@pytest.mark.asyncio
+async def test_fabric_identity_preserved_after_propagation_refresh(mock_db):
     """Verify that propagation sequencing preserves fabric identity and history."""
-    n = UnifiedSecurityIntelligenceFabricService.create_or_sync_fabric_node("RISK", SCOPE_ID, rules_hash="AD")
-    history1 = FabricHistoryService.get_history(n.node_id)
+    n = await UnifiedSecurityIntelligenceFabricService.create_or_sync_fabric_node("RISK", SCOPE_ID, rules_hash="AD")
+    history1 = await FabricHistoryService.get_history(n.node_id)
 
     IntelligencePropagationService.process_propagation()
 
     assert n.node_id is not None
-    assert FabricHistoryService.get_history(n.node_id) == history1
+    assert await FabricHistoryService.get_history(n.node_id) == history1
 
 
 @pytest.mark.asyncio
 async def test_fabric_identity_preserved_after_snapshot_rebuild(mock_db):
     """Verify that snapshot rebuild preserves fabric identity."""
-    n = UnifiedSecurityIntelligenceFabricService.create_or_sync_fabric_node("RISK", SCOPE_ID, rules_hash="AD")
-    history1 = FabricHistoryService.get_history(n.node_id)
+    n = await UnifiedSecurityIntelligenceFabricService.create_or_sync_fabric_node("RISK", SCOPE_ID, rules_hash="AD")
+    history1 = await FabricHistoryService.get_history(n.node_id)
 
     await FabricSnapshotService.generate_snapshot(mock_db, SCOPE_ID)
 
     assert n.node_id is not None
-    assert FabricHistoryService.get_history(n.node_id) == history1
+    assert await FabricHistoryService.get_history(n.node_id) == history1
 
 
 @pytest.mark.asyncio
 async def test_fabric_identity_preserved_after_drift_processing(mock_db):
     """Verify that drift processing preserves fabric identity."""
-    n = UnifiedSecurityIntelligenceFabricService.create_or_sync_fabric_node("RISK", SCOPE_ID, rules_hash="AD")
-    history1 = FabricHistoryService.get_history(n.node_id)
+    n = await UnifiedSecurityIntelligenceFabricService.create_or_sync_fabric_node("RISK", SCOPE_ID, rules_hash="AD")
+    history1 = await FabricHistoryService.get_history(n.node_id)
 
     prev_snap = {
         "total_nodes": 1,
@@ -513,12 +530,13 @@ async def test_fabric_identity_preserved_after_drift_processing(mock_db):
     await FabricDriftService.process_drift(mock_db, SCOPE_ID, prev_snap)
 
     assert n.node_id is not None
-    assert FabricHistoryService.get_history(n.node_id) == history1
+    assert await FabricHistoryService.get_history(n.node_id) == history1
 
 
-def test_propagation_determinism():
+@pytest.mark.asyncio
+async def test_propagation_determinism(mock_db):
     """Verify propagation calculations are deterministic."""
-    n = UnifiedSecurityIntelligenceFabricService.create_or_sync_fabric_node("RISK", SCOPE_ID, rules_hash="AD")
+    n = await UnifiedSecurityIntelligenceFabricService.create_or_sync_fabric_node("RISK", SCOPE_ID, rules_hash="AD")
     
     IntelligencePropagationService.process_propagation()
     c1 = n.confidence_weights.get("current_confidence")
@@ -532,8 +550,8 @@ def test_propagation_determinism():
 @pytest.mark.asyncio
 async def test_scope_isolation_for_fabric_events(mock_db):
     """Verify propagation calculation respects scope boundaries."""
-    n1 = UnifiedSecurityIntelligenceFabricService.create_or_sync_fabric_node("RISK", SCOPE_ID, rules_hash="AD1")
-    n2 = UnifiedSecurityIntelligenceFabricService.create_or_sync_fabric_node("RISK", ALT_SCOPE_ID, rules_hash="AD2")
+    n1 = await UnifiedSecurityIntelligenceFabricService.create_or_sync_fabric_node("RISK", SCOPE_ID, rules_hash="AD1")
+    n2 = await UnifiedSecurityIntelligenceFabricService.create_or_sync_fabric_node("RISK", ALT_SCOPE_ID, rules_hash="AD2")
 
     IntelligencePropagationService.process_propagation()
 
@@ -541,9 +559,10 @@ async def test_scope_isolation_for_fabric_events(mock_db):
     assert n2.confidence_weights.get("current_confidence") is not None
 
 
-def test_fabric_score_stability():
+@pytest.mark.asyncio
+async def test_fabric_score_stability(mock_db):
     """Verify fabric scores are stable."""
-    n = UnifiedSecurityIntelligenceFabricService.create_or_sync_fabric_node("RISK", SCOPE_ID, rules_hash="AD")
+    n = await UnifiedSecurityIntelligenceFabricService.create_or_sync_fabric_node("RISK", SCOPE_ID, rules_hash="AD")
     IntelligencePropagationService.process_propagation()
 
     s1 = n.confidence_weights.get("current_confidence")

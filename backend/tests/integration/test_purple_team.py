@@ -139,8 +139,10 @@ def override_auth_dependency():
 
 
 def setup_test_db(mock_db, scopes=None, assets=None, findings=None):
-    mock_db.add = MagicMock()
-    mock_db.commit = AsyncMock()
+    orig_add = mock_db.add
+    orig_commit = mock_db.commit
+    orig_execute = mock_db.execute
+    orig_get = mock_db.get
 
     async def mock_get(model, ident):
         if model == Scope and scopes:
@@ -155,12 +157,11 @@ def setup_test_db(mock_db, scopes=None, assets=None, findings=None):
             for a in assets:
                 if a.id == ident:
                     return a
-        return None
+        return await orig_get(model, ident)
 
     mock_db.get = AsyncMock(side_effect=mock_get)
 
     async def mock_execute(query, *args, **kwargs):
-        mock_result = MagicMock()
         query_str = str(query).lower()
 
         if "from scopes" in query_str or "from scope" in query_str:
@@ -184,15 +185,25 @@ def setup_test_db(mock_db, scopes=None, assets=None, findings=None):
             elif owner_id_val:
                 filtered_scopes = [s for s in filtered_scopes if s.owner_id == owner_id_val]
 
+            mock_result = MagicMock()
             mock_result.scalar_one_or_none.side_effect = lambda: filtered_scopes[0] if filtered_scopes else None
             mock_result.scalars().all.side_effect = lambda: filtered_scopes
+            return mock_result
         elif "from assets" in query_str:
+            mock_result = MagicMock()
             mock_result.scalars().all.side_effect = lambda: assets or []
+            return mock_result
         elif "from findings" in query_str:
+            mock_result = MagicMock()
             mock_result.scalars().all.side_effect = lambda: findings or []
-        else:
-            mock_result.scalar_one_or_none.side_effect = lambda: None
-            mock_result.scalars().all.side_effect = lambda: []
+            return mock_result
+        
+        if any(table in query_str for table in ["purple_team_exercises", "purple_team_validations", "purple_team_findings", "purple_team_history"]):
+            return await orig_execute(query, *args, **kwargs)
+
+        mock_result = MagicMock()
+        mock_result.scalar_one_or_none.side_effect = lambda: None
+        mock_result.scalars().all.side_effect = lambda: []
         return mock_result
 
     mock_db.execute = AsyncMock(side_effect=mock_execute)
@@ -207,36 +218,42 @@ def setup_basic_mock_db(mock_db, mock_scope, mock_scope_2=None):
 
 # --- 1. Exercise Type & Status Registry Tests (6 tests) ---
 
-def test_exercise_type_valid():
+@pytest.mark.asyncio
+async def test_exercise_type_valid(mock_db):
     assert ExerciseTypeRegistry.is_valid_type("ATTACK_SIMULATION") is True
     assert ExerciseTypeRegistry.is_valid_type("ADVERSARY_EMULATION") is True
     assert ExerciseTypeRegistry.is_valid_type("INVALID_TYPE") is False
 
 
-def test_exercise_type_registered():
+@pytest.mark.asyncio
+async def test_exercise_type_registered(mock_db):
     registered = ExerciseTypeRegistry.get_registered_types()
     assert ExerciseType.ATTACK_SIMULATION in registered
     assert ExerciseType.CONTROL_VALIDATION in registered
 
 
-def test_validation_status_valid():
+@pytest.mark.asyncio
+async def test_validation_status_valid(mock_db):
     assert ValidationStatusRegistry.is_valid_status("PASSED") is True
     assert ValidationStatusRegistry.is_valid_status("PARTIAL") is True
     assert ValidationStatusRegistry.is_valid_status("INVALID") is False
 
 
-def test_validation_status_registered():
+@pytest.mark.asyncio
+async def test_validation_status_registered(mock_db):
     registered = ValidationStatusRegistry.get_registered_statuses()
     assert ValidationStatus.PASSED in registered
     assert ValidationStatus.FAILED in registered
 
 
-def test_attack_validation_registry_valid():
+@pytest.mark.asyncio
+async def test_attack_validation_registry_valid(mock_db):
     assert AttackValidationRegistry.is_valid_technique("T1059") is True
     assert AttackValidationRegistry.is_valid_technique("T1234") is False
 
 
-def test_attack_validation_registry_techniques():
+@pytest.mark.asyncio
+async def test_attack_validation_registry_techniques(mock_db):
     registered = AttackValidationRegistry.get_registered_techniques()
     assert "T1059" in registered
     assert "T1562" in registered
@@ -245,7 +262,8 @@ def test_attack_validation_registry_techniques():
 
 # --- 2. Fingerprint Stability Tests (3 tests) ---
 
-def test_exercise_fingerprint_generation():
+@pytest.mark.asyncio
+async def test_exercise_fingerprint_generation(mock_db):
     fp1 = PurpleTeamFingerprintService.generate_fingerprint(
         ExerciseType.ATTACK_SIMULATION, "Exercise 1", ["T1059"], [{"entity_type": "Asset", "entity_id": "1"}]
     )
@@ -255,7 +273,8 @@ def test_exercise_fingerprint_generation():
     assert fp1 == fp2
 
 
-def test_exercise_fingerprint_stability():
+@pytest.mark.asyncio
+async def test_exercise_fingerprint_stability(mock_db):
     fp1 = PurpleTeamFingerprintService.generate_fingerprint(
         ExerciseType.ATTACK_SIMULATION, "Exercise 1", ["T1059"], [{"entity_type": "Asset", "entity_id": "1"}]
     )
@@ -265,11 +284,12 @@ def test_exercise_fingerprint_stability():
     assert fp1 == fp2
 
 
-def test_exercise_sync_preserves_identity():
-    ex1 = PurpleTeamService.create_or_sync_exercise(
+@pytest.mark.asyncio
+async def test_exercise_sync_preserves_identity(mock_db):
+    ex1 = await PurpleTeamService.create_or_sync_exercise(
         "Ex 1", "Desc 1", ExerciseType.ATTACK_SIMULATION, ExerciseSeverity.HIGH, SCOPE_ID, related_techniques=["T1059"]
     )
-    ex2 = PurpleTeamService.create_or_sync_exercise(
+    ex2 = await PurpleTeamService.create_or_sync_exercise(
         "Ex 1", "Desc 2", ExerciseType.ATTACK_SIMULATION, ExerciseSeverity.HIGH, SCOPE_ID, related_techniques=["T1059"]
     )
     assert ex1.exercise_id == ex2.exercise_id
@@ -278,43 +298,51 @@ def test_exercise_sync_preserves_identity():
 
 # --- 3. Purple Team History Logs Tests (4 tests) ---
 
-def test_history_empty():
-    assert len(PurpleTeamHistoryService.get_history(uuid.uuid4())) == 0
+@pytest.mark.asyncio
+async def test_history_empty(mock_db):
+    assert len(await PurpleTeamHistoryService.get_history(uuid.uuid4())) == 0
 
 
-def test_history_record_event():
+@pytest.mark.asyncio
+async def test_history_record_event(mock_db):
     ex_id = uuid.uuid4()
-    entry = PurpleTeamHistoryService.record_event(ex_id, "CREATED", "Created exercise")
+    entry = await PurpleTeamHistoryService.record_event(ex_id, "CREATED", "Created exercise")
     assert entry.exercise_id == ex_id
     assert entry.event_type == "CREATED"
     assert entry.details == "Created exercise"
 
 
-def test_history_clear():
+@pytest.mark.asyncio
+async def test_history_clear(mock_db):
+    from src.infrastructure.database.models import PurpleTeamHistory
     ex_id = uuid.uuid4()
-    PurpleTeamHistoryService.record_event(ex_id, "CREATED", "Created exercise")
+    await PurpleTeamHistoryService.record_event(ex_id, "CREATED", "Created exercise")
     PurpleTeamHistoryService.clear_history()
-    assert len(PurpleTeamHistoryService.get_history(ex_id)) == 0
+    mock_db._entities[PurpleTeamHistory] = []
+    assert len(await PurpleTeamHistoryService.get_history(ex_id)) == 0
 
 
-def test_history_preserved():
-    ex = PurpleTeamService.create_or_sync_exercise(
+@pytest.mark.asyncio
+async def test_history_preserved(mock_db):
+    ex = await PurpleTeamService.create_or_sync_exercise(
         "Ex 1", "Desc 1", ExerciseType.ATTACK_SIMULATION, ExerciseSeverity.HIGH, SCOPE_ID
     )
-    history = PurpleTeamHistoryService.get_history(ex.exercise_id)
+    history = await PurpleTeamHistoryService.get_history(ex.exercise_id)
     assert len(history) == 1
     assert history[0].event_type == "CREATED"
 
 
 # --- 4. Validation Findings Preservation Tests (4 tests) ---
 
-def test_findings_empty():
-    assert len(PurpleTeamFindingService.get_findings(uuid.uuid4())) == 0
+@pytest.mark.asyncio
+async def test_findings_empty(mock_db):
+    assert len(await PurpleTeamFindingService.get_findings(uuid.uuid4())) == 0
 
 
-def test_findings_create():
+@pytest.mark.asyncio
+async def test_findings_create(mock_db):
     ex_id = uuid.uuid4()
-    finding = PurpleTeamFindingService.create_finding(
+    finding = await PurpleTeamFindingService.create_finding(
         ex_id, "T1059", ExerciseSeverity.HIGH, "GAP", "Description of gap"
     )
     assert finding.exercise_id == ex_id
@@ -322,120 +350,135 @@ def test_findings_create():
     assert finding.gap_type == "GAP"
 
 
-def test_findings_duplicate_prevention():
+@pytest.mark.asyncio
+async def test_findings_duplicate_prevention(mock_db):
     ex_id = uuid.uuid4()
-    f1 = PurpleTeamFindingService.create_finding(ex_id, "T1059", ExerciseSeverity.HIGH, "GAP", "Desc")
-    f2 = PurpleTeamFindingService.create_finding(ex_id, "T1059", ExerciseSeverity.HIGH, "GAP", "Other Desc")
+    f1 = await PurpleTeamFindingService.create_finding(ex_id, "T1059", ExerciseSeverity.HIGH, "GAP", "Desc")
+    f2 = await PurpleTeamFindingService.create_finding(ex_id, "T1059", ExerciseSeverity.HIGH, "GAP", "Other Desc")
     assert f1.finding_id == f2.finding_id
 
 
-def test_findings_immutable():
+@pytest.mark.asyncio
+async def test_findings_immutable(mock_db):
     ex_id = uuid.uuid4()
-    f = PurpleTeamFindingService.create_finding(ex_id, "T1059", ExerciseSeverity.HIGH, "GAP", "Desc")
+    f = await PurpleTeamFindingService.create_finding(ex_id, "T1059", ExerciseSeverity.HIGH, "GAP", "Desc")
     with pytest.raises((TypeError, ValidationError)):
         f.description = "Mutated"  # type: ignore
 
 
 # --- 5. Lifecycle Transition & Terminal State Tests (7 tests) ---
 
-def test_exercise_create():
-    ex = PurpleTeamService.create_or_sync_exercise(
+@pytest.mark.asyncio
+async def test_exercise_create(mock_db):
+    ex = await PurpleTeamService.create_or_sync_exercise(
         "Ex 1", "Desc 1", ExerciseType.ATTACK_SIMULATION, ExerciseSeverity.HIGH, SCOPE_ID
     )
     assert ex.status == ExerciseStatus.OPEN
     assert ex.name == "Ex 1"
 
 
-def test_exercise_activate_transition():
-    ex = PurpleTeamService.create_or_sync_exercise(
+@pytest.mark.asyncio
+async def test_exercise_activate_transition(mock_db):
+    ex = await PurpleTeamService.create_or_sync_exercise(
         "Ex 1", "Desc 1", ExerciseType.ATTACK_SIMULATION, ExerciseSeverity.HIGH, SCOPE_ID
     )
-    activated = PurpleTeamService.activate_exercise(ex.exercise_id, owner="operator")
+    activated = await PurpleTeamService.activate_exercise(ex.exercise_id, owner="operator")
     assert activated.status == ExerciseStatus.ACTIVE
     assert activated.owner == "operator"
 
 
-def test_exercise_review_transition():
-    ex = PurpleTeamService.create_or_sync_exercise(
+@pytest.mark.asyncio
+async def test_exercise_review_transition(mock_db):
+    ex = await PurpleTeamService.create_or_sync_exercise(
         "Ex 1", "Desc 1", ExerciseType.ATTACK_SIMULATION, ExerciseSeverity.HIGH, SCOPE_ID
     )
-    PurpleTeamService.activate_exercise(ex.exercise_id)
-    reviewed = PurpleTeamService.review_exercise(ex.exercise_id)
+    await PurpleTeamService.activate_exercise(ex.exercise_id)
+    reviewed = await PurpleTeamService.review_exercise(ex.exercise_id)
     assert reviewed.status == ExerciseStatus.UNDER_REVIEW
 
 
-def test_exercise_complete_transition():
-    ex = PurpleTeamService.create_or_sync_exercise(
+@pytest.mark.asyncio
+async def test_exercise_complete_transition(mock_db):
+    ex = await PurpleTeamService.create_or_sync_exercise(
         "Ex 1", "Desc 1", ExerciseType.ATTACK_SIMULATION, ExerciseSeverity.HIGH, SCOPE_ID
     )
-    PurpleTeamService.activate_exercise(ex.exercise_id)
-    completed = PurpleTeamService.complete_exercise(ex.exercise_id)
+    await PurpleTeamService.activate_exercise(ex.exercise_id)
+    completed = await PurpleTeamService.complete_exercise(ex.exercise_id)
     assert completed.status == ExerciseStatus.COMPLETED
 
 
-def test_exercise_close_transition():
-    ex = PurpleTeamService.create_or_sync_exercise(
+@pytest.mark.asyncio
+async def test_exercise_close_transition(mock_db):
+    ex = await PurpleTeamService.create_or_sync_exercise(
         "Ex 1", "Desc 1", ExerciseType.ATTACK_SIMULATION, ExerciseSeverity.HIGH, SCOPE_ID
     )
-    PurpleTeamService.activate_exercise(ex.exercise_id)
-    PurpleTeamService.complete_exercise(ex.exercise_id)
-    closed = PurpleTeamService.close_exercise(ex.exercise_id)
+    await PurpleTeamService.activate_exercise(ex.exercise_id)
+    await PurpleTeamService.complete_exercise(ex.exercise_id)
+    closed = await PurpleTeamService.close_exercise(ex.exercise_id)
     assert closed.status == ExerciseStatus.CLOSED
 
 
-def test_exercise_terminal_state_enforcement():
-    ex = PurpleTeamService.create_or_sync_exercise(
+@pytest.mark.asyncio
+async def test_exercise_terminal_state_enforcement(mock_db):
+    ex = await PurpleTeamService.create_or_sync_exercise(
         "Ex 1", "Desc 1", ExerciseType.ATTACK_SIMULATION, ExerciseSeverity.HIGH, SCOPE_ID
     )
-    PurpleTeamService.activate_exercise(ex.exercise_id)
-    PurpleTeamService.complete_exercise(ex.exercise_id)
-    PurpleTeamService.close_exercise(ex.exercise_id)
+    await PurpleTeamService.activate_exercise(ex.exercise_id)
+    await PurpleTeamService.complete_exercise(ex.exercise_id)
+    await PurpleTeamService.close_exercise(ex.exercise_id)
 
     with pytest.raises(ValueError):
-        PurpleTeamService.activate_exercise(ex.exercise_id)
+        await PurpleTeamService.activate_exercise(ex.exercise_id)
 
 
-def test_exercise_invalid_transitions():
-    ex = PurpleTeamService.create_or_sync_exercise(
+@pytest.mark.asyncio
+async def test_exercise_invalid_transitions(mock_db):
+    ex = await PurpleTeamService.create_or_sync_exercise(
         "Ex 1", "Desc 1", ExerciseType.ATTACK_SIMULATION, ExerciseSeverity.HIGH, SCOPE_ID
     )
     with pytest.raises(ValueError):
-        PurpleTeamService.complete_exercise(ex.exercise_id)  # Cannot complete from OPEN directly
+        await PurpleTeamService.complete_exercise(ex.exercise_id)  # Cannot complete from OPEN directly
 
 
 # --- 6. Emulation Tests (6 tests) ---
 
-def test_apt29_emulation():
+@pytest.mark.asyncio
+async def test_apt29_emulation(mock_db):
     techs = AdversaryEmulationService.get_techniques_for_actor("APT29")
     assert "T1059" in techs
     assert "T1078" in techs
 
 
-def test_apt28_emulation():
+@pytest.mark.asyncio
+async def test_apt28_emulation(mock_db):
     techs = AdversaryEmulationService.get_techniques_for_actor("APT28")
     assert "T1027" in techs
     assert "T1105" in techs
 
 
-def test_lazarus_emulation():
+@pytest.mark.asyncio
+async def test_lazarus_emulation(mock_db):
     techs = AdversaryEmulationService.get_techniques_for_actor("Lazarus")
     assert "T1047" in techs
     assert "T1055" in techs
 
 
-def test_fin7_emulation():
+@pytest.mark.asyncio
+async def test_fin7_emulation(mock_db):
     techs = AdversaryEmulationService.get_techniques_for_actor("FIN7")
     assert "T1059" in techs
     assert "T1562" in techs
 
 
-def test_actor_mapping_preserved():
+@pytest.mark.asyncio
+async def test_actor_mapping_preserved(mock_db):
     actors = AdversaryEmulationService.get_actors_for_technique("T1059")
     assert "APT29" in actors
     assert "FIN7" in actors
 
 
-def test_campaign_mapping_preserved():
+@pytest.mark.asyncio
+async def test_campaign_mapping_preserved(mock_db):
     # Campaign validation mappings check
     techs = AdversaryEmulationService.get_techniques_for_actor("APT29")
     assert len(techs) == 2
@@ -457,7 +500,7 @@ async def test_validation_passed(mock_db):
     finding.description = "..."
     setup_test_db(mock_db, findings=[finding])
 
-    ex = PurpleTeamService.create_or_sync_exercise(
+    ex = await PurpleTeamService.create_or_sync_exercise(
         "Ex 1", "...", ExerciseType.DETECTION_VALIDATION, ExerciseSeverity.HIGH, SCOPE_ID, related_techniques=["T1059"]
     )
     vals = await AttackValidationService.validate_exercise_techniques(mock_db, ex.exercise_id)
@@ -474,7 +517,7 @@ async def test_validation_partial(mock_db):
         "Rule 1", "Desc", DetectionSeverity.HIGH, ["T1059"], SCOPE_ID
     )
 
-    ex = PurpleTeamService.create_or_sync_exercise(
+    ex = await PurpleTeamService.create_or_sync_exercise(
         "Ex 1", "...", ExerciseType.DETECTION_VALIDATION, ExerciseSeverity.HIGH, SCOPE_ID, related_techniques=["T1059"]
     )
     vals = await AttackValidationService.validate_exercise_techniques(mock_db, ex.exercise_id)
@@ -487,7 +530,7 @@ async def test_validation_partial(mock_db):
 @pytest.mark.asyncio
 async def test_validation_failed(mock_db):
     setup_test_db(mock_db)
-    ex = PurpleTeamService.create_or_sync_exercise(
+    ex = await PurpleTeamService.create_or_sync_exercise(
         "Ex 1", "...", ExerciseType.DETECTION_VALIDATION, ExerciseSeverity.HIGH, SCOPE_ID, related_techniques=["T1059"]
     )
     vals = await AttackValidationService.validate_exercise_techniques(mock_db, ex.exercise_id)
@@ -500,7 +543,7 @@ async def test_validation_failed(mock_db):
 @pytest.mark.asyncio
 async def test_validation_identity_preserved(mock_db):
     setup_test_db(mock_db)
-    ex = PurpleTeamService.create_or_sync_exercise(
+    ex = await PurpleTeamService.create_or_sync_exercise(
         "Ex 1", "...", ExerciseType.DETECTION_VALIDATION, ExerciseSeverity.HIGH, SCOPE_ID, related_techniques=["T1059"]
     )
     v1 = await AttackValidationService.validate_exercise_techniques(mock_db, ex.exercise_id)
@@ -511,12 +554,12 @@ async def test_validation_identity_preserved(mock_db):
 @pytest.mark.asyncio
 async def test_validation_sync_preserves_identity(mock_db):
     setup_test_db(mock_db)
-    ex = PurpleTeamService.create_or_sync_exercise(
+    ex = await PurpleTeamService.create_or_sync_exercise(
         "Ex 1", "...", ExerciseType.DETECTION_VALIDATION, ExerciseSeverity.HIGH, SCOPE_ID, related_techniques=["T1059"]
     )
     v1 = await AttackValidationService.validate_exercise_techniques(mock_db, ex.exercise_id)
     # Sync exercise name/details
-    PurpleTeamService.create_or_sync_exercise(
+    await PurpleTeamService.create_or_sync_exercise(
         "Ex 1", "Desc Updated", ExerciseType.DETECTION_VALIDATION, ExerciseSeverity.HIGH, SCOPE_ID, related_techniques=["T1059"]
     )
     v2 = await AttackValidationService.validate_exercise_techniques(mock_db, ex.exercise_id)
@@ -526,17 +569,17 @@ async def test_validation_sync_preserves_identity(mock_db):
 @pytest.mark.asyncio
 async def test_validation_finding_creation(mock_db):
     setup_test_db(mock_db)
-    ex = PurpleTeamService.create_or_sync_exercise(
+    ex = await PurpleTeamService.create_or_sync_exercise(
         "Ex 1", "...", ExerciseType.DETECTION_VALIDATION, ExerciseSeverity.HIGH, SCOPE_ID, related_techniques=["T1059"]
     )
     vals = await AttackValidationService.validate_exercise_techniques(mock_db, ex.exercise_id)
     # Create findings for gaps/failures
     for v in vals:
         if v.validation_status == ValidationStatus.FAILED:
-            PurpleTeamFindingService.create_finding(
+            await PurpleTeamFindingService.create_finding(
                 v.exercise_id, v.technique_id, ExerciseSeverity.HIGH, "GAP", "No detection rule covers this technique."
             )
-    finds = PurpleTeamFindingService.get_findings(ex.exercise_id)
+    finds = await PurpleTeamFindingService.get_findings(ex.exercise_id)
     assert len(finds) == 1
     assert finds[0].technique_id == "T1059"
 
@@ -544,32 +587,33 @@ async def test_validation_finding_creation(mock_db):
 @pytest.mark.asyncio
 async def test_validation_finding_preservation(mock_db):
     setup_test_db(mock_db)
-    ex = PurpleTeamService.create_or_sync_exercise(
+    ex = await PurpleTeamService.create_or_sync_exercise(
         "Ex 1", "...", ExerciseType.DETECTION_VALIDATION, ExerciseSeverity.HIGH, SCOPE_ID, related_techniques=["T1059"]
     )
-    f1 = PurpleTeamFindingService.create_finding(ex.exercise_id, "T1059", ExerciseSeverity.HIGH, "GAP", "Desc")
-    f2 = PurpleTeamFindingService.create_finding(ex.exercise_id, "T1059", ExerciseSeverity.HIGH, "GAP", "Desc")
+    f1 = await PurpleTeamFindingService.create_finding(ex.exercise_id, "T1059", ExerciseSeverity.HIGH, "GAP", "Desc")
+    f2 = await PurpleTeamFindingService.create_finding(ex.exercise_id, "T1059", ExerciseSeverity.HIGH, "GAP", "Desc")
     assert f1.finding_id == f2.finding_id
 
 
 @pytest.mark.asyncio
 async def test_gap_finding_creation(mock_db):
     setup_test_db(mock_db)
-    ex = PurpleTeamService.create_or_sync_exercise(
+    ex = await PurpleTeamService.create_or_sync_exercise(
         "Ex 1", "...", ExerciseType.CONTROL_VALIDATION, ExerciseSeverity.CRITICAL, SCOPE_ID, related_techniques=["T1562"]
     )
     await AttackValidationService.validate_exercise_techniques(mock_db, ex.exercise_id)
-    PurpleTeamFindingService.create_finding(
+    await PurpleTeamFindingService.create_finding(
         ex.exercise_id, "T1562", ExerciseSeverity.CRITICAL, "CONTROL_GAP", "Control bypass verified"
     )
-    finds = PurpleTeamFindingService.get_findings(ex.exercise_id)
+    finds = await PurpleTeamFindingService.get_findings(ex.exercise_id)
     assert len(finds) == 1
     assert finds[0].gap_type == "CONTROL_GAP"
 
 
 # --- 8. Coverage & Drift Service Tests (10 tests) ---
 
-def test_attack_coverage_calculation():
+@pytest.mark.asyncio
+async def test_attack_coverage_calculation(mock_db):
     DetectionService.create_or_sync_detection(
         "Rule 1", "...", DetectionSeverity.HIGH, ["T1059"], SCOPE_ID
     )
@@ -578,7 +622,8 @@ def test_attack_coverage_calculation():
     assert cov["attack_coverage"] == round(1 / 7 * 100.0, 2)
 
 
-def test_actor_coverage_calculation():
+@pytest.mark.asyncio
+async def test_actor_coverage_calculation(mock_db):
     DetectionService.create_or_sync_detection(
         "Rule 1", "...", DetectionSeverity.HIGH, ["T1059"], SCOPE_ID
     )
@@ -587,7 +632,8 @@ def test_actor_coverage_calculation():
     assert cov["actor_coverage"] == 50.0
 
 
-def test_campaign_coverage_calculation():
+@pytest.mark.asyncio
+async def test_campaign_coverage_calculation(mock_db):
     DetectionService.create_or_sync_detection(
         "Rule 1", "...", DetectionSeverity.HIGH, ["T1059"], SCOPE_ID
     )
@@ -596,8 +642,9 @@ def test_campaign_coverage_calculation():
     assert cov["campaign_coverage"] == 50.0
 
 
-def test_detection_validation_coverage(mock_db):
-    ex = PurpleTeamService.create_or_sync_exercise(
+@pytest.mark.asyncio
+async def test_detection_validation_coverage(mock_db):
+    ex = await PurpleTeamService.create_or_sync_exercise(
         "Ex 1", "...", ExerciseType.DETECTION_VALIDATION, ExerciseSeverity.HIGH, SCOPE_ID, related_techniques=["T1059"]
     )
     # Fake passed validation
@@ -610,8 +657,9 @@ def test_detection_validation_coverage(mock_db):
     assert cov["detection_validation_coverage"] == 100.0
 
 
-def test_control_validation_coverage():
-    ex = PurpleTeamService.create_or_sync_exercise(
+@pytest.mark.asyncio
+async def test_control_validation_coverage(mock_db):
+    ex = await PurpleTeamService.create_or_sync_exercise(
         "Ex 1", "...", ExerciseType.CONTROL_VALIDATION, ExerciseSeverity.HIGH, SCOPE_ID, related_techniques=["T1562"]
     )
     val_id = uuid.uuid4()
@@ -649,7 +697,7 @@ async def test_validation_drift_detection(mock_db):
     from unittest.mock import patch
     from src.services.workflow_event_service import WorkflowEventService
 
-    ex = PurpleTeamService.create_or_sync_exercise(
+    ex = await PurpleTeamService.create_or_sync_exercise(
         "Ex 1", "...", ExerciseType.DETECTION_VALIDATION, ExerciseSeverity.HIGH, SCOPE_ID, related_techniques=["T1059"]
     )
     # Current validation status is FAILED
@@ -674,7 +722,7 @@ async def test_detection_drift_detection(mock_db):
     from unittest.mock import patch
     from src.services.workflow_event_service import WorkflowEventService
 
-    ex = PurpleTeamService.create_or_sync_exercise(
+    ex = await PurpleTeamService.create_or_sync_exercise(
         "Ex 1", "...", ExerciseType.DETECTION_VALIDATION, ExerciseSeverity.HIGH, SCOPE_ID, related_techniques=["T1059"]
     )
     await AttackValidationService.validate_exercise_techniques(mock_db, ex.exercise_id)
@@ -700,7 +748,7 @@ async def test_control_drift_detection(mock_db):
     from unittest.mock import patch
     from src.services.workflow_event_service import WorkflowEventService
 
-    ex = PurpleTeamService.create_or_sync_exercise(
+    ex = await PurpleTeamService.create_or_sync_exercise(
         "Ex 1", "...", ExerciseType.CONTROL_VALIDATION, ExerciseSeverity.HIGH, SCOPE_ID, related_techniques=["T1562"]
     )
     await AttackValidationService.validate_exercise_techniques(mock_db, ex.exercise_id)
@@ -744,8 +792,9 @@ async def test_new_attack_gap_detection(mock_db):
 
 # --- 9. Snapshot & Cache Rebuild Tests (3 tests) ---
 
-def test_snapshot_rebuild_consistency():
-    ex = PurpleTeamService.create_or_sync_exercise(
+@pytest.mark.asyncio
+async def test_snapshot_rebuild_consistency(mock_db):
+    ex = await PurpleTeamService.create_or_sync_exercise(
         "Ex 1", "Desc", ExerciseType.ATTACK_SIMULATION, ExerciseSeverity.HIGH, SCOPE_ID
     )
     snap1 = PurpleTeamSnapshotService.get_snapshot(SCOPE_ID)
@@ -756,8 +805,9 @@ def test_snapshot_rebuild_consistency():
     assert snap2 == snap1
 
 
-def test_snapshot_rebuild_after_cache_deletion():
-    ex = PurpleTeamService.create_or_sync_exercise(
+@pytest.mark.asyncio
+async def test_snapshot_rebuild_after_cache_deletion(mock_db):
+    ex = await PurpleTeamService.create_or_sync_exercise(
         "Ex 1", "Desc", ExerciseType.ATTACK_SIMULATION, ExerciseSeverity.HIGH, SCOPE_ID
     )
     PurpleTeamSnapshotService.get_snapshot(SCOPE_ID)
@@ -768,8 +818,9 @@ def test_snapshot_rebuild_after_cache_deletion():
     assert snap["summary"]["total_exercises"] == 1
 
 
-def test_snapshot_rebuild_after_corruption():
-    ex = PurpleTeamService.create_or_sync_exercise(
+@pytest.mark.asyncio
+async def test_snapshot_rebuild_after_corruption(mock_db):
+    ex = await PurpleTeamService.create_or_sync_exercise(
         "Ex 1", "Desc", ExerciseType.ATTACK_SIMULATION, ExerciseSeverity.HIGH, SCOPE_ID
     )
     PurpleTeamSnapshotService._snapshots[SCOPE_ID] = {"corrupted": True}
@@ -784,7 +835,7 @@ def test_snapshot_rebuild_after_corruption():
 @pytest.mark.asyncio
 async def test_ai_context_purple_team_injection(mock_db):
     setup_test_db(mock_db)
-    ex = PurpleTeamService.create_or_sync_exercise(
+    ex = await PurpleTeamService.create_or_sync_exercise(
         "Ex 1", "...", ExerciseType.DETECTION_VALIDATION, ExerciseSeverity.HIGH, SCOPE_ID
     )
     
@@ -805,7 +856,8 @@ async def test_ai_context_purple_team_injection(mock_db):
         assert "active_exercises" in ctx["asset"]
 
 
-def test_ai_advisory_only_enforcement():
+@pytest.mark.asyncio
+async def test_ai_advisory_only_enforcement(mock_db):
     context = {"dummy": "data"}
     prompt = AIPromptBuilder.build_asset_prompt(context)
     assert "purple team exercises" in prompt
@@ -817,7 +869,7 @@ def test_ai_advisory_only_enforcement():
 @pytest.mark.asyncio
 async def test_api_list_exercises(client, mock_db, mock_scope):
     setup_basic_mock_db(mock_db, mock_scope)
-    PurpleTeamService.create_or_sync_exercise(
+    await PurpleTeamService.create_or_sync_exercise(
         "Ex 1", "...", ExerciseType.DETECTION_VALIDATION, ExerciseSeverity.HIGH, SCOPE_ID
     )
     headers = get_auth_header(OPERATOR_ID, "operator")
@@ -829,7 +881,7 @@ async def test_api_list_exercises(client, mock_db, mock_scope):
 @pytest.mark.asyncio
 async def test_api_get_exercise(client, mock_db, mock_scope):
     setup_basic_mock_db(mock_db, mock_scope)
-    ex = PurpleTeamService.create_or_sync_exercise(
+    ex = await PurpleTeamService.create_or_sync_exercise(
         "Ex 1", "...", ExerciseType.DETECTION_VALIDATION, ExerciseSeverity.HIGH, SCOPE_ID
     )
     headers = get_auth_header(OPERATOR_ID, "operator")
@@ -857,7 +909,7 @@ async def test_api_create_exercise(client, mock_db, mock_scope):
 @pytest.mark.asyncio
 async def test_api_transitions(client, mock_db, mock_scope):
     setup_basic_mock_db(mock_db, mock_scope)
-    ex = PurpleTeamService.create_or_sync_exercise(
+    ex = await PurpleTeamService.create_or_sync_exercise(
         "Ex 1", "...", ExerciseType.DETECTION_VALIDATION, ExerciseSeverity.HIGH, SCOPE_ID
     )
     headers = get_auth_header(OPERATOR_ID, "operator")
@@ -890,7 +942,7 @@ async def test_api_transitions(client, mock_db, mock_scope):
 @pytest.mark.asyncio
 async def test_api_rbac_permissions(client, mock_db, mock_scope):
     setup_basic_mock_db(mock_db, mock_scope)
-    ex = PurpleTeamService.create_or_sync_exercise(
+    ex = await PurpleTeamService.create_or_sync_exercise(
         "Ex 1", "...", ExerciseType.DETECTION_VALIDATION, ExerciseSeverity.HIGH, SCOPE_ID
     )
     headers = get_auth_header(READER_ID, "reader")
@@ -903,7 +955,7 @@ async def test_api_rbac_permissions(client, mock_db, mock_scope):
 async def test_rbac_scope_validation(client, mock_db, mock_scope, mock_scope_2):
     setup_basic_mock_db(mock_db, mock_scope, mock_scope_2)
     # Ex 1 is in scope_2 which operator does not own
-    ex = PurpleTeamService.create_or_sync_exercise(
+    ex = await PurpleTeamService.create_or_sync_exercise(
         "Ex 1", "...", ExerciseType.DETECTION_VALIDATION, ExerciseSeverity.HIGH, SCOPE_ID_2
     )
     headers = get_auth_header(OPERATOR_ID, "operator")
@@ -944,7 +996,7 @@ async def test_rbac_reader_restrictions(client, mock_db, mock_scope):
 @pytest.mark.asyncio
 async def test_identity_preserved_after_completion(client, mock_db, mock_scope):
     setup_basic_mock_db(mock_db, mock_scope)
-    ex = PurpleTeamService.create_or_sync_exercise(
+    ex = await PurpleTeamService.create_or_sync_exercise(
         "Ex 1", "...", ExerciseType.DETECTION_VALIDATION, ExerciseSeverity.HIGH, SCOPE_ID
     )
     headers = get_auth_header(OPERATOR_ID, "operator")
@@ -956,7 +1008,7 @@ async def test_identity_preserved_after_completion(client, mock_db, mock_scope):
 @pytest.mark.asyncio
 async def test_identity_preserved_after_closure(client, mock_db, mock_scope):
     setup_basic_mock_db(mock_db, mock_scope)
-    ex = PurpleTeamService.create_or_sync_exercise(
+    ex = await PurpleTeamService.create_or_sync_exercise(
         "Ex 1", "...", ExerciseType.DETECTION_VALIDATION, ExerciseSeverity.HIGH, SCOPE_ID
     )
     headers = get_auth_header(OPERATOR_ID, "operator")

@@ -11,6 +11,15 @@ from src.infrastructure.repositories import (
     ThreatRepository,
     CyberRiskRepository,
     GraphRepository,
+    IncidentRepository,
+    RiskAcceptanceRepository,
+    RemediationRepository,
+    HuntRepository,
+    FabricRepository,
+    PostureRepository,
+    DecisionRepository,
+    ProgramRepository,
+    PurpleTeamRepository,
 )
 from src.core.tenant import get_current_tenant_id
 
@@ -29,6 +38,15 @@ class UnitOfWork:
         self.threat_repo: ThreatRepository = None
         self.risk_repo: CyberRiskRepository = None
         self.graph_repo: GraphRepository = None
+        self.incident_repo: IncidentRepository = None
+        self.risk_acceptance_repo: RiskAcceptanceRepository = None
+        self.remediation_repo: RemediationRepository = None
+        self.hunt_repo: HuntRepository = None
+        self.fabric_repo: FabricRepository = None
+        self.posture_repo: PostureRepository = None
+        self.decision_repo: DecisionRepository = None
+        self.program_repo: ProgramRepository = None
+        self.purple_team_repo: PurpleTeamRepository = None
 
     async def __aenter__(self):
         self.session = self.session_factory()
@@ -50,6 +68,15 @@ class UnitOfWork:
         self.threat_repo = ThreatRepository(self.session)
         self.risk_repo = CyberRiskRepository(self.session)
         self.graph_repo = GraphRepository(self.session)
+        self.incident_repo = IncidentRepository(self.session)
+        self.risk_acceptance_repo = RiskAcceptanceRepository(self.session)
+        self.remediation_repo = RemediationRepository(self.session)
+        self.hunt_repo = HuntRepository(self.session)
+        self.fabric_repo = FabricRepository(self.session)
+        self.posture_repo = PostureRepository(self.session)
+        self.decision_repo = DecisionRepository(self.session)
+        self.program_repo = ProgramRepository(self.session)
+        self.purple_team_repo = PurpleTeamRepository(self.session)
         return self
 
     async def __aexit__(self, exc_type, exc_val, exc_tb):

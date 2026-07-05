@@ -267,96 +267,109 @@ def test_hunt_fingerprint_changes():
 
 # --- 3. Hunt Lifecycle, Sync, and terminal status Tests (10 tests) ---
 
-def test_hunt_creation():
-    hunt = HuntService.create_or_sync_hunt("Test Hunt", "Desc", HuntType.MANUAL, HuntSeverity.HIGH)
+@pytest.mark.asyncio
+async def test_hunt_creation(mock_db):
+    hunt = await HuntService.create_or_sync_hunt("Test Hunt", "Desc", HuntType.MANUAL, HuntSeverity.HIGH)
     assert hunt.title == "Test Hunt"
     assert hunt.status == HuntStatus.OPEN
     assert len(HuntService.get_all_hunts()) == 1
 
 
-def test_hunt_sync_preserves_identity():
-    hunt1 = HuntService.create_or_sync_hunt("Test Hunt", "Desc 1", HuntType.MANUAL, HuntSeverity.HIGH)
-    hunt2 = HuntService.create_or_sync_hunt("Test Hunt", "Desc 2", HuntType.MANUAL, HuntSeverity.CRITICAL)
+@pytest.mark.asyncio
+async def test_hunt_sync_preserves_identity(mock_db):
+    hunt1 = await HuntService.create_or_sync_hunt("Test Hunt", "Desc 1", HuntType.MANUAL, HuntSeverity.HIGH)
+    hunt2 = await HuntService.create_or_sync_hunt("Test Hunt", "Desc 2", HuntType.MANUAL, HuntSeverity.CRITICAL)
     assert hunt1.hunt_id == hunt2.hunt_id
     assert hunt2.description == "Desc 2"
     assert hunt2.severity == HuntSeverity.CRITICAL
 
 
-def test_hunt_sync_preserves_status():
-    hunt = HuntService.create_or_sync_hunt("Test Hunt", "Desc", HuntType.MANUAL, HuntSeverity.HIGH)
-    HuntService.activate_hunt(hunt.hunt_id)
-    synced = HuntService.create_or_sync_hunt("Test Hunt", "Desc", HuntType.MANUAL, HuntSeverity.HIGH)
+@pytest.mark.asyncio
+async def test_hunt_sync_preserves_status(mock_db):
+    hunt = await HuntService.create_or_sync_hunt("Test Hunt", "Desc", HuntType.MANUAL, HuntSeverity.HIGH)
+    await HuntService.activate_hunt(hunt.hunt_id)
+    synced = await HuntService.create_or_sync_hunt("Test Hunt", "Desc", HuntType.MANUAL, HuntSeverity.HIGH)
     assert synced.status == HuntStatus.ACTIVE
 
 
-def test_hunt_activate_transition():
-    hunt = HuntService.create_or_sync_hunt("Test Hunt", "Desc", HuntType.MANUAL, HuntSeverity.HIGH)
-    HuntService.activate_hunt(hunt.hunt_id, user_id=ADMIN_ID)
+@pytest.mark.asyncio
+async def test_hunt_activate_transition(mock_db):
+    hunt = await HuntService.create_or_sync_hunt("Test Hunt", "Desc", HuntType.MANUAL, HuntSeverity.HIGH)
+    await HuntService.activate_hunt(hunt.hunt_id, user_id=ADMIN_ID)
     assert hunt.status == HuntStatus.ACTIVE
     assert hunt.owner_id == ADMIN_ID
 
 
-def test_hunt_review_transition():
-    hunt = HuntService.create_or_sync_hunt("Test Hunt", "Desc", HuntType.MANUAL, HuntSeverity.HIGH)
-    HuntService.review_hunt(hunt.hunt_id)
+@pytest.mark.asyncio
+async def test_hunt_review_transition(mock_db):
+    hunt = await HuntService.create_or_sync_hunt("Test Hunt", "Desc", HuntType.MANUAL, HuntSeverity.HIGH)
+    await HuntService.review_hunt(hunt.hunt_id)
     assert hunt.status == HuntStatus.UNDER_REVIEW
 
 
-def test_hunt_complete_transition():
-    hunt = HuntService.create_or_sync_hunt("Test Hunt", "Desc", HuntType.MANUAL, HuntSeverity.HIGH)
-    HuntService.complete_hunt(hunt.hunt_id)
+@pytest.mark.asyncio
+async def test_hunt_complete_transition(mock_db):
+    hunt = await HuntService.create_or_sync_hunt("Test Hunt", "Desc", HuntType.MANUAL, HuntSeverity.HIGH)
+    await HuntService.complete_hunt(hunt.hunt_id)
     assert hunt.status == HuntStatus.COMPLETED
 
 
-def test_hunt_close_transition():
-    hunt = HuntService.create_or_sync_hunt("Test Hunt", "Desc", HuntType.MANUAL, HuntSeverity.HIGH)
-    HuntService.close_hunt(hunt.hunt_id)
+@pytest.mark.asyncio
+async def test_hunt_close_transition(mock_db):
+    hunt = await HuntService.create_or_sync_hunt("Test Hunt", "Desc", HuntType.MANUAL, HuntSeverity.HIGH)
+    await HuntService.close_hunt(hunt.hunt_id)
     assert hunt.status == HuntStatus.CLOSED
 
 
-def test_hunt_escalate_transition():
-    hunt = HuntService.create_or_sync_hunt("Test Hunt", "Desc", HuntType.MANUAL, HuntSeverity.HIGH)
-    HuntService.escalate_hunt(hunt.hunt_id)
+@pytest.mark.asyncio
+async def test_hunt_escalate_transition(mock_db):
+    hunt = await HuntService.create_or_sync_hunt("Test Hunt", "Desc", HuntType.MANUAL, HuntSeverity.HIGH)
+    await HuntService.escalate_hunt(hunt.hunt_id)
     assert hunt.status == HuntStatus.ESCALATED
 
 
-def test_hunt_terminal_state_enforcement():
-    hunt = HuntService.create_or_sync_hunt("Test Hunt", "Desc", HuntType.MANUAL, HuntSeverity.HIGH)
-    HuntService.close_hunt(hunt.hunt_id)
+@pytest.mark.asyncio
+async def test_hunt_terminal_state_enforcement(mock_db):
+    hunt = await HuntService.create_or_sync_hunt("Test Hunt", "Desc", HuntType.MANUAL, HuntSeverity.HIGH)
+    await HuntService.close_hunt(hunt.hunt_id)
     with pytest.raises(ValueError, match="terminal state"):
-        HuntService.activate_hunt(hunt.hunt_id)
+        await HuntService.activate_hunt(hunt.hunt_id)
 
 
-def test_hunt_terminal_state_enforcement_sync():
-    hunt = HuntService.create_or_sync_hunt("Test Hunt", "Desc", HuntType.MANUAL, HuntSeverity.HIGH)
-    HuntService.close_hunt(hunt.hunt_id)
-    synced = HuntService.create_or_sync_hunt("Test Hunt", "Desc New", HuntType.MANUAL, HuntSeverity.HIGH)
+@pytest.mark.asyncio
+async def test_hunt_terminal_state_enforcement_sync(mock_db):
+    hunt = await HuntService.create_or_sync_hunt("Test Hunt", "Desc", HuntType.MANUAL, HuntSeverity.HIGH)
+    await HuntService.close_hunt(hunt.hunt_id)
+    synced = await HuntService.create_or_sync_hunt("Test Hunt", "Desc New", HuntType.MANUAL, HuntSeverity.HIGH)
     assert synced.status == HuntStatus.CLOSED
 
 
 # --- 4. Hunt History & Audit Trails (3 tests) ---
 
-def test_hunt_history_recording():
-    hunt = HuntService.create_or_sync_hunt("Test Hunt", "Desc", HuntType.MANUAL, HuntSeverity.HIGH)
-    HuntService.activate_hunt(hunt.hunt_id)
-    history = HuntHistoryService.get_history(hunt.hunt_id)
+@pytest.mark.asyncio
+async def test_hunt_history_recording(mock_db):
+    hunt = await HuntService.create_or_sync_hunt("Test Hunt", "Desc", HuntType.MANUAL, HuntSeverity.HIGH)
+    await HuntService.activate_hunt(hunt.hunt_id)
+    history = await HuntHistoryService.get_history(hunt.hunt_id)
     assert len(history) == 2
     assert history[0].event_type == "CREATED"
     assert history[1].event_type == "ACTIVATED"
 
 
-def test_hunt_history_immutable():
-    hunt = HuntService.create_or_sync_hunt("Test Hunt", "Desc", HuntType.MANUAL, HuntSeverity.HIGH)
-    history = HuntHistoryService.get_history(hunt.hunt_id)
+@pytest.mark.asyncio
+async def test_hunt_history_immutable(mock_db):
+    hunt = await HuntService.create_or_sync_hunt("Test Hunt", "Desc", HuntType.MANUAL, HuntSeverity.HIGH)
+    history = await HuntHistoryService.get_history(hunt.hunt_id)
     from pydantic import ValidationError
     with pytest.raises((TypeError, ValidationError)):
         history[0].details = "Malicious update"  # type: ignore
 
 
-def test_hunt_history_survives_sync():
-    hunt = HuntService.create_or_sync_hunt("Test Hunt", "Desc", HuntType.MANUAL, HuntSeverity.HIGH)
-    HuntService.create_or_sync_hunt("Test Hunt", "Desc New", HuntType.MANUAL, HuntSeverity.HIGH)
-    history = HuntHistoryService.get_history(hunt.hunt_id)
+@pytest.mark.asyncio
+async def test_hunt_history_survives_sync(mock_db):
+    hunt = await HuntService.create_or_sync_hunt("Test Hunt", "Desc", HuntType.MANUAL, HuntSeverity.HIGH)
+    await HuntService.create_or_sync_hunt("Test Hunt", "Desc New", HuntType.MANUAL, HuntSeverity.HIGH)
+    history = await HuntHistoryService.get_history(hunt.hunt_id)
     assert len(history) == 2
     assert history[0].event_type == "CREATED"
     assert history[1].event_type == "UPDATED"
@@ -364,47 +377,53 @@ def test_hunt_history_survives_sync():
 
 # --- 5. Hypotheses & Findings tracking (6 tests) ---
 
-def test_hypothesis_creation():
-    hunt = HuntService.create_or_sync_hunt("Test Hunt", "Desc", HuntType.MANUAL, HuntSeverity.HIGH)
-    hyp = HuntHypothesisService.create_hypothesis(hunt.hunt_id, "Hypothesis 1")
+@pytest.mark.asyncio
+async def test_hypothesis_creation(mock_db):
+    hunt = await HuntService.create_or_sync_hunt("Test Hunt", "Desc", HuntType.MANUAL, HuntSeverity.HIGH)
+    hyp = await HuntHypothesisService.create_hypothesis(hunt.hunt_id, "Hypothesis 1")
     assert hyp.description == "Hypothesis 1"
-    assert len(HuntHypothesisService.get_hypotheses(hunt.hunt_id)) == 1
+    assert len(await HuntHypothesisService.get_hypotheses(hunt.hunt_id)) == 1
 
 
-def test_hypothesis_preservation_on_sync():
-    hunt = HuntService.create_or_sync_hunt("Test Hunt", "Desc", HuntType.MANUAL, HuntSeverity.HIGH)
-    HuntHypothesisService.create_hypothesis(hunt.hunt_id, "Hypothesis 1")
-    HuntService.create_or_sync_hunt("Test Hunt", "Desc New", HuntType.MANUAL, HuntSeverity.HIGH)
-    assert len(HuntHypothesisService.get_hypotheses(hunt.hunt_id)) == 1
+@pytest.mark.asyncio
+async def test_hypothesis_preservation_on_sync(mock_db):
+    hunt = await HuntService.create_or_sync_hunt("Test Hunt", "Desc", HuntType.MANUAL, HuntSeverity.HIGH)
+    await HuntHypothesisService.create_hypothesis(hunt.hunt_id, "Hypothesis 1")
+    await HuntService.create_or_sync_hunt("Test Hunt", "Desc New", HuntType.MANUAL, HuntSeverity.HIGH)
+    assert len(await HuntHypothesisService.get_hypotheses(hunt.hunt_id)) == 1
 
 
-def test_finding_creation():
-    hunt = HuntService.create_or_sync_hunt("Test Hunt", "Desc", HuntType.MANUAL, HuntSeverity.HIGH)
-    finding = HuntFindingService.create_finding(hunt.hunt_id, "Asset", uuid.uuid4(), "Finding 1")
+@pytest.mark.asyncio
+async def test_finding_creation(mock_db):
+    hunt = await HuntService.create_or_sync_hunt("Test Hunt", "Desc", HuntType.MANUAL, HuntSeverity.HIGH)
+    finding = await HuntFindingService.create_finding(hunt.hunt_id, "Asset", uuid.uuid4(), "Finding 1")
     assert finding.details == "Finding 1"
-    assert len(HuntFindingService.get_findings(hunt.hunt_id)) == 1
+    assert len(await HuntFindingService.get_findings(hunt.hunt_id)) == 1
 
 
-def test_finding_duplicate_prevention():
-    hunt = HuntService.create_or_sync_hunt("Test Hunt", "Desc", HuntType.MANUAL, HuntSeverity.HIGH)
+@pytest.mark.asyncio
+async def test_finding_duplicate_prevention(mock_db):
+    hunt = await HuntService.create_or_sync_hunt("Test Hunt", "Desc", HuntType.MANUAL, HuntSeverity.HIGH)
     asset_id = uuid.uuid4()
-    HuntFindingService.create_finding(hunt.hunt_id, "Asset", asset_id, "Finding 1")
-    HuntFindingService.create_finding(hunt.hunt_id, "Asset", asset_id, "Finding 2")
-    assert len(HuntFindingService.get_findings(hunt.hunt_id)) == 1
+    await HuntFindingService.create_finding(hunt.hunt_id, "Asset", asset_id, "Finding 1")
+    await HuntFindingService.create_finding(hunt.hunt_id, "Asset", asset_id, "Finding 2")
+    assert len(await HuntFindingService.get_findings(hunt.hunt_id)) == 1
 
 
-def test_finding_preservation_on_sync():
-    hunt = HuntService.create_or_sync_hunt("Test Hunt", "Desc", HuntType.MANUAL, HuntSeverity.HIGH)
-    HuntFindingService.create_finding(hunt.hunt_id, "Asset", uuid.uuid4(), "Finding 1")
-    HuntService.create_or_sync_hunt("Test Hunt", "Desc New", HuntType.MANUAL, HuntSeverity.HIGH)
-    assert len(HuntFindingService.get_findings(hunt.hunt_id)) == 1
+@pytest.mark.asyncio
+async def test_finding_preservation_on_sync(mock_db):
+    hunt = await HuntService.create_or_sync_hunt("Test Hunt", "Desc", HuntType.MANUAL, HuntSeverity.HIGH)
+    await HuntFindingService.create_finding(hunt.hunt_id, "Asset", uuid.uuid4(), "Finding 1")
+    await HuntService.create_or_sync_hunt("Test Hunt", "Desc New", HuntType.MANUAL, HuntSeverity.HIGH)
+    assert len(await HuntFindingService.get_findings(hunt.hunt_id)) == 1
 
 
-def test_hunt_to_response():
-    hunt = HuntService.create_or_sync_hunt("Test Hunt", "Desc", HuntType.MANUAL, HuntSeverity.HIGH)
-    HuntHypothesisService.create_hypothesis(hunt.hunt_id, "Hypothesis 1")
-    HuntFindingService.create_finding(hunt.hunt_id, "Asset", uuid.uuid4(), "Finding 1")
-    resp = HuntService.to_response(hunt)
+@pytest.mark.asyncio
+async def test_hunt_to_response(mock_db):
+    hunt = await HuntService.create_or_sync_hunt("Test Hunt", "Desc", HuntType.MANUAL, HuntSeverity.HIGH)
+    await HuntHypothesisService.create_hypothesis(hunt.hunt_id, "Hypothesis 1")
+    await HuntFindingService.create_finding(hunt.hunt_id, "Asset", uuid.uuid4(), "Finding 1")
+    resp = await HuntService.to_response(hunt)
     assert isinstance(resp, HuntResponse)
     assert len(resp.hypotheses) == 1
     assert len(resp.findings) == 1
@@ -412,7 +431,8 @@ def test_hunt_to_response():
 
 # --- 6. IOC Hunt Auto-generation (3 tests) ---
 
-def test_ioc_hunt_generation():
+@pytest.mark.asyncio
+async def test_ioc_hunt_generation(mock_db):
     # Setup correlated IOC
     ioc = IOCService.create_or_sync_ioc(
         value="1.1.1.1",
@@ -433,7 +453,7 @@ def test_ioc_hunt_generation():
     )
     IOCCorrelationService._correlations[correlation_id] = corr_record
 
-    IOCHuntService.sync_ioc_hunts()
+    await IOCHuntService.sync_ioc_hunts()
 
     hunts = HuntService.get_all_hunts()
     assert len(hunts) == 1
@@ -441,7 +461,8 @@ def test_ioc_hunt_generation():
     assert hunts[0].severity == HuntSeverity.HIGH
 
 
-def test_ioc_hunt_generation_hypothesis_and_findings():
+@pytest.mark.asyncio
+async def test_ioc_hunt_generation_hypothesis_and_findings(mock_db):
     ioc = IOCService.create_or_sync_ioc(
         value="1.1.1.1",
         ioc_type=IOCType.IP_ADDRESS,
@@ -461,9 +482,9 @@ def test_ioc_hunt_generation_hypothesis_and_findings():
     )
     IOCCorrelationService._correlations[correlation_id] = corr_record
 
-    IOCHuntService.sync_ioc_hunts()
+    await IOCHuntService.sync_ioc_hunts()
     hunts = HuntService.get_all_hunts()
-    resp = HuntService.to_response(hunts[0])
+    resp = await HuntService.to_response(hunts[0])
     assert len(resp.hypotheses) == 1
     assert "1.1.1.1" in resp.hypotheses[0].description
     assert len(resp.findings) == 1
@@ -471,7 +492,8 @@ def test_ioc_hunt_generation_hypothesis_and_findings():
     assert resp.findings[0].entity_id == entity_id
 
 
-def test_ioc_hunt_generation_no_correlation():
+@pytest.mark.asyncio
+async def test_ioc_hunt_generation_no_correlation(mock_db):
     IOCService.create_or_sync_ioc(
         value="1.1.1.1",
         ioc_type=IOCType.IP_ADDRESS,
@@ -479,7 +501,7 @@ def test_ioc_hunt_generation_no_correlation():
         reputation=85,
         feed_type=ThreatFeedType.COMMUNITY,
     )
-    IOCHuntService.sync_ioc_hunts()
+    await IOCHuntService.sync_ioc_hunts()
     assert len(HuntService.get_all_hunts()) == 0
 
 
@@ -544,7 +566,7 @@ async def test_attack_hunt_generation_correlation_findings():
     hunts = HuntService.get_all_hunts()
     t1059_hunt = [h for h in hunts if "T1059" in h.title]
     assert len(t1059_hunt) == 1
-    resp = HuntService.to_response(t1059_hunt[0])
+    resp = await HuntService.to_response(t1059_hunt[0])
     assert len(resp.findings) == 1
     assert resp.findings[0].entity_id == finding.id
 
@@ -609,11 +631,11 @@ async def test_hunt_drift_status_change():
     mock_wf.id = uuid.uuid4()
     setup_test_db(mock_db, workflow=mock_wf)
 
-    hunt = HuntService.create_or_sync_hunt("Test Hunt", "Desc", HuntType.MANUAL, HuntSeverity.HIGH)
+    hunt = await HuntService.create_or_sync_hunt("Test Hunt", "Desc", HuntType.MANUAL, HuntSeverity.HIGH)
     prev_snap = HuntSnapshotService.generate_snapshot()
 
     # Change status
-    HuntService.activate_hunt(hunt.hunt_id)
+    await HuntService.activate_hunt(hunt.hunt_id)
 
     await HuntDriftService.check_drift(mock_db, prev_snapshot=prev_snap)
     assert mock_db.add.called
@@ -645,7 +667,7 @@ async def test_hunt_drift_no_change():
     mock_db = AsyncMock()
     setup_test_db(mock_db)
 
-    HuntService.create_or_sync_hunt("Test Hunt", "Desc", HuntType.MANUAL, HuntSeverity.HIGH)
+    await HuntService.create_or_sync_hunt("Test Hunt", "Desc", HuntType.MANUAL, HuntSeverity.HIGH)
     prev_snap = HuntSnapshotService.generate_snapshot()
 
     await HuntDriftService.check_drift(mock_db, prev_snapshot=prev_snap)
@@ -654,26 +676,29 @@ async def test_hunt_drift_no_change():
 
 # --- 10. Snapshot rebuild consistency (3 tests) ---
 
-def test_hunt_snapshot_generation():
-    HuntService.create_or_sync_hunt("Test Hunt", "Desc", HuntType.MANUAL, HuntSeverity.HIGH)
+@pytest.mark.asyncio
+async def test_hunt_snapshot_generation(mock_db):
+    await HuntService.create_or_sync_hunt("Test Hunt", "Desc", HuntType.MANUAL, HuntSeverity.HIGH)
     snapshot = HuntSnapshotService.generate_snapshot()
     assert snapshot["summary"]["total_hunts"] == 1
     assert "coverage" in snapshot
     assert "hunts" in snapshot
 
 
-def test_hunt_snapshot_consistency_cleared():
-    HuntService.create_or_sync_hunt("Test Hunt", "Desc", HuntType.MANUAL, HuntSeverity.HIGH)
+@pytest.mark.asyncio
+async def test_hunt_snapshot_consistency_cleared(mock_db):
+    await HuntService.create_or_sync_hunt("Test Hunt", "Desc", HuntType.MANUAL, HuntSeverity.HIGH)
     HuntSnapshotService.clear_snapshots()
     # get_snapshot should rebuild automatically
     snap = HuntSnapshotService.get_snapshot()
     assert snap["summary"]["total_hunts"] == 1
 
 
-def test_hunt_snapshot_by_scope():
+@pytest.mark.asyncio
+async def test_hunt_snapshot_by_scope(mock_db):
     scope_id = uuid.uuid4()
-    HuntService.create_or_sync_hunt("Scoped Hunt", "Desc", HuntType.MANUAL, HuntSeverity.HIGH, scope_id=scope_id)
-    HuntService.create_or_sync_hunt("Global Hunt", "Desc", HuntType.MANUAL, HuntSeverity.HIGH)
+    await HuntService.create_or_sync_hunt("Scoped Hunt", "Desc", HuntType.MANUAL, HuntSeverity.HIGH, scope_id=scope_id)
+    await HuntService.create_or_sync_hunt("Global Hunt", "Desc", HuntType.MANUAL, HuntSeverity.HIGH)
 
     snap_scoped = HuntSnapshotService.get_snapshot(scope_id)
     snap_global = HuntSnapshotService.get_snapshot(None)
@@ -703,7 +728,7 @@ async def test_ai_context_injection_asset():
     from unittest.mock import patch
 
     # Seed a hunt
-    HuntService.create_or_sync_hunt("Hunt 1", "...", HuntType.MANUAL, HuntSeverity.HIGH, scope_id=SCOPE_ID)
+    await HuntService.create_or_sync_hunt("Hunt 1", "...", HuntType.MANUAL, HuntSeverity.HIGH, scope_id=SCOPE_ID)
 
     with patch.object(AssetReportService, "generate_asset_report", AsyncMock(return_value=report)):
         ctx = await AIContextBuilder.build_asset_context(mock_db, SCOPE_ID)
@@ -722,7 +747,7 @@ async def test_ai_context_injection_executive():
     setup_test_db(mock_db)
 
     # Seed a hunt
-    HuntService.create_or_sync_hunt("Hunt 1", "...", HuntType.MANUAL, HuntSeverity.HIGH)
+    await HuntService.create_or_sync_hunt("Hunt 1", "...", HuntType.MANUAL, HuntSeverity.HIGH)
 
     with patch.object(ExecutiveReportService, "get_executive_report", AsyncMock(return_value={})), \
          patch.object(DashboardTrendService, "generate_trends", AsyncMock(return_value=[])):
@@ -742,7 +767,7 @@ def test_ai_prompt_builder_restriction():
 @pytest.mark.asyncio
 async def test_api_list_hunts(client, mock_db, mock_scope):
     setup_basic_mock_db(mock_db, mock_scope)
-    HuntService.create_or_sync_hunt("Hunt 1", "...", HuntType.MANUAL, HuntSeverity.HIGH, scope_id=SCOPE_ID)
+    await HuntService.create_or_sync_hunt("Hunt 1", "...", HuntType.MANUAL, HuntSeverity.HIGH, scope_id=SCOPE_ID)
 
     headers = get_auth_header(OPERATOR_ID, "operator")
     resp = await client.get("/api/v1/threat-hunting/hunts", headers=headers)
@@ -753,7 +778,7 @@ async def test_api_list_hunts(client, mock_db, mock_scope):
 @pytest.mark.asyncio
 async def test_api_get_hunt(client, mock_db, mock_scope):
     setup_basic_mock_db(mock_db, mock_scope)
-    h = HuntService.create_or_sync_hunt("Hunt 1", "...", HuntType.MANUAL, HuntSeverity.HIGH, scope_id=SCOPE_ID)
+    h = await HuntService.create_or_sync_hunt("Hunt 1", "...", HuntType.MANUAL, HuntSeverity.HIGH, scope_id=SCOPE_ID)
 
     headers = get_auth_header(OPERATOR_ID, "operator")
     resp = await client.get(f"/api/v1/threat-hunting/hunts/{h.hunt_id}", headers=headers)
@@ -797,7 +822,7 @@ async def test_api_create_hunt(client, mock_db, mock_scope):
 @pytest.mark.asyncio
 async def test_api_activate_hunt(client, mock_db, mock_scope):
     setup_basic_mock_db(mock_db, mock_scope)
-    h = HuntService.create_or_sync_hunt("Hunt 1", "...", HuntType.MANUAL, HuntSeverity.HIGH, scope_id=SCOPE_ID)
+    h = await HuntService.create_or_sync_hunt("Hunt 1", "...", HuntType.MANUAL, HuntSeverity.HIGH, scope_id=SCOPE_ID)
 
     headers = get_auth_header(OPERATOR_ID, "operator")
     resp = await client.post(f"/api/v1/threat-hunting/hunts/{h.hunt_id}/activate", headers=headers)
@@ -808,7 +833,7 @@ async def test_api_activate_hunt(client, mock_db, mock_scope):
 @pytest.mark.asyncio
 async def test_api_review_hunt(client, mock_db, mock_scope):
     setup_basic_mock_db(mock_db, mock_scope)
-    h = HuntService.create_or_sync_hunt("Hunt 1", "...", HuntType.MANUAL, HuntSeverity.HIGH, scope_id=SCOPE_ID)
+    h = await HuntService.create_or_sync_hunt("Hunt 1", "...", HuntType.MANUAL, HuntSeverity.HIGH, scope_id=SCOPE_ID)
 
     headers = get_auth_header(OPERATOR_ID, "operator")
     resp = await client.post(f"/api/v1/threat-hunting/hunts/{h.hunt_id}/review", headers=headers)
@@ -819,7 +844,7 @@ async def test_api_review_hunt(client, mock_db, mock_scope):
 @pytest.mark.asyncio
 async def test_api_complete_hunt(client, mock_db, mock_scope):
     setup_basic_mock_db(mock_db, mock_scope)
-    h = HuntService.create_or_sync_hunt("Hunt 1", "...", HuntType.MANUAL, HuntSeverity.HIGH, scope_id=SCOPE_ID)
+    h = await HuntService.create_or_sync_hunt("Hunt 1", "...", HuntType.MANUAL, HuntSeverity.HIGH, scope_id=SCOPE_ID)
 
     headers = get_auth_header(OPERATOR_ID, "operator")
     resp = await client.post(f"/api/v1/threat-hunting/hunts/{h.hunt_id}/complete", headers=headers)
@@ -830,7 +855,7 @@ async def test_api_complete_hunt(client, mock_db, mock_scope):
 @pytest.mark.asyncio
 async def test_api_close_hunt(client, mock_db, mock_scope):
     setup_basic_mock_db(mock_db, mock_scope)
-    h = HuntService.create_or_sync_hunt("Hunt 1", "...", HuntType.MANUAL, HuntSeverity.HIGH, scope_id=SCOPE_ID)
+    h = await HuntService.create_or_sync_hunt("Hunt 1", "...", HuntType.MANUAL, HuntSeverity.HIGH, scope_id=SCOPE_ID)
 
     headers = get_auth_header(OPERATOR_ID, "operator")
     resp = await client.post(f"/api/v1/threat-hunting/hunts/{h.hunt_id}/close", headers=headers)
@@ -841,7 +866,7 @@ async def test_api_close_hunt(client, mock_db, mock_scope):
 @pytest.mark.asyncio
 async def test_api_escalate_hunt(client, mock_db, mock_scope):
     setup_basic_mock_db(mock_db, mock_scope)
-    h = HuntService.create_or_sync_hunt("Hunt 1", "...", HuntType.MANUAL, HuntSeverity.HIGH, scope_id=SCOPE_ID)
+    h = await HuntService.create_or_sync_hunt("Hunt 1", "...", HuntType.MANUAL, HuntSeverity.HIGH, scope_id=SCOPE_ID)
 
     headers = get_auth_header(OPERATOR_ID, "operator")
     resp = await client.post(f"/api/v1/threat-hunting/hunts/{h.hunt_id}/escalate", headers=headers)

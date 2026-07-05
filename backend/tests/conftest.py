@@ -34,7 +34,15 @@ class InterceptedExecuteMock(AsyncMock):
                     "SecurityKnowledgeRecord", "SecurityKnowledgeRelationship", "SecurityKnowledgeRecommendation", "SecurityKnowledgeHistory",
                     "ThreatIntelIOC", "ThreatIntelActor", "ThreatIntelCampaign", "ThreatIntelIOCActorMapping", "ThreatIntelIOCCampaignMapping", "ThreatIntelActorCampaignMapping", "ThreatIntelHistory", "IntelligenceEvent",
                     "SecurityIntelligenceNode", "SecurityIntelligenceEdge", "SecurityIntelligenceGraphHistory",
-                    "CyberRiskRecord", "CyberRiskScenario", "CyberRiskForecast", "CyberRiskHistory"
+                    "CyberRiskRecord", "CyberRiskScenario", "CyberRiskForecast", "CyberRiskHistory",
+                    "Incident", "IncidentInvestigation", "IncidentHistory", "IncidentEvidence",
+                    "RiskAcceptance", "Remediation", "RemediationHistory",
+                    "Hunt", "HuntHypothesis", "HuntFinding", "HuntHistory",
+                    "SecurityIntelligenceFabricNode", "SecurityIntelligenceFabricPropagation", "SecurityIntelligenceFabricHistory",
+                    "SecurityPosture", "SecurityPostureHistory",
+                    "SecurityDecision", "SecurityDecisionHistory",
+                    "SecurityProgram", "SecurityProgramObjective", "SecurityProgramInitiative", "SecurityProgramHistory",
+                    "PurpleTeamExercise", "PurpleTeamValidation", "PurpleTeamFinding", "PurpleTeamHistory"
                 ]:
                     is_migrated_model = True
             except Exception:
@@ -69,7 +77,15 @@ class InterceptedGetMock(AsyncMock):
             "SecurityKnowledgeRecord", "SecurityKnowledgeRelationship", "SecurityKnowledgeRecommendation", "SecurityKnowledgeHistory",
             "ThreatIntelIOC", "ThreatIntelActor", "ThreatIntelCampaign", "ThreatIntelIOCActorMapping", "ThreatIntelIOCCampaignMapping", "ThreatIntelActorCampaignMapping", "ThreatIntelHistory", "IntelligenceEvent",
             "SecurityIntelligenceNode", "SecurityIntelligenceEdge", "SecurityIntelligenceGraphHistory",
-            "CyberRiskRecord", "CyberRiskScenario", "CyberRiskForecast", "CyberRiskHistory"
+            "CyberRiskRecord", "CyberRiskScenario", "CyberRiskForecast", "CyberRiskHistory",
+            "Incident", "IncidentInvestigation", "IncidentHistory", "IncidentEvidence",
+            "RiskAcceptance", "Remediation", "RemediationHistory",
+            "Hunt", "HuntHypothesis", "HuntFinding", "HuntHistory",
+            "SecurityIntelligenceFabricNode", "SecurityIntelligenceFabricPropagation", "SecurityIntelligenceFabricHistory",
+            "SecurityPosture", "SecurityPostureHistory",
+            "SecurityDecision", "SecurityDecisionHistory",
+            "SecurityProgram", "SecurityProgramObjective", "SecurityProgramInitiative", "SecurityProgramHistory",
+            "PurpleTeamExercise", "PurpleTeamValidation", "PurpleTeamFinding", "PurpleTeamHistory"
         ]
         
         from unittest.mock import DEFAULT

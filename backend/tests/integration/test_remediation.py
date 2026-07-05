@@ -146,7 +146,7 @@ async def test_auto_remediation_creation(mock_db) -> None:
     assert abs((rec.due_date - expected_due).total_seconds()) < 1.0
 
     # Check history is logged
-    hist = RemediationHistoryService.get_history(rec.remediation_id)
+    hist = await RemediationHistoryService.get_history(rec.remediation_id)
     assert len(hist) == 1
     assert hist[0].history_type.value == "CREATED"
 

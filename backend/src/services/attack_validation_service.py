@@ -6,11 +6,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.domain.entities.purple_team import ValidationStatus
 from src.domain.entities.detection import DetectionStatus
-from src.infrastructure.database.models import Asset, Finding
+from src.infrastructure.database.models import Asset, Finding, PurpleTeamValidation, IntelligenceEvent
 from src.services.purple_team_service import PurpleTeamService
 from src.services.detection_service import DetectionService
 from src.services.hunt_service import HuntService
 from src.services.purple_team_history_service import PurpleTeamHistoryService
+from src.infrastructure.database.unit_of_work import UnitOfWork
+from src.core.tenant import get_current_tenant_id
 
 
 class ValidationRecord:
@@ -38,13 +40,34 @@ class ValidationRecord:
 
 
 class AttackValidationService:
-    # in-memory store: validation_id -> ValidationRecord
+    # in-memory L2 cache
     _validations: Dict[uuid.UUID, ValidationRecord] = {}
 
     @classmethod
     def clear_validations(cls) -> None:
         """Clear all validation records."""
         cls._validations.clear()
+
+    @classmethod
+    async def bootstrap(cls, db: AsyncSession) -> None:
+        """Bootstrap the L2 cache from PostgreSQL database."""
+        cls.clear_validations()
+        async with UnitOfWork() as uow:
+            result = await uow.session.execute(select(PurpleTeamValidation))
+            db_vals = list(result.scalars().all())
+            for db_v in db_vals:
+                record = ValidationRecord(
+                    validation_id=db_v.validation_id,
+                    exercise_id=db_v.exercise_id,
+                    technique_id=db_v.technique_id,
+                    validation_status=ValidationStatus(db_v.validation_status),
+                    expected_detection=db_v.expected_detection,
+                    actual_detection=db_v.actual_detection,
+                    coverage_gap=db_v.coverage_gap,
+                    created_at=db_v.created_at,
+                    updated_at=db_v.updated_at,
+                )
+                cls._validations[db_v.validation_id] = record
 
     @classmethod
     def get_all_validations(cls) -> List[ValidationRecord]:
@@ -90,6 +113,8 @@ class AttackValidationService:
         scope_hunts = [h for h in hunts if h.scope_id == exercise.scope_id]
 
         outcomes = []
+        tenant_id = get_current_tenant_id() or uuid.UUID("00000000-0000-0000-0000-000000000000")
+
         for tech in exercise.related_techniques:
             # check expected detection (active rule covers the technique)
             expected = any(tech in d.attack_techniques for d in active_detections)
@@ -143,11 +168,37 @@ class AttackValidationService:
 
                 if changed:
                     existing_match.updated_at = datetime.now(timezone.utc)
-                    PurpleTeamHistoryService.record_event(
-                        exercise_id,
-                        "VALIDATED",
-                        f"Validation status updated for technique {tech}: {status.value}",
-                    )
+                    async with UnitOfWork() as uow:
+                        res = await uow.session.execute(
+                            select(PurpleTeamValidation).filter(
+                                PurpleTeamValidation.validation_id == existing_match.validation_id
+                            )
+                        )
+                        db_v = res.scalar_one_or_none()
+                        if db_v:
+                            db_v.validation_status = status.value
+                            db_v.expected_detection = expected
+                            db_v.actual_detection = actual
+                            db_v.coverage_gap = gap
+                            db_v.updated_at = existing_match.updated_at
+
+                            await PurpleTeamHistoryService.record_event(
+                                exercise_id,
+                                "VALIDATED",
+                                f"Validation status updated for technique {tech}: {status.value}",
+                                uow=uow,
+                            )
+                            # Stage outbox event
+                            outbox_evt = IntelligenceEvent(
+                                tenant_id=tenant_id,
+                                event_type="validation.failed" if status == ValidationStatus.FAILED else "validation.passed",
+                                payload={
+                                    "validation_id": str(existing_match.validation_id),
+                                    "status": status.value,
+                                }
+                            )
+                            uow.session.add(outbox_evt)
+                            await uow.commit()
                 outcomes.append(existing_match)
             else:
                 # Create a new validation record
@@ -162,11 +213,38 @@ class AttackValidationService:
                     coverage_gap=gap,
                 )
                 cls._validations[val_id] = record
-                PurpleTeamHistoryService.record_event(
-                    exercise_id,
-                    "VALIDATED",
-                    f"Validation completed for technique {tech}: {status.value}",
-                )
+                
+                async with UnitOfWork() as uow:
+                    db_v = PurpleTeamValidation(
+                        tenant_id=tenant_id,
+                        validation_id=val_id,
+                        exercise_id=exercise_id,
+                        technique_id=tech,
+                        validation_status=status.value,
+                        expected_detection=expected,
+                        actual_detection=actual,
+                        coverage_gap=gap,
+                        created_at=record.created_at,
+                        updated_at=record.updated_at,
+                    )
+                    await uow.purple_team_repo.save_validation(db_v)
+                    await PurpleTeamHistoryService.record_event(
+                        exercise_id,
+                        "VALIDATED",
+                        f"Validation completed for technique {tech}: {status.value}",
+                        uow=uow,
+                    )
+                    # Stage outbox event
+                    outbox_evt = IntelligenceEvent(
+                        tenant_id=tenant_id,
+                        event_type="validation.failed" if status == ValidationStatus.FAILED else "validation.passed",
+                        payload={
+                            "validation_id": str(val_id),
+                            "status": status.value,
+                        }
+                    )
+                    uow.session.add(outbox_evt)
+                    await uow.commit()
                 outcomes.append(record)
 
         return outcomes

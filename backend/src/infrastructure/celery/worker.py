@@ -645,7 +645,7 @@ async def _execute_workflow_async(
                             from src.services.hunt_drift_service import HuntDriftService
                             from src.services.hunt_snapshot_service import HuntSnapshotService
 
-                            IOCHuntService.sync_ioc_hunts()
+                            await IOCHuntService.sync_ioc_hunts()
                             await AttackHuntService.sync_attack_hunts(db)
 
                             prev_hunt_snap = HuntSnapshotService._snapshots.get(scope_id)

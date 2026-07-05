@@ -1,8 +1,11 @@
 import uuid
 from datetime import datetime, timezone
-from typing import Dict, List
+from typing import Dict, List, Optional
 
 from src.domain.entities.hunt import HuntHistoryEntry
+from src.infrastructure.database.unit_of_work import UnitOfWork
+from src.infrastructure.database.models import HuntHistory
+from src.core.tenant import get_current_tenant_id
 
 
 class HuntHistoryService:
@@ -15,16 +18,28 @@ class HuntHistoryService:
         cls._history.clear()
 
     @classmethod
-    def get_history(cls, hunt_id: uuid.UUID) -> List[HuntHistoryEntry]:
+    async def get_history(cls, hunt_id: uuid.UUID) -> List[HuntHistoryEntry]:
         """Get all logged history for a hunt."""
-        return cls._history.get(hunt_id, [])
+        async with UnitOfWork() as uow:
+            db_entries = await uow.hunt_repo.list_history(hunt_id)
+            res = [
+                HuntHistoryEntry(
+                    hunt_id=e.hunt_id,
+                    timestamp=e.timestamp,
+                    event_type=e.event_type,
+                    details=e.details,
+                )
+                for e in db_entries
+            ]
+            return res
 
     @classmethod
-    def record_event(
+    async def record_event(
         cls,
         hunt_id: uuid.UUID,
         event_type: str,
         details: str,
+        uow: Optional[UnitOfWork] = None,
     ) -> HuntHistoryEntry:
         """Record an immutable history event for a hunt."""
         entry = HuntHistoryEntry(
@@ -34,4 +49,24 @@ class HuntHistoryService:
             details=details,
         )
         cls._history.setdefault(hunt_id, []).append(entry)
+
+        tenant_id = get_current_tenant_id() or uuid.UUID("00000000-0000-0000-0000-000000000000")
+
+        async def _save(uow_inst: UnitOfWork):
+            db_hist = HuntHistory(
+                tenant_id=tenant_id,
+                hunt_id=hunt_id,
+                event_type=event_type,
+                details=details,
+                timestamp=entry.timestamp,
+            )
+            await uow_inst.hunt_repo.save_history(db_hist)
+
+        if uow:
+            await _save(uow)
+        else:
+            async with UnitOfWork() as new_uow:
+                await _save(new_uow)
+                await new_uow.commit()
+
         return entry

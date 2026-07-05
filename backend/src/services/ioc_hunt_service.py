@@ -11,7 +11,7 @@ from src.services.hunt_finding_service import HuntFindingService
 
 class IOCHuntService:
     @classmethod
-    def sync_ioc_hunts(cls) -> None:
+    async def sync_ioc_hunts(cls) -> None:
         """Automatically generate threat hunts based on active correlated IOCs."""
         iocs = IOCService.get_all_iocs()
         correlations = IOCCorrelationService.get_all_correlations()
@@ -37,7 +37,7 @@ class IOCHuntService:
                 })
 
             # Create or sync the hunt
-            hunt = HuntService.create_or_sync_hunt(
+            hunt = await HuntService.create_or_sync_hunt(
                 title=title,
                 description=desc,
                 hunt_type=HuntType.IOC_DRIVEN,
@@ -49,14 +49,14 @@ class IOCHuntService:
             # Auto-create standard hypothesis
             hypothesis_text = f"Verify whether the correlated indicator {ioc.value} indicates active intrusion or malware execution."
             # Only add if not already present
-            existing_hyps = HuntHypothesisService.get_hypotheses(hunt.hunt_id)
+            existing_hyps = await HuntHypothesisService.get_hypotheses(hunt.hunt_id)
             if not any(h.description == hypothesis_text for h in existing_hyps):
-                HuntHypothesisService.create_hypothesis(hunt.hunt_id, hypothesis_text)
+                await HuntHypothesisService.create_hypothesis(hunt.hunt_id, hypothesis_text)
 
             # Auto-create findings from active correlations
             for corr in ioc_corrs:
                 finding_details = f"Active correlation match found: IOC {ioc.value} matched with {corr.entity_type} ({corr.entity_id})."
-                HuntFindingService.create_finding(
+                await HuntFindingService.create_finding(
                     hunt_id=hunt.hunt_id,
                     entity_type=corr.entity_type,
                     entity_id=corr.entity_id,

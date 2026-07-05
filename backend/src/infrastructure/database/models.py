@@ -12,6 +12,7 @@ from sqlalchemy import (
     UniqueConstraint,
     text,
     Float,
+    Boolean,
 )
 from sqlalchemy.dialects.postgresql import INET, JSONB, UUID, ARRAY
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
@@ -1288,3 +1289,654 @@ class CyberRiskHistory(Base, TenantOwnedMixin, AuditMixin, VersionedMixin, SoftD
     __table_args__ = (
         Index("ix_cyber_risk_history_tenant", "tenant_id"),
     )
+
+
+# ==============================================================================
+# PHASE 1 PERSISTENT DOMAINS
+# ==============================================================================
+
+# 1. INCIDENT MANAGEMENT & INVESTIGATION
+class Incident(Base, TenantOwnedMixin, AuditMixin, VersionedMixin, SoftDeleteMixin):
+    __tablename__ = "incidents"
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, server_default=text("gen_random_uuid()")
+    )
+    incident_fingerprint: Mapped[str] = mapped_column(String, unique=True, nullable=False)
+    title: Mapped[str] = mapped_column(String, nullable=False)
+    description: Mapped[str] = mapped_column(String, nullable=False)
+    severity: Mapped[str] = mapped_column(String, nullable=False)
+    status: Mapped[str] = mapped_column(String, nullable=False)
+    owner: Mapped[Optional[uuid.UUID]] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True
+    )
+    alert_ids: Mapped[list[uuid.UUID]] = mapped_column(ARRAY(UUID(as_uuid=True)), server_default="{}", nullable=False)
+    asset_ids: Mapped[list[uuid.UUID]] = mapped_column(ARRAY(UUID(as_uuid=True)), server_default="{}", nullable=False)
+    finding_ids: Mapped[list[uuid.UUID]] = mapped_column(ARRAY(UUID(as_uuid=True)), server_default="{}", nullable=False)
+    recommendation_ids: Mapped[list[uuid.UUID]] = mapped_column(ARRAY(UUID(as_uuid=True)), server_default="{}", nullable=False)
+    remediation_ids: Mapped[list[uuid.UUID]] = mapped_column(ARRAY(UUID(as_uuid=True)), server_default="{}", nullable=False)
+
+    @property
+    def incident_id(self) -> uuid.UUID:
+        return self.id
+
+    __table_args__ = (
+        Index("ix_incidents_tenant", "tenant_id"),
+        Index("ix_incidents_tenant_status", "tenant_id", "status"),
+    )
+
+
+class IncidentInvestigation(Base, TenantOwnedMixin, AuditMixin):
+    __tablename__ = "incident_investigations"
+
+    entry_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, server_default=text("gen_random_uuid()")
+    )
+    incident_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("incidents.id", ondelete="CASCADE"), nullable=False
+    )
+    timestamp: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=text("now()"), nullable=False
+    )
+    analyst: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=False
+    )
+    action: Mapped[str] = mapped_column(String, nullable=False)
+    notes: Mapped[str] = mapped_column(String, nullable=False)
+
+    __table_args__ = (
+        Index("ix_incident_investigations_tenant", "tenant_id"),
+        Index("ix_incident_investigations_incident", "incident_id"),
+    )
+
+
+class IncidentHistory(Base, TenantOwnedMixin, AuditMixin):
+    __tablename__ = "incident_history"
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, server_default=text("gen_random_uuid()")
+    )
+    incident_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("incidents.id", ondelete="CASCADE"), nullable=False
+    )
+    timestamp: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=text("now()"), nullable=False
+    )
+    event_type: Mapped[str] = mapped_column(String, nullable=False)
+    details: Mapped[str] = mapped_column(String, nullable=False)
+
+    __table_args__ = (
+        Index("ix_incident_history_tenant", "tenant_id"),
+        Index("ix_incident_history_incident", "incident_id"),
+    )
+
+
+class IncidentEvidence(Base, TenantOwnedMixin, AuditMixin):
+    __tablename__ = "incident_evidence"
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, server_default=text("gen_random_uuid()")
+    )
+    incident_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("incidents.id", ondelete="CASCADE"), nullable=False
+    )
+    category: Mapped[str] = mapped_column(String, nullable=False)
+    entity_type: Mapped[str] = mapped_column(String, nullable=False)
+    entity_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False)
+    details: Mapped[str] = mapped_column(String, nullable=False)
+
+    __table_args__ = (
+        Index("ix_incident_evidence_tenant", "tenant_id"),
+        Index("ix_incident_evidence_incident", "incident_id"),
+    )
+
+
+# 2. RISK ACCEPTANCE
+class RiskAcceptance(Base, TenantOwnedMixin, AuditMixin, VersionedMixin, SoftDeleteMixin):
+    __tablename__ = "risk_acceptances"
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, server_default=text("gen_random_uuid()")
+    )
+    asset_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("assets.id", ondelete="CASCADE"), nullable=False
+    )
+    finding_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("findings.id", ondelete="SET NULL"), nullable=True
+    )
+    recommendation_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        UUID(as_uuid=True), nullable=True
+    )
+    recommendation_fingerprint: Mapped[str] = mapped_column(String, nullable=False)
+    approved_by: Mapped[str] = mapped_column(String, nullable=False)
+    approved_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    expiration_date: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    status: Mapped[str] = mapped_column(String, nullable=False)
+    reason: Mapped[str] = mapped_column(String, nullable=False)
+
+    @property
+    def acceptance_id(self) -> uuid.UUID:
+        return self.id
+
+    __table_args__ = (
+        Index("ix_risk_acceptances_tenant", "tenant_id"),
+        Index("ix_risk_acceptances_asset", "asset_id"),
+    )
+
+
+# 3. REMEDIATION & SLA
+class Remediation(Base, TenantOwnedMixin, AuditMixin, VersionedMixin, SoftDeleteMixin):
+    __tablename__ = "remediations"
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, server_default=text("gen_random_uuid()")
+    )
+    recommendation_fingerprint: Mapped[str] = mapped_column(String, unique=True, nullable=False)
+    asset_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("assets.id", ondelete="CASCADE"), nullable=False
+    )
+    finding_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("findings.id", ondelete="SET NULL"), nullable=True
+    )
+    status: Mapped[str] = mapped_column(String, nullable=False)
+    owner: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    due_date: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    reason: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    approved_by: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    exception_approved_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+
+    @property
+    def remediation_id(self) -> uuid.UUID:
+        return self.id
+
+    __table_args__ = (
+        Index("ix_remediations_tenant", "tenant_id"),
+        Index("ix_remediations_fingerprint", "recommendation_fingerprint"),
+    )
+
+
+class RemediationHistory(Base, TenantOwnedMixin, AuditMixin):
+    __tablename__ = "remediation_history"
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, server_default=text("gen_random_uuid()")
+    )
+    remediation_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("remediations.id", ondelete="CASCADE"), nullable=False
+    )
+    history_type: Mapped[str] = mapped_column(String, nullable=False)
+    old_value: Mapped[Optional[Dict[str, Any]]] = mapped_column(JSONB, nullable=True)
+    new_value: Mapped[Optional[Dict[str, Any]]] = mapped_column(JSONB, nullable=True)
+    actor_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True
+    )
+    timestamp: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=text("now()"), nullable=False
+    )
+
+    __table_args__ = (
+        Index("ix_remediation_history_tenant", "tenant_id"),
+        Index("ix_remediation_history_remediation", "remediation_id"),
+    )
+
+
+# ==============================================================================
+# PHASE 2 PERSISTENT DOMAINS
+# ==============================================================================
+
+# 4. THREAT HUNTING & IOC SCAN
+class Hunt(Base, TenantOwnedMixin, AuditMixin, VersionedMixin, SoftDeleteMixin):
+    __tablename__ = "hunts"
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, server_default=text("gen_random_uuid()")
+    )
+    hunt_fingerprint: Mapped[str] = mapped_column(String, unique=True, nullable=False)
+    title: Mapped[str] = mapped_column(String, nullable=False)
+    description: Mapped[str] = mapped_column(String, nullable=False)
+    hunt_type: Mapped[str] = mapped_column(String, nullable=False)
+    severity: Mapped[str] = mapped_column(String, nullable=False)
+    status: Mapped[str] = mapped_column(String, nullable=False)
+    owner_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True
+    )
+    scope_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("scopes.id", ondelete="SET NULL"), nullable=True
+    )
+    related_entities: Mapped[list[dict]] = mapped_column(JSONB, server_default="[]", nullable=False)
+
+    @property
+    def hunt_id(self) -> uuid.UUID:
+        return self.id
+
+    __table_args__ = (
+        Index("ix_hunts_tenant", "tenant_id"),
+        Index("ix_hunts_tenant_status", "tenant_id", "status"),
+    )
+
+
+class HuntHypothesis(Base, TenantOwnedMixin, AuditMixin):
+    __tablename__ = "hunt_hypotheses"
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, server_default=text("gen_random_uuid()")
+    )
+    hunt_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("hunts.id", ondelete="CASCADE"), nullable=False
+    )
+    description: Mapped[str] = mapped_column(String, nullable=False)
+
+    @property
+    def hypothesis_id(self) -> uuid.UUID:
+        return self.id
+
+    __table_args__ = (
+        Index("ix_hunt_hypotheses_tenant", "tenant_id"),
+        Index("ix_hunt_hypotheses_hunt", "hunt_id"),
+    )
+
+
+class HuntFinding(Base, TenantOwnedMixin, AuditMixin):
+    __tablename__ = "hunt_findings"
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, server_default=text("gen_random_uuid()")
+    )
+    hunt_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("hunts.id", ondelete="CASCADE"), nullable=False
+    )
+    entity_type: Mapped[str] = mapped_column(String, nullable=False)
+    entity_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False)
+    details: Mapped[str] = mapped_column(String, nullable=False)
+
+    @property
+    def finding_id(self) -> uuid.UUID:
+        return self.id
+
+    __table_args__ = (
+        Index("ix_hunt_findings_tenant", "tenant_id"),
+        Index("ix_hunt_findings_hunt", "hunt_id"),
+    )
+
+
+class HuntHistory(Base, TenantOwnedMixin, AuditMixin):
+    __tablename__ = "hunt_history"
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, server_default=text("gen_random_uuid()")
+    )
+    hunt_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("hunts.id", ondelete="CASCADE"), nullable=False
+    )
+    timestamp: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=text("now()"), nullable=False
+    )
+    event_type: Mapped[str] = mapped_column(String, nullable=False)
+    details: Mapped[str] = mapped_column(String, nullable=False)
+
+    __table_args__ = (
+        Index("ix_hunt_history_tenant", "tenant_id"),
+        Index("ix_hunt_history_hunt", "hunt_id"),
+    )
+
+
+# 5. UNIFIED SECURITY INTELLIGENCE FABRIC
+class SecurityIntelligenceFabricNode(Base, TenantOwnedMixin, AuditMixin, VersionedMixin, SoftDeleteMixin):
+    __tablename__ = "security_intelligence_fabric_nodes"
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, server_default=text("gen_random_uuid()")
+    )
+    node_fingerprint: Mapped[str] = mapped_column(String, unique=True, nullable=False)
+    source_type: Mapped[str] = mapped_column(String, nullable=False)
+    status: Mapped[str] = mapped_column(String, nullable=False)
+    priority: Mapped[str] = mapped_column(String, nullable=False)
+    scope_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("scopes.id", ondelete="SET NULL"), nullable=True
+    )
+    confidence_weights: Mapped[Dict[str, float]] = mapped_column(JSONB, server_default="{}", nullable=False)
+    target_links: Mapped[list[uuid.UUID]] = mapped_column(ARRAY(UUID(as_uuid=True)), server_default="{}", nullable=False)
+
+    @property
+    def node_id(self) -> uuid.UUID:
+        return self.id
+
+    __table_args__ = (
+        Index("ix_fabric_nodes_tenant", "tenant_id"),
+        Index("ix_fabric_nodes_fingerprint", "node_fingerprint"),
+    )
+
+
+class SecurityIntelligenceFabricPropagation(Base, TenantOwnedMixin, AuditMixin):
+    __tablename__ = "security_intelligence_fabric_propagations"
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, server_default=text("gen_random_uuid()")
+    )
+    source_node_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("security_intelligence_fabric_nodes.id", ondelete="CASCADE"), nullable=False
+    )
+    target_node_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False)
+    mode: Mapped[str] = mapped_column(String, nullable=False)
+    confidence_score: Mapped[float] = mapped_column(Numeric, nullable=False)
+    decay_factor: Mapped[float] = mapped_column(Numeric, nullable=False)
+    timestamp: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=text("now()"), nullable=False
+    )
+
+    @property
+    def propagation_id(self) -> uuid.UUID:
+        return self.id
+
+    __table_args__ = (
+        Index("ix_fabric_propagations_tenant", "tenant_id"),
+        Index("ix_fabric_propagations_source", "source_node_id"),
+    )
+
+
+class SecurityIntelligenceFabricHistory(Base, TenantOwnedMixin, AuditMixin):
+    __tablename__ = "security_intelligence_fabric_history"
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, server_default=text("gen_random_uuid()")
+    )
+    fabric_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("security_intelligence_fabric_nodes.id", ondelete="CASCADE"), nullable=False
+    )
+    timestamp: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=text("now()"), nullable=False
+    )
+    event_type: Mapped[str] = mapped_column(String, nullable=False)
+    details: Mapped[str] = mapped_column(String, nullable=False)
+
+    __table_args__ = (
+        Index("ix_fabric_history_tenant", "tenant_id"),
+        Index("ix_fabric_history_fabric", "fabric_id"),
+    )
+
+
+# 6. SECURITY POSTURE
+class SecurityPosture(Base, TenantOwnedMixin, AuditMixin, VersionedMixin, SoftDeleteMixin):
+    __tablename__ = "security_postures"
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, server_default=text("gen_random_uuid()")
+    )
+    posture_fingerprint: Mapped[str] = mapped_column(String, unique=True, nullable=False)
+    title: Mapped[str] = mapped_column(String, nullable=False)
+    description: Mapped[str] = mapped_column(String, nullable=False)
+    posture_score: Mapped[float] = mapped_column(Numeric, nullable=False)
+    risk_score: Mapped[float] = mapped_column(Numeric, nullable=False)
+    severity: Mapped[str] = mapped_column(String, nullable=False)
+    category: Mapped[str] = mapped_column(String, nullable=False)
+    status: Mapped[str] = mapped_column(String, nullable=False)
+    owner: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    asset_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("assets.id", ondelete="CASCADE"), nullable=False
+    )
+    risk_source: Mapped[str] = mapped_column(String, nullable=False)
+    scope_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("scopes.id", ondelete="SET NULL"), nullable=True
+    )
+
+    @property
+    def posture_id(self) -> uuid.UUID:
+        return self.id
+
+    __table_args__ = (
+        Index("ix_security_postures_tenant", "tenant_id"),
+        Index("ix_security_postures_asset", "asset_id"),
+    )
+
+
+class SecurityPostureHistory(Base, TenantOwnedMixin, AuditMixin):
+    __tablename__ = "security_posture_history"
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, server_default=text("gen_random_uuid()")
+    )
+    posture_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("security_postures.id", ondelete="CASCADE"), nullable=False
+    )
+    timestamp: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=text("now()"), nullable=False
+    )
+    event_type: Mapped[str] = mapped_column(String, nullable=False)
+    details: Mapped[str] = mapped_column(String, nullable=False)
+
+    __table_args__ = (
+        Index("ix_security_posture_history_tenant", "tenant_id"),
+        Index("ix_security_posture_history_posture", "posture_id"),
+    )
+
+
+# ==============================================================================
+# PHASE 3 PERSISTENT DOMAINS
+# ==============================================================================
+
+# 7. SECURITY DECISION
+class SecurityDecision(Base, TenantOwnedMixin, AuditMixin, VersionedMixin, SoftDeleteMixin):
+    __tablename__ = "security_decisions"
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, server_default=text("gen_random_uuid()")
+    )
+    decision_fingerprint: Mapped[str] = mapped_column(String, unique=True, nullable=False)
+    decision_type: Mapped[str] = mapped_column(String, nullable=False)
+    target_entity_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False)
+    option_name: Mapped[str] = mapped_column(String, nullable=False)
+    status: Mapped[str] = mapped_column(String, nullable=False)
+    scope_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("scopes.id", ondelete="SET NULL"), nullable=True
+    )
+    tradeoff_matrix: Mapped[Optional[Dict[str, Any]]] = mapped_column(JSONB, nullable=True)
+    impact_metrics: Mapped[Optional[Dict[str, Any]]] = mapped_column(JSONB, nullable=True)
+
+    @property
+    def decision_id(self) -> uuid.UUID:
+        return self.id
+
+    __table_args__ = (
+        Index("ix_security_decisions_tenant", "tenant_id"),
+        Index("ix_security_decisions_target", "target_entity_id"),
+    )
+
+
+class SecurityDecisionHistory(Base, TenantOwnedMixin, AuditMixin):
+    __tablename__ = "security_decision_history"
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, server_default=text("gen_random_uuid()")
+    )
+    decision_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("security_decisions.id", ondelete="CASCADE"), nullable=False
+    )
+    timestamp: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=text("now()"), nullable=False
+    )
+    event_type: Mapped[str] = mapped_column(String, nullable=False)
+    details: Mapped[str] = mapped_column(String, nullable=False)
+
+    __table_args__ = (
+        Index("ix_security_decision_history_tenant", "tenant_id"),
+        Index("ix_security_decision_history_decision", "decision_id"),
+    )
+
+
+# 8. SECURITY PROGRAM
+class SecurityProgram(Base, TenantOwnedMixin, AuditMixin, VersionedMixin, SoftDeleteMixin):
+    __tablename__ = "security_programs"
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, server_default=text("gen_random_uuid()")
+    )
+    program_fingerprint: Mapped[str] = mapped_column(String, unique=True, nullable=False)
+    name: Mapped[str] = mapped_column(String, nullable=False)
+    description: Mapped[str] = mapped_column(String, nullable=False)
+    category: Mapped[str] = mapped_column(String, nullable=False)
+    severity: Mapped[str] = mapped_column(String, nullable=False)
+    status: Mapped[str] = mapped_column(String, nullable=False)
+    program_score: Mapped[float] = mapped_column(Numeric, nullable=False)
+    scope_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("scopes.id", ondelete="SET NULL"), nullable=True
+    )
+
+    @property
+    def program_id(self) -> uuid.UUID:
+        return self.id
+
+    __table_args__ = (
+        Index("ix_security_programs_tenant", "tenant_id"),
+        Index("ix_security_programs_status", "tenant_id", "status"),
+    )
+
+
+class SecurityProgramObjective(Base, TenantOwnedMixin, AuditMixin):
+    __tablename__ = "security_program_objectives"
+
+    objective_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, server_default=text("gen_random_uuid()")
+    )
+    program_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("security_programs.id", ondelete="CASCADE"), nullable=False
+    )
+    name: Mapped[str] = mapped_column(String, nullable=False)
+    description: Mapped[str] = mapped_column(String, nullable=False)
+    completion_percentage: Mapped[float] = mapped_column(Numeric, nullable=False)
+
+    __table_args__ = (
+        Index("ix_program_objectives_tenant", "tenant_id"),
+        Index("ix_program_objectives_program", "program_id"),
+    )
+
+
+class SecurityProgramInitiative(Base, TenantOwnedMixin, AuditMixin):
+    __tablename__ = "security_program_initiatives"
+
+    initiative_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, server_default=text("gen_random_uuid()")
+    )
+    program_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("security_programs.id", ondelete="CASCADE"), nullable=False
+    )
+    name: Mapped[str] = mapped_column(String, nullable=False)
+    description: Mapped[str] = mapped_column(String, nullable=False)
+    status: Mapped[str] = mapped_column(String, nullable=False)
+    completion_percentage: Mapped[float] = mapped_column(Numeric, nullable=False)
+
+    __table_args__ = (
+        Index("ix_program_initiatives_tenant", "tenant_id"),
+        Index("ix_program_initiatives_program", "program_id"),
+    )
+
+
+class SecurityProgramHistory(Base, TenantOwnedMixin, AuditMixin):
+    __tablename__ = "security_program_history"
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, server_default=text("gen_random_uuid()")
+    )
+    program_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("security_programs.id", ondelete="CASCADE"), nullable=False
+    )
+    timestamp: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=text("now()"), nullable=False
+    )
+    event_type: Mapped[str] = mapped_column(String, nullable=False)
+    details: Mapped[str] = mapped_column(String, nullable=False)
+
+    __table_args__ = (
+        Index("ix_security_program_history_tenant", "tenant_id"),
+        Index("ix_security_program_history_program", "program_id"),
+    )
+
+
+# 9. PURPLE TEAM EMULATION
+class PurpleTeamExercise(Base, TenantOwnedMixin, AuditMixin, VersionedMixin, SoftDeleteMixin):
+    __tablename__ = "purple_team_exercises"
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, server_default=text("gen_random_uuid()")
+    )
+    exercise_fingerprint: Mapped[str] = mapped_column(String, unique=True, nullable=False)
+    name: Mapped[str] = mapped_column(String, nullable=False)
+    description: Mapped[str] = mapped_column(String, nullable=False)
+    exercise_type: Mapped[str] = mapped_column(String, nullable=False)
+    severity: Mapped[str] = mapped_column(String, nullable=False)
+    status: Mapped[str] = mapped_column(String, nullable=False)
+    owner: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    scope_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("scopes.id", ondelete="CASCADE"), nullable=False
+    )
+
+    @property
+    def exercise_id(self) -> uuid.UUID:
+        return self.id
+
+    __table_args__ = (
+        Index("ix_purple_team_exercises_tenant", "tenant_id"),
+        Index("ix_purple_team_exercises_status", "tenant_id", "status"),
+    )
+
+
+class PurpleTeamValidation(Base, TenantOwnedMixin, AuditMixin):
+    __tablename__ = "purple_team_validations"
+
+    validation_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, server_default=text("gen_random_uuid()")
+    )
+    exercise_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("purple_team_exercises.id", ondelete="CASCADE"), nullable=False
+    )
+    technique_id: Mapped[str] = mapped_column(String, nullable=False)
+    validation_status: Mapped[str] = mapped_column(String, nullable=False)
+    expected_detection: Mapped[bool] = mapped_column(Boolean, nullable=False)
+    actual_detection: Mapped[bool] = mapped_column(Boolean, nullable=False)
+    coverage_gap: Mapped[bool] = mapped_column(Boolean, nullable=False)
+
+    __table_args__ = (
+        Index("ix_purple_team_validations_tenant", "tenant_id"),
+        Index("ix_purple_team_validations_exercise", "exercise_id"),
+    )
+
+
+class PurpleTeamFinding(Base, TenantOwnedMixin, AuditMixin):
+    __tablename__ = "purple_team_findings"
+
+    finding_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, server_default=text("gen_random_uuid()")
+    )
+    exercise_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("purple_team_exercises.id", ondelete="CASCADE"), nullable=False
+    )
+    technique_id: Mapped[str] = mapped_column(String, nullable=False)
+    severity: Mapped[str] = mapped_column(String, nullable=False)
+    gap_type: Mapped[str] = mapped_column(String, nullable=False)
+    description: Mapped[str] = mapped_column(String, nullable=False)
+
+    __table_args__ = (
+        Index("ix_purple_team_findings_tenant", "tenant_id"),
+        Index("ix_purple_team_findings_exercise", "exercise_id"),
+    )
+
+
+class PurpleTeamHistory(Base, TenantOwnedMixin, AuditMixin):
+    __tablename__ = "purple_team_history"
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, server_default=text("gen_random_uuid()")
+    )
+    exercise_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("purple_team_exercises.id", ondelete="CASCADE"), nullable=False
+    )
+    timestamp: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=text("now()"), nullable=False
+    )
+    event_type: Mapped[str] = mapped_column(String, nullable=False)
+    details: Mapped[str] = mapped_column(String, nullable=False)
+
+    __table_args__ = (
+        Index("ix_purple_team_history_tenant", "tenant_id"),
+        Index("ix_purple_team_history_exercise", "exercise_id"),
+    )
+

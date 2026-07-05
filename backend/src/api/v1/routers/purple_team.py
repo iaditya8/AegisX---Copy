@@ -206,9 +206,9 @@ async def list_findings(
                 detail="Exercise not found",
             )
         await check_scope_ownership(db, exercise.scope_id, current_user)
-        findings = PurpleTeamFindingService.get_findings(exercise_id)
+        findings = await PurpleTeamFindingService.get_findings(exercise_id)
     else:
-        findings = PurpleTeamFindingService.get_all_findings()
+        findings = await PurpleTeamFindingService.get_all_findings()
         if current_user.role != "admin":
             allowed_scopes = await get_allowed_scope_ids(db, current_user)
             findings = [
@@ -290,7 +290,7 @@ async def create_exercise(
     await check_scope_ownership(db, req.scope_id, current_user)
 
     try:
-        ex = PurpleTeamService.create_or_sync_exercise(
+        ex = await PurpleTeamService.create_or_sync_exercise(
             name=req.name,
             description=req.description,
             exercise_type=req.exercise_type,
@@ -326,7 +326,7 @@ async def activate_exercise(
     await check_scope_ownership(db, exercise.scope_id, current_user)
 
     try:
-        updated = PurpleTeamService.activate_exercise(exercise_id, owner=current_user.username)
+        updated = await PurpleTeamService.activate_exercise(exercise_id, owner=current_user.username)
         # Run validation
         await AttackValidationService.validate_exercise_techniques(db, exercise_id)
         PurpleTeamSnapshotService.generate_snapshot(exercise.scope_id)
@@ -355,7 +355,7 @@ async def review_exercise(
     await check_scope_ownership(db, exercise.scope_id, current_user)
 
     try:
-        updated = PurpleTeamService.review_exercise(exercise_id)
+        updated = await PurpleTeamService.review_exercise(exercise_id)
         PurpleTeamSnapshotService.generate_snapshot(exercise.scope_id)
         return StandardResponse(data=PurpleTeamService.to_response(updated))
     except ValueError as e:
@@ -382,7 +382,7 @@ async def complete_exercise(
     await check_scope_ownership(db, exercise.scope_id, current_user)
 
     try:
-        updated = PurpleTeamService.complete_exercise(exercise_id)
+        updated = await PurpleTeamService.complete_exercise(exercise_id)
         PurpleTeamSnapshotService.generate_snapshot(exercise.scope_id)
         return StandardResponse(data=PurpleTeamService.to_response(updated))
     except ValueError as e:
@@ -409,7 +409,7 @@ async def close_exercise(
     await check_scope_ownership(db, exercise.scope_id, current_user)
 
     try:
-        updated = PurpleTeamService.close_exercise(exercise_id)
+        updated = await PurpleTeamService.close_exercise(exercise_id)
         PurpleTeamSnapshotService.generate_snapshot(exercise.scope_id)
         return StandardResponse(data=PurpleTeamService.to_response(updated))
     except ValueError as e:

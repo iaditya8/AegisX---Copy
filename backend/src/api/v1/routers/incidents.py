@@ -457,7 +457,7 @@ async def get_incident_timeline(
         )
 
     await check_incident_ownership(db, incident, current_user)
-    return IncidentHistoryService.get_history(incident_id)
+    return await IncidentHistoryService.get_history(incident_id)
 
 
 @router.get("/{incident_id}/evidence")
@@ -475,7 +475,7 @@ async def get_incident_evidence(
         )
 
     await check_incident_ownership(db, incident, current_user)
-    return IncidentEvidenceService.get_evidence(incident_id)
+    return await IncidentEvidenceService.get_evidence(incident_id)
 
 
 @router.post("/{incident_id}/escalate/team", response_model=IncidentResponse)

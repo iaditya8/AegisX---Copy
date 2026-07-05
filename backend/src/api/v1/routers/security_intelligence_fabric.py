@@ -98,7 +98,7 @@ async def terminate_fabric_node(
     if node.scope_id:
         await check_scope_ownership(db, node.scope_id, current_user)
 
-    updated = UnifiedSecurityIntelligenceFabricService.terminate_fabric_node(id)
+    updated = await UnifiedSecurityIntelligenceFabricService.terminate_fabric_node(id)
     return updated
 
 

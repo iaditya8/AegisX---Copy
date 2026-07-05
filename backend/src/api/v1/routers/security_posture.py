@@ -248,7 +248,7 @@ async def accept_posture_risk(
     await check_asset_ownership(db, posture.asset_id, current_user)
 
     try:
-        updated = SecurityPostureService.accept_risk(posture_id)
+        updated = await SecurityPostureService.accept_risk(posture_id)
         return StandardResponse(data=SecurityPostureService.to_response(updated))
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
@@ -271,7 +271,7 @@ async def mitigate_posture_risk(
     await check_asset_ownership(db, posture.asset_id, current_user)
 
     try:
-        updated = SecurityPostureService.mitigate_risk(posture_id)
+        updated = await SecurityPostureService.mitigate_risk(posture_id)
         return StandardResponse(data=SecurityPostureService.to_response(updated))
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
@@ -294,7 +294,7 @@ async def close_posture_record(
     await check_asset_ownership(db, posture.asset_id, current_user)
 
     try:
-        updated = SecurityPostureService.close_posture(posture_id)
+        updated = await SecurityPostureService.close_posture(posture_id)
         return StandardResponse(data=SecurityPostureService.to_response(updated))
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))

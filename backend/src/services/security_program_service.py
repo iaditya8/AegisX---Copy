@@ -23,6 +23,14 @@ from src.services.kpi_service import KPIService
 from src.services.kri_service import KRIService
 from src.services.program_health_service import ProgramHealthService
 from src.services.program_correlation_service import ProgramCorrelationService
+from src.infrastructure.database.models import (
+    SecurityProgram as DBProgram,
+    SecurityProgramObjective,
+    SecurityProgramInitiative,
+    IntelligenceEvent
+)
+from src.infrastructure.database.unit_of_work import UnitOfWork
+from src.core.tenant import get_current_tenant_id
 
 
 class ProgramObjectiveRecord:
@@ -86,6 +94,55 @@ class SecurityProgramService:
         cls._fingerprint_lookup.clear()
 
     @classmethod
+    async def bootstrap(cls, db: AsyncSession) -> None:
+        """Bootstrap the L2 cache from PostgreSQL database."""
+        cls.clear_programs()
+        async with UnitOfWork() as uow:
+            db_programs = await uow.program_repo.list()
+            for db_p in db_programs:
+                db_objs = await uow.program_repo.list_objectives(db_p.id)
+                db_inits = await uow.program_repo.list_initiatives(db_p.id)
+
+                objs = [
+                    ProgramObjectiveRecord(
+                        objective_id=o.objective_id,
+                        name=o.name,
+                        description=o.description,
+                        completion_percentage=float(o.completion_percentage),
+                    )
+                    for o in db_objs
+                ]
+
+                inits = [
+                    ProgramInitiativeRecord(
+                        initiative_id=i.initiative_id,
+                        name=i.name,
+                        description=i.description,
+                        status=i.status,
+                        completion_percentage=float(i.completion_percentage),
+                    )
+                    for i in db_inits
+                ]
+
+                record = SecurityProgramRecord(
+                    program_id=db_p.id,
+                    program_fingerprint=db_p.program_fingerprint,
+                    name=db_p.name,
+                    description=db_p.description,
+                    category=db_p.category,
+                    severity=ProgramSeverity(db_p.severity),
+                    status=ProgramStatus(db_p.status),
+                    program_score=float(db_p.program_score),
+                    objectives=objs,
+                    initiatives=inits,
+                    scope_id=db_p.scope_id,
+                    created_at=db_p.created_at,
+                    updated_at=db_p.updated_at,
+                )
+                cls._programs[db_p.id] = record
+                cls._fingerprint_lookup[db_p.program_fingerprint] = db_p.id
+
+    @classmethod
     def get_all_programs(cls) -> List[SecurityProgramRecord]:
         """Retrieve all security program records."""
         return list(cls._programs.values())
@@ -120,6 +177,7 @@ class SecurityProgramService:
 
         fingerprint = ProgramFingerprintService.generate_fingerprint(name, category, severity)
         existing = cls.get_program_by_fingerprint(fingerprint)
+        tenant_id = get_current_tenant_id() or uuid.UUID("00000000-0000-0000-0000-000000000000")
 
         if existing:
             if existing.status in [ProgramStatus.COMPLETED, ProgramStatus.CLOSED]:
@@ -146,19 +204,39 @@ class SecurityProgramService:
             if existing.program_score != new_score:
                 existing.program_score = new_score
                 changed = True
-                ProgramHistoryService.record_event(
-                    existing.program_id,
-                    "EFFECTIVENESS_CHANGED",
-                    f"Health score recalculated: {new_score}",
-                )
 
             if changed:
                 existing.updated_at = datetime.now(timezone.utc)
-                ProgramHistoryService.record_event(
-                    existing.program_id,
-                    "DRIFT_DETECTED",
-                    f"Program synced: score={existing.program_score}",
-                )
+                async with UnitOfWork() as uow:
+                    db_p = await uow.program_repo.get(existing.program_id)
+                    if db_p:
+                        db_p.description = existing.description
+                        db_p.program_score = existing.program_score
+                        db_p.updated_at = existing.updated_at
+                        await ProgramHistoryService.record_event(
+                            existing.program_id,
+                            "EFFECTIVENESS_CHANGED",
+                            f"Health score recalculated: {new_score}",
+                            uow=uow,
+                        )
+                        await ProgramHistoryService.record_event(
+                            existing.program_id,
+                            "DRIFT_DETECTED",
+                            f"Program synced: score={existing.program_score}",
+                            uow=uow,
+                        )
+                        # Stage outbox event
+                        outbox_evt = IntelligenceEvent(
+                            tenant_id=tenant_id,
+                            event_type="program.updated",
+                            payload={
+                                "program_id": str(existing.program_id),
+                                "status": existing.status.value,
+                            }
+                        )
+                        uow.session.add(outbox_evt)
+                        await uow.commit()
+
             return existing
 
         # Create new security program record
@@ -188,11 +266,63 @@ class SecurityProgramService:
         cls._programs[program_id] = record
         cls._fingerprint_lookup[fingerprint] = program_id
 
-        ProgramHistoryService.record_event(
-            program_id,
-            "CREATED",
-            f"Created security program: '{name}' ({category})",
-        )
+        async with UnitOfWork() as uow:
+            db_p = DBProgram(
+                tenant_id=tenant_id,
+                id=program_id,
+                program_fingerprint=fingerprint,
+                name=name,
+                description=description,
+                category=category,
+                severity=severity.value,
+                status=ProgramStatus.PLANNED.value,
+                program_score=prog_score,
+                scope_id=scope_id,
+            )
+            await uow.program_repo.save(db_p)
+
+            for o in objectives:
+                db_o = SecurityProgramObjective(
+                    tenant_id=tenant_id,
+                    objective_id=o.objective_id,
+                    program_id=program_id,
+                    name=o.name,
+                    description=o.description,
+                    completion_percentage=o.completion_percentage,
+                )
+                await uow.program_repo.save_objective(db_o)
+
+            for i in initiatives:
+                db_i = SecurityProgramInitiative(
+                    tenant_id=tenant_id,
+                    initiative_id=i.initiative_id,
+                    program_id=program_id,
+                    name=i.name,
+                    description=i.description,
+                    status=i.status,
+                    completion_percentage=i.completion_percentage,
+                )
+                await uow.program_repo.save_initiative(db_i)
+
+            await ProgramHistoryService.record_event(
+                program_id,
+                "CREATED",
+                f"Created security program: '{name}' ({category})",
+                uow=uow,
+            )
+
+            # Stage outbox event
+            outbox_evt = IntelligenceEvent(
+                tenant_id=tenant_id,
+                event_type="program.created",
+                payload={
+                    "program_id": str(program_id),
+                    "status": ProgramStatus.PLANNED.value,
+                }
+            )
+            uow.session.add(outbox_evt)
+            await uow.commit()
+
         return record
 
     @classmethod
@@ -224,7 +354,7 @@ class SecurityProgramService:
         return synced
 
     @classmethod
-    def transition_program_status(cls, program_id: uuid.UUID, new_status: ProgramStatus) -> SecurityProgramRecord:
+    async def transition_program_status(cls, program_id: uuid.UUID, new_status: ProgramStatus) -> SecurityProgramRecord:
         """Transition program status safely, enforcing terminal states."""
         program = cls.get_program(program_id)
         if not program:
@@ -238,11 +368,30 @@ class SecurityProgramService:
         program.status = new_status
         program.updated_at = datetime.now(timezone.utc)
         
-        ProgramHistoryService.record_event(
-            program_id,
-            "STATUS_CHANGED",
-            f"Status transitioned from {old_status.value} to {new_status.value}",
-        )
+        tenant_id = get_current_tenant_id() or uuid.UUID("00000000-0000-0000-0000-000000000000")
+        async with UnitOfWork() as uow:
+            db_p = await uow.program_repo.get(program_id)
+            if db_p:
+                db_p.status = new_status.value
+                db_p.updated_at = program.updated_at
+                await ProgramHistoryService.record_event(
+                    program_id,
+                    "STATUS_CHANGED",
+                    f"Status transitioned from {old_status.value} to {new_status.value}",
+                    uow=uow,
+                )
+                # Stage outbox event
+                outbox_evt = IntelligenceEvent(
+                    tenant_id=tenant_id,
+                    event_type="program.status_changed",
+                    payload={
+                        "program_id": str(program_id),
+                        "status": new_status.value,
+                    }
+                )
+                uow.session.add(outbox_evt)
+                await uow.commit()
+
         return program
 
     @classmethod

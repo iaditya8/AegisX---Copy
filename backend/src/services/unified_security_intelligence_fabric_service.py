@@ -2,6 +2,7 @@ import uuid
 from datetime import datetime, timezone
 from typing import Dict, List, Optional
 
+from sqlalchemy.ext.asyncio import AsyncSession
 from src.domain.entities.security_intelligence_fabric import (
     FabricIntelligenceNodeResponse,
     FabricStatus,
@@ -11,15 +12,18 @@ from src.services.intelligence_source_registry import IntelligenceSourceRegistry
 from src.services.fabric_fingerprint_service import FabricFingerprintService
 from src.services.fabric_history_service import FabricHistoryService
 from src.services.confidence_weight_registry import ConfidenceWeightRegistry
-
-
 from src.infrastructure.cache.cache_dict import CacheDict
+from src.infrastructure.database.unit_of_work import UnitOfWork
+from src.infrastructure.database.models import (
+    SecurityIntelligenceFabricNode as DBNode,
+    IntelligenceEvent,
+)
+from src.core.tenant import get_current_tenant_id
 
 
 class UnifiedSecurityIntelligenceFabricService:
-    # in-memory store: node_id -> FabricIntelligenceNodeResponse
+    # L2 caches
     _fabric_nodes = CacheDict("intelligence_fabric")
-    # fingerprint -> node_id
     _fingerprint_lookup = CacheDict("intelligence_fabric_fingerprints")
 
     @classmethod
@@ -28,6 +32,28 @@ class UnifiedSecurityIntelligenceFabricService:
         cls._fabric_nodes.clear()
         cls._fingerprint_lookup.clear()
         FabricHistoryService.clear_history()
+
+    @classmethod
+    async def bootstrap(cls, db: AsyncSession) -> None:
+        """Bootstrap L2 cache from PostgreSQL database."""
+        cls.clear_fabric()
+        async with UnitOfWork() as uow:
+            db_nodes = await uow.fabric_repo.list()
+            for db_n in db_nodes:
+                node = FabricIntelligenceNodeResponse(
+                    node_id=db_n.id,
+                    node_fingerprint=db_n.node_fingerprint,
+                    source_type=db_n.source_type,
+                    status=FabricStatus(db_n.status),
+                    priority=FabricPriority(db_n.priority),
+                    scope_id=db_n.scope_id,
+                    created_at=db_n.created_at,
+                    updated_at=db_n.updated_at,
+                    confidence_weights=db_n.confidence_weights,
+                    target_links=db_n.target_links,
+                )
+                cls._fabric_nodes[db_n.id] = node
+                cls._fingerprint_lookup[db_n.node_fingerprint] = db_n.id
 
     @classmethod
     def get_all_fabric_nodes(cls) -> List[FabricIntelligenceNodeResponse]:
@@ -59,7 +85,7 @@ class UnifiedSecurityIntelligenceFabricService:
         return None
 
     @classmethod
-    def create_or_sync_fabric_node(
+    async def create_or_sync_fabric_node(
         cls,
         source_type: str,
         scope_id: Optional[uuid.UUID] = None,
@@ -72,27 +98,50 @@ class UnifiedSecurityIntelligenceFabricService:
             raise ValueError(f"Invalid Intelligence Source Type: {source_type}")
 
         val_scope_id = cls._get_uuid(scope_id)
-
-        # Generate stable fingerprint
         fingerprint = FabricFingerprintService.generate_fingerprint(source_type, val_scope_id, rules_hash)
 
         existing = cls.get_node_by_fingerprint(fingerprint)
+        tenant_id = get_current_tenant_id() or uuid.UUID("00000000-0000-0000-0000-000000000000")
+
         if existing:
-            # Enforce Fabric Terminal State Rule: sync cannot reactivate TERMINATED fabric elements
             if existing.status == FabricStatus.TERMINATED:
                 return existing
 
-            # Identity preservation
+            changed = False
             if target_links:
-                existing.target_links = list(set(existing.target_links + target_links))
-            
-            existing.updated_at = datetime.now(timezone.utc)
+                new_links = list(set(existing.target_links + target_links))
+                if len(new_links) != len(existing.target_links):
+                    existing.target_links = new_links
+                    changed = True
+
+            if changed:
+                existing.updated_at = datetime.now(timezone.utc)
+                async with UnitOfWork() as uow:
+                    db_n = await uow.fabric_repo.get(existing.node_id)
+                    if db_n:
+                        db_n.target_links = existing.target_links
+                        db_n.updated_at = existing.updated_at
+                        await FabricHistoryService.record_event(
+                            existing.node_id,
+                            "FABRIC_UPDATED",
+                            f"Updated fabric node link associations: {existing.target_links}",
+                            uow=uow,
+                        )
+                        # Stage outbox event
+                        outbox_evt = IntelligenceEvent(
+                            tenant_id=tenant_id,
+                            event_type="fabric.updated",
+                            payload={
+                                "node_id": str(existing.node_id),
+                                "status": existing.status.value,
+                            }
+                        )
+                        uow.session.add(outbox_evt)
+                        await uow.commit()
+
             return existing
 
-        # Retrieve weight params
         params = ConfidenceWeightRegistry.get_parameters(source_type)
-
-        # Create new node
         node_id = uuid.uuid4()
         node = FabricIntelligenceNodeResponse(
             node_id=node_id,
@@ -114,35 +163,74 @@ class UnifiedSecurityIntelligenceFabricService:
         cls._fabric_nodes[node_id] = node
         cls._fingerprint_lookup[fingerprint] = node_id
 
-        # Record history event
-        FabricHistoryService.record_event(
-            node_id, "FABRIC_CREATED", f"Created fabric node for source: {source_type}"
-        )
+        async with UnitOfWork() as uow:
+            db_n = DBNode(
+                tenant_id=tenant_id,
+                id=node_id,
+                node_fingerprint=fingerprint,
+                source_type=node.source_type,
+                status=FabricStatus.ACTIVE.value,
+                priority=priority.value,
+                scope_id=val_scope_id,
+                confidence_weights=node.confidence_weights,
+                target_links=node.target_links,
+            )
+            await uow.fabric_repo.save(db_n)
+            await FabricHistoryService.record_event(
+                node_id, "FABRIC_CREATED", f"Created fabric node for source: {source_type}", uow=uow
+            )
+            # Stage outbox event
+            outbox_evt = IntelligenceEvent(
+                tenant_id=tenant_id,
+                event_type="fabric.created",
+                payload={
+                    "node_id": str(node_id),
+                    "status": FabricStatus.ACTIVE.value,
+                }
+            )
+            uow.session.add(outbox_evt)
+            await uow.commit()
 
         return node
 
     @classmethod
-    def suspend_fabric_node(cls, node_id: uuid.UUID) -> FabricIntelligenceNodeResponse:
+    async def suspend_fabric_node(cls, node_id: uuid.UUID) -> FabricIntelligenceNodeResponse:
         """Suspend the fabric node."""
         node = cls.get_fabric_node(node_id)
         if not node:
             raise ValueError(f"Fabric node with ID {node_id} not found")
 
-        # Enforce Fabric Terminal State Rule
         if node.status == FabricStatus.TERMINATED:
             return node
 
         if node.status != FabricStatus.SUSPENDED:
             node.status = FabricStatus.SUSPENDED
             node.updated_at = datetime.now(timezone.utc)
-            FabricHistoryService.record_event(
-                node_id, "SUSPENDED", "Fabric node suspended by operator"
-            )
+            tenant_id = get_current_tenant_id() or uuid.UUID("00000000-0000-0000-0000-000000000000")
+            async with UnitOfWork() as uow:
+                db_n = await uow.fabric_repo.get(node_id)
+                if db_n:
+                    db_n.status = FabricStatus.SUSPENDED.value
+                    db_n.updated_at = node.updated_at
+                    await FabricHistoryService.record_event(
+                        node_id, "SUSPENDED", "Fabric node suspended by operator", uow=uow
+                    )
+                    # Stage outbox event
+                    outbox_evt = IntelligenceEvent(
+                        tenant_id=tenant_id,
+                        event_type="fabric.suspended",
+                        payload={
+                            "node_id": str(node_id),
+                            "status": FabricStatus.SUSPENDED.value,
+                        }
+                    )
+                    uow.session.add(outbox_evt)
+                    await uow.commit()
 
         return node
 
     @classmethod
-    def terminate_fabric_node(cls, node_id: uuid.UUID) -> FabricIntelligenceNodeResponse:
+    async def terminate_fabric_node(cls, node_id: uuid.UUID) -> FabricIntelligenceNodeResponse:
         """Terminate the fabric node (terminal state)."""
         node = cls.get_fabric_node(node_id)
         if not node:
@@ -151,9 +239,26 @@ class UnifiedSecurityIntelligenceFabricService:
         if node.status != FabricStatus.TERMINATED:
             node.status = FabricStatus.TERMINATED
             node.updated_at = datetime.now(timezone.utc)
-            FabricHistoryService.record_event(
-                node_id, "TERMINATED", "Fabric node terminated by operator"
-            )
+            tenant_id = get_current_tenant_id() or uuid.UUID("00000000-0000-0000-0000-000000000000")
+            async with UnitOfWork() as uow:
+                db_n = await uow.fabric_repo.get(node_id)
+                if db_n:
+                    db_n.status = FabricStatus.TERMINATED.value
+                    db_n.updated_at = node.updated_at
+                    await FabricHistoryService.record_event(
+                        node_id, "TERMINATED", "Fabric node terminated by operator", uow=uow
+                    )
+                    # Stage outbox event
+                    outbox_evt = IntelligenceEvent(
+                        tenant_id=tenant_id,
+                        event_type="fabric.terminated",
+                        payload={
+                            "node_id": str(node_id),
+                            "status": FabricStatus.TERMINATED.value,
+                        }
+                    )
+                    uow.session.add(outbox_evt)
+                    await uow.commit()
 
         return node
 
@@ -164,9 +269,7 @@ class UnifiedSecurityIntelligenceFabricService:
         from src.services.threat_intelligence_service import ThreatIntelligenceService
         threats = ThreatIntelligenceService.get_all_threats()
         for t in threats:
-            # Sync threat nodes in the fabric
-            # Map threat node target links to decisions/assets
-            cls.create_or_sync_fabric_node(
+            await cls.create_or_sync_fabric_node(
                 source_type="THREAT_INTEL",
                 scope_id=t.scope_id,
                 priority=FabricPriority.HIGH,
@@ -178,7 +281,7 @@ class UnifiedSecurityIntelligenceFabricService:
         from src.services.security_decision_service import SecurityDecisionService
         decisions = SecurityDecisionService.get_all_decisions()
         for d in decisions:
-            cls.create_or_sync_fabric_node(
+            await cls.create_or_sync_fabric_node(
                 source_type="RISK",
                 scope_id=d.scope_id,
                 priority=FabricPriority.MEDIUM,
@@ -190,7 +293,7 @@ class UnifiedSecurityIntelligenceFabricService:
         from src.services.autonomous_security_planning_service import AutonomousSecurityPlanningService
         plans = AutonomousSecurityPlanningService.get_all_plans()
         for p in plans:
-            cls.create_or_sync_fabric_node(
+            await cls.create_or_sync_fabric_node(
                 source_type="POSTURE",
                 scope_id=p.scope_id,
                 priority=FabricPriority.HIGH,

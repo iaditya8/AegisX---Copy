@@ -190,19 +190,21 @@ def test_incident_fingerprint_stability() -> None:
     assert fp1 == fp2
 
 
-def test_incident_history_preservation() -> None:
+@pytest.mark.asyncio
+async def test_incident_history_preservation(mock_db) -> None:
     """Verify history log entries are immutable and append correctly."""
     iid = uuid.uuid4()
-    IncidentHistoryService.record_event(iid, "CREATED", "First event")
-    IncidentHistoryService.record_event(iid, "ASSIGNED", "Second event")
+    await IncidentHistoryService.record_event(iid, "CREATED", "First event")
+    await IncidentHistoryService.record_event(iid, "ASSIGNED", "Second event")
 
-    history = IncidentHistoryService.get_history(iid)
+    history = await IncidentHistoryService.get_history(iid)
     assert len(history) == 2
     assert history[0].event_type == "CREATED"
     assert history[1].event_type == "ASSIGNED"
 
 
-def test_incident_evidence_stability() -> None:
+@pytest.mark.asyncio
+async def test_incident_evidence_stability(mock_db) -> None:
     """Verify evidence references are read-only and retain original snapshots."""
     iid = uuid.uuid4()
 
@@ -216,16 +218,16 @@ def test_incident_evidence_stability() -> None:
 
     alert_id = uuid.uuid4()
     ent = DummyAlert(alert_id, "HIGH")
-    IncidentEvidenceService.add_evidence(iid, "alerts", ent)
+    await IncidentEvidenceService.add_evidence(iid, "alerts", ent)
 
     # Check if duplicate is ignored
     ent2 = DummyAlert(alert_id, "CRITICAL")
-    IncidentEvidenceService.add_evidence(iid, "alerts", ent2)
+    await IncidentEvidenceService.add_evidence(iid, "alerts", ent2)
 
-    evidence = IncidentEvidenceService.get_evidence(iid)
+    evidence = await IncidentEvidenceService.get_evidence(iid)
     assert len(evidence["alerts"]) == 1
     # Preserve original severity snapshot
-    assert evidence["alerts"][0].severity == "HIGH"
+    assert evidence["alerts"][0]["severity"] == "HIGH"
 
 
 @pytest.mark.asyncio
@@ -368,7 +370,7 @@ async def test_incident_assignment(mock_db) -> None:
     owner_id = uuid.uuid4()
     await IncidentService.assign_incident(mock_db, iid, owner_id)
     assert inc.owner == owner_id
-    history = IncidentHistoryService.get_history(iid)
+    history = await IncidentHistoryService.get_history(iid)
     assert history[0].event_type == "ASSIGNED"
 
 
@@ -391,7 +393,7 @@ async def test_incident_escalation_manual_team(mock_db) -> None:
 
     await IncidentEscalationService.escalate_to_team(mock_db, iid, "SOC-L3")
     assert inc.status == IncidentStatus.ESCALATED
-    history = IncidentHistoryService.get_history(iid)
+    history = await IncidentHistoryService.get_history(iid)
     assert any(h.event_type == "ESCALATED" for h in history)
     assert any("SOC-L3" in h.details for h in history)
 
@@ -462,7 +464,7 @@ async def test_incident_escalation_auto_sla(mock_db) -> None:
 
     await IncidentEscalationService.process_escalations(mock_db)
     assert inc.status == IncidentStatus.ESCALATED
-    history = IncidentHistoryService.get_history(iid)
+    history = await IncidentHistoryService.get_history(iid)
     assert any(h.event_type == "AUTO_ESCALATED" for h in history)
 
 
@@ -720,7 +722,7 @@ async def test_api_timeline(client, mock_admin, mock_db) -> None:
     )
     IncidentService._incidents[iid] = inc
 
-    IncidentHistoryService.record_event(iid, "CREATED", "First event")
+    await IncidentHistoryService.record_event(iid, "CREATED", "First event")
 
     headers = get_auth_header(ADMIN_ID, "admin")
     res = await client.get(f"/api/v1/incidents/{iid}/timeline", headers=headers)
@@ -753,7 +755,7 @@ async def test_api_evidence(client, mock_admin, mock_db) -> None:
             return DummyAlert(self.alert_id, self.status)
 
     alert_id = uuid.uuid4()
-    IncidentEvidenceService.add_evidence(iid, "alerts", DummyAlert(alert_id, "OPEN"))
+    await IncidentEvidenceService.add_evidence(iid, "alerts", DummyAlert(alert_id, "OPEN"))
 
     headers = get_auth_header(ADMIN_ID, "admin")
     res = await client.get(f"/api/v1/incidents/{iid}/evidence", headers=headers)
@@ -784,7 +786,7 @@ async def test_api_add_note(client, mock_admin, mock_db) -> None:
         headers=headers,
     )
     assert res.status_code == 200
-    entries = InvestigationService.get_investigation_timeline(iid)
+    entries = await InvestigationService.get_investigation_timeline(iid)
     assert len(entries) == 1
     assert entries[0].notes == "investigation note"
 

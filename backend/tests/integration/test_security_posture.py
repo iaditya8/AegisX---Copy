@@ -301,39 +301,46 @@ def test_fingerprint_length():
 
 # --- 3. History Preservation Tests (5 tests) ---
 
-def test_posture_history_empty():
-    assert len(PostureHistoryService.get_history(uuid.uuid4())) == 0
+@pytest.mark.asyncio
+async def test_posture_history_empty(mock_db):
+    assert len(await PostureHistoryService.get_history(uuid.uuid4())) == 0
 
 
-def test_posture_history_record():
+@pytest.mark.asyncio
+async def test_posture_history_record(mock_db):
     pid = uuid.uuid4()
-    entry = PostureHistoryService.record_event(pid, "CREATED", "Created")
+    entry = await PostureHistoryService.record_event(pid, "CREATED", "Created")
     assert entry.posture_id == pid
     assert entry.event_type == "CREATED"
 
 
-def test_posture_history_preserved():
+@pytest.mark.asyncio
+async def test_posture_history_preserved(mock_db):
     pid = uuid.uuid4()
-    PostureHistoryService.record_event(pid, "CREATED", "Created")
-    history = PostureHistoryService.get_history(pid)
+    await PostureHistoryService.record_event(pid, "CREATED", "Created")
+    history = await PostureHistoryService.get_history(pid)
     assert len(history) == 1
     assert history[0].event_type == "CREATED"
 
 
-def test_posture_history_deepcopied():
+@pytest.mark.asyncio
+async def test_posture_history_deepcopied(mock_db):
     pid = uuid.uuid4()
-    entry = PostureHistoryService.record_event(pid, "CREATED", "Created")
-    history1 = PostureHistoryService.get_history(pid)
-    history2 = PostureHistoryService.get_history(pid)
+    entry = await PostureHistoryService.record_event(pid, "CREATED", "Created")
+    history1 = await PostureHistoryService.get_history(pid)
+    history2 = await PostureHistoryService.get_history(pid)
     assert history1 is not history2
     assert history1[0] == history2[0]
 
 
-def test_posture_history_clear():
+@pytest.mark.asyncio
+async def test_posture_history_clear(mock_db):
+    from src.infrastructure.database.models import SecurityPostureHistory
     pid = uuid.uuid4()
-    PostureHistoryService.record_event(pid, "CREATED", "Created")
+    await PostureHistoryService.record_event(pid, "CREATED", "Created")
     PostureHistoryService.clear_history()
-    assert len(PostureHistoryService.get_history(pid)) == 0
+    mock_db._entities[SecurityPostureHistory] = []
+    assert len(await PostureHistoryService.get_history(pid)) == 0
 
 
 # --- 4. Risk Scoring & Prioritization Tests (6 tests) ---
@@ -619,7 +626,7 @@ async def test_posture_accept_transition(mock_db):
     p = await SecurityPostureService.create_or_sync_posture(
         "Posture Title", "Desc", RiskCategory.VULNERABILITY, PostureSeverity.HIGH, ASSET_ID, "src"
     )
-    updated = SecurityPostureService.accept_risk(p.posture_id)
+    updated = await SecurityPostureService.accept_risk(p.posture_id)
     assert updated.status == RiskStatus.ACCEPTED
 
 
@@ -629,7 +636,7 @@ async def test_posture_mitigate_transition(mock_db):
     p = await SecurityPostureService.create_or_sync_posture(
         "Posture Title", "Desc", RiskCategory.VULNERABILITY, PostureSeverity.HIGH, ASSET_ID, "src"
     )
-    updated = SecurityPostureService.mitigate_risk(p.posture_id)
+    updated = await SecurityPostureService.mitigate_risk(p.posture_id)
     assert updated.status == RiskStatus.MITIGATED
 
 
@@ -639,7 +646,7 @@ async def test_posture_close_transition(mock_db):
     p = await SecurityPostureService.create_or_sync_posture(
         "Posture Title", "Desc", RiskCategory.VULNERABILITY, PostureSeverity.HIGH, ASSET_ID, "src"
     )
-    updated = SecurityPostureService.close_posture(p.posture_id)
+    updated = await SecurityPostureService.close_posture(p.posture_id)
     assert updated.status == RiskStatus.CLOSED
 
 
@@ -649,7 +656,7 @@ async def test_posture_identity_preserved_after_acceptance(mock_db):
     p = await SecurityPostureService.create_or_sync_posture(
         "Posture Title", "Desc", RiskCategory.VULNERABILITY, PostureSeverity.HIGH, ASSET_ID, "src"
     )
-    SecurityPostureService.accept_risk(p.posture_id)
+    await SecurityPostureService.accept_risk(p.posture_id)
     p2 = await SecurityPostureService.create_or_sync_posture(
         "Posture Title", "Desc", RiskCategory.VULNERABILITY, PostureSeverity.HIGH, ASSET_ID, "src"
     )
@@ -663,7 +670,7 @@ async def test_posture_identity_preserved_after_mitigation(mock_db):
     p = await SecurityPostureService.create_or_sync_posture(
         "Posture Title", "Desc", RiskCategory.VULNERABILITY, PostureSeverity.HIGH, ASSET_ID, "src"
     )
-    SecurityPostureService.mitigate_risk(p.posture_id)
+    await SecurityPostureService.mitigate_risk(p.posture_id)
     p2 = await SecurityPostureService.create_or_sync_posture(
         "Posture Title", "Desc", RiskCategory.VULNERABILITY, PostureSeverity.HIGH, ASSET_ID, "src"
     )
@@ -677,7 +684,7 @@ async def test_posture_identity_preserved_after_closure(mock_db):
     p = await SecurityPostureService.create_or_sync_posture(
         "Posture Title", "Desc", RiskCategory.VULNERABILITY, PostureSeverity.HIGH, ASSET_ID, "src"
     )
-    SecurityPostureService.close_posture(p.posture_id)
+    await SecurityPostureService.close_posture(p.posture_id)
     p2 = await SecurityPostureService.create_or_sync_posture(
         "Posture Title", "Desc", RiskCategory.VULNERABILITY, PostureSeverity.HIGH, ASSET_ID, "src"
     )
@@ -691,9 +698,9 @@ async def test_posture_terminal_state_enforcement(mock_db):
     p = await SecurityPostureService.create_or_sync_posture(
         "Posture Title", "Desc", RiskCategory.VULNERABILITY, PostureSeverity.HIGH, ASSET_ID, "src"
     )
-    SecurityPostureService.close_posture(p.posture_id)
+    await SecurityPostureService.close_posture(p.posture_id)
     with pytest.raises(ValueError):
-        SecurityPostureService.accept_risk(p.posture_id)
+        await SecurityPostureService.accept_risk(p.posture_id)
 
 
 @pytest.mark.asyncio
@@ -702,7 +709,7 @@ async def test_posture_terminal_state_not_reactivated_by_sync(mock_db):
     p = await SecurityPostureService.create_or_sync_posture(
         "Posture Title", "Desc", RiskCategory.VULNERABILITY, PostureSeverity.HIGH, ASSET_ID, "src"
     )
-    SecurityPostureService.close_posture(p.posture_id)
+    await SecurityPostureService.close_posture(p.posture_id)
     
     # Run sync to verify CLOSED is preserved
     p2 = await SecurityPostureService.create_or_sync_posture(

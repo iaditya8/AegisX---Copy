@@ -78,7 +78,10 @@ async def list_hunts(
         allowed_scopes = await get_allowed_scope_ids(db, current_user)
         hunts = [h for h in hunts if h.scope_id is None or h.scope_id in allowed_scopes]
 
-    return [HuntService.to_response(h) for h in hunts]
+    res = []
+    for h in hunts:
+        res.append(await HuntService.to_response(h))
+    return res
 
 
 @router.get("/hunts/metrics")
@@ -123,7 +126,7 @@ async def get_hunt(
             detail="Forbidden: Access to global hunts requires admin role",
         )
 
-    return HuntService.to_response(hunt)
+    return await HuntService.to_response(hunt)
 
 
 @router.post("/hunts", response_model=HuntResponse, status_code=status.HTTP_201_CREATED)
@@ -142,7 +145,7 @@ async def create_or_sync_hunt(
         )
 
     try:
-        hunt = HuntService.create_or_sync_hunt(
+        hunt = await HuntService.create_or_sync_hunt(
             title=req.title,
             description=req.description,
             hunt_type=req.hunt_type,
@@ -151,7 +154,7 @@ async def create_or_sync_hunt(
             owner_id=req.owner_id,
             related_entities=req.related_entities,
         )
-        return HuntService.to_response(hunt)
+        return await HuntService.to_response(hunt)
     except ValueError as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -182,10 +185,10 @@ async def activate_hunt(
         )
 
     try:
-        activated = HuntService.activate_hunt(hunt_id, user_id=current_user.id)
+        activated = await HuntService.activate_hunt(hunt_id, user_id=current_user.id)
         # Force snapshot rebuild
         HuntSnapshotService.generate_snapshot(hunt.scope_id)
-        return HuntService.to_response(activated)
+        return await HuntService.to_response(activated)
     except ValueError as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -216,9 +219,9 @@ async def review_hunt(
         )
 
     try:
-        reviewed = HuntService.review_hunt(hunt_id)
+        reviewed = await HuntService.review_hunt(hunt_id)
         HuntSnapshotService.generate_snapshot(hunt.scope_id)
-        return HuntService.to_response(reviewed)
+        return await HuntService.to_response(reviewed)
     except ValueError as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -249,9 +252,9 @@ async def complete_hunt(
         )
 
     try:
-        completed = HuntService.complete_hunt(hunt_id)
+        completed = await HuntService.complete_hunt(hunt_id)
         HuntSnapshotService.generate_snapshot(hunt.scope_id)
-        return HuntService.to_response(completed)
+        return await HuntService.to_response(completed)
     except ValueError as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -282,9 +285,9 @@ async def close_hunt(
         )
 
     try:
-        closed = HuntService.close_hunt(hunt_id)
+        closed = await HuntService.close_hunt(hunt_id)
         HuntSnapshotService.generate_snapshot(hunt.scope_id)
-        return HuntService.to_response(closed)
+        return await HuntService.to_response(closed)
     except ValueError as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -315,9 +318,9 @@ async def escalate_hunt(
         )
 
     try:
-        escalated = HuntService.escalate_hunt(hunt_id)
+        escalated = await HuntService.escalate_hunt(hunt_id)
         HuntSnapshotService.generate_snapshot(hunt.scope_id)
-        return HuntService.to_response(escalated)
+        return await HuntService.to_response(escalated)
     except ValueError as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,

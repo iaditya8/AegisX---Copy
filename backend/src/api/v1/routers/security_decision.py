@@ -80,7 +80,7 @@ async def create_decision(
     if req.scope_id:
         await check_scope_ownership(db, req.scope_id, current_user)
 
-    decision = SecurityDecisionService.create_or_sync_decision(
+    decision = await SecurityDecisionService.create_or_sync_decision(
         decision_type=req.decision_type,
         target_entity_id=req.target_entity_id,
         option_name=req.option_name,
@@ -106,7 +106,7 @@ async def recommend_decision(
     if decision.scope_id:
         await check_scope_ownership(db, decision.scope_id, current_user)
 
-    updated = SecurityDecisionService.recommend_decision(id)
+    updated = await SecurityDecisionService.recommend_decision(id)
     return updated
 
 
@@ -127,7 +127,7 @@ async def commit_decision(
     if decision.scope_id:
         await check_scope_ownership(db, decision.scope_id, current_user)
 
-    updated = SecurityDecisionService.commit_decision(id)
+    updated = await SecurityDecisionService.commit_decision(id)
     return updated
 
 
@@ -148,7 +148,7 @@ async def archive_decision(
     if decision.scope_id:
         await check_scope_ownership(db, decision.scope_id, current_user)
 
-    updated = SecurityDecisionService.archive_decision(id)
+    updated = await SecurityDecisionService.archive_decision(id)
     return updated
 
 

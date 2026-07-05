@@ -228,6 +228,6 @@ async def transition_program_status(
             detail="Cannot modify status of a completed or closed program",
         )
 
-    record = SecurityProgramService.transition_program_status(id, req.status)
+    record = await SecurityProgramService.transition_program_status(id, req.status)
     data = SecurityProgramService.to_response(record)
     return StandardResponse(data=data)

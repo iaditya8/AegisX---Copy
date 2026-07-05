@@ -7,6 +7,15 @@ from src.infrastructure.repositories.knowledge_repository import KnowledgeReposi
 from src.infrastructure.repositories.threat_repository import ThreatRepository
 from src.infrastructure.repositories.cyber_risk_repository import CyberRiskRepository
 from src.infrastructure.repositories.graph_repository import GraphRepository
+from src.infrastructure.repositories.incident_repository import IncidentRepository
+from src.infrastructure.repositories.risk_acceptance_repository import RiskAcceptanceRepository
+from src.infrastructure.repositories.remediation_repository import RemediationRepository
+from src.infrastructure.repositories.hunt_repository import HuntRepository
+from src.infrastructure.repositories.fabric_repository import FabricRepository
+from src.infrastructure.repositories.posture_repository import PostureRepository
+from src.infrastructure.repositories.decision_repository import DecisionRepository
+from src.infrastructure.repositories.program_repository import ProgramRepository
+from src.infrastructure.repositories.purple_team_repository import PurpleTeamRepository
 
 __all__ = [
     "BaseRepository",
@@ -18,4 +27,13 @@ __all__ = [
     "ThreatRepository",
     "CyberRiskRepository",
     "GraphRepository",
+    "IncidentRepository",
+    "RiskAcceptanceRepository",
+    "RemediationRepository",
+    "HuntRepository",
+    "FabricRepository",
+    "PostureRepository",
+    "DecisionRepository",
+    "ProgramRepository",
+    "PurpleTeamRepository",
 ]

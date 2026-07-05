@@ -38,24 +38,15 @@ def get_auth_header(user_id: uuid.UUID, role: str) -> dict:
     return {"Authorization": f"Bearer {token}"}
 
 
-@pytest.fixture
-def mock_db():
-    db = MagicMock()
-    mock_result = MagicMock()
-    mock_result.scalars.return_value.all.return_value = []
-    mock_result.scalar_one_or_none.return_value = None
-    db.execute = AsyncMock(return_value=mock_result)
-    db.get = AsyncMock()
-    db.commit = AsyncMock()
-    db.refresh = AsyncMock()
-    return db
+
 
 
 # --- Decision Structures & Lifecycle ---
 
-def test_decision_auto_creation():
+@pytest.mark.asyncio
+async def test_decision_auto_creation(mock_db):
     """Verify decisions can be synced/created dynamically and validates types."""
-    d = SecurityDecisionService.create_or_sync_decision(
+    d = await SecurityDecisionService.create_or_sync_decision(
         decision_type=DecisionType.REMEDIATION,
         target_entity_id=uuid.uuid4(),
         option_name="Remediate Target Server",
@@ -66,110 +57,118 @@ def test_decision_auto_creation():
 
     # Invalid Decision Type
     with pytest.raises(ValueError):
-        SecurityDecisionService.create_or_sync_decision(
+        await SecurityDecisionService.create_or_sync_decision(
             decision_type="INVALID_TYPE",
             target_entity_id=uuid.uuid4(),
             option_name="Invalid Type Options",
         )
 
 
-def test_decision_fingerprint_stability():
+@pytest.mark.asyncio
+async def test_decision_fingerprint_stability(mock_db):
     """Verify SHA-256 fingerprints are deterministic and stable across identical calls."""
     ent_id = uuid.uuid4()
     opt_name = "Patch Server CVEs"
-    d1 = SecurityDecisionService.create_or_sync_decision(DecisionType.REMEDIATION, ent_id, opt_name)
-    d2 = SecurityDecisionService.create_or_sync_decision(DecisionType.REMEDIATION, ent_id, opt_name)
+    d1 = await SecurityDecisionService.create_or_sync_decision(DecisionType.REMEDIATION, ent_id, opt_name)
+    d2 = await SecurityDecisionService.create_or_sync_decision(DecisionType.REMEDIATION, ent_id, opt_name)
     assert d1.decision_fingerprint == d2.decision_fingerprint
     assert d1.decision_id == d2.decision_id
 
 
-def test_decision_identity_preservation():
+@pytest.mark.asyncio
+async def test_decision_identity_preservation(mock_db):
     """Verify syncing identical components preserves the original decision IDs and history."""
     ent_id = uuid.uuid4()
     opt_name = "Update Firewall Rules"
-    d1 = SecurityDecisionService.create_or_sync_decision(DecisionType.MITIGATION, ent_id, opt_name, SCOPE_ID)
-    history1 = DecisionHistoryService.get_history(d1.decision_id)
+    d1 = await SecurityDecisionService.create_or_sync_decision(DecisionType.MITIGATION, ent_id, opt_name, SCOPE_ID)
+    history1 = await DecisionHistoryService.get_history(d1.decision_id)
 
-    d2 = SecurityDecisionService.create_or_sync_decision(DecisionType.MITIGATION, ent_id, opt_name, SCOPE_ID)
+    d2 = await SecurityDecisionService.create_or_sync_decision(DecisionType.MITIGATION, ent_id, opt_name, SCOPE_ID)
 
     assert d1.decision_id == d2.decision_id
-    assert DecisionHistoryService.get_history(d2.decision_id) == history1
+    assert await DecisionHistoryService.get_history(d2.decision_id) == history1
 
 
-def test_decision_duplicate_prevention():
+@pytest.mark.asyncio
+async def test_decision_duplicate_prevention(mock_db):
     """Verify that redundant sync calls do not add duplicate items to decision list."""
     ent_id = uuid.uuid4()
     opt_name = "Accept Low Severity CVEs"
     for _ in range(5):
-        SecurityDecisionService.create_or_sync_decision(DecisionType.ACCEPTANCE, ent_id, opt_name, SCOPE_ID)
+        await SecurityDecisionService.create_or_sync_decision(DecisionType.ACCEPTANCE, ent_id, opt_name, SCOPE_ID)
     
     decisions = SecurityDecisionService.get_all_decisions()
     assert len(decisions) == 1
 
 
-def test_decision_recommend_transition():
+@pytest.mark.asyncio
+async def test_decision_recommend_transition(mock_db):
     """Verify transition to RECOMMENDED status."""
-    d = SecurityDecisionService.create_or_sync_decision(DecisionType.REMEDIATION, uuid.uuid4(), "Remediate SQL", SCOPE_ID)
-    updated = SecurityDecisionService.recommend_decision(d.decision_id)
+    d = await SecurityDecisionService.create_or_sync_decision(DecisionType.REMEDIATION, uuid.uuid4(), "Remediate SQL", SCOPE_ID)
+    updated = await SecurityDecisionService.recommend_decision(d.decision_id)
     assert updated.status == DecisionStatus.RECOMMENDED
 
-    history = DecisionHistoryService.get_history(d.decision_id)
+    history = await DecisionHistoryService.get_history(d.decision_id)
     event_types = [h.event_type for h in history]
     assert "RECOMMENDED" in event_types
 
 
-def test_decision_commit_transition():
+@pytest.mark.asyncio
+async def test_decision_commit_transition(mock_db):
     """Verify transition to COMMITTED status."""
-    d = SecurityDecisionService.create_or_sync_decision(DecisionType.REMEDIATION, uuid.uuid4(), "Deploy MFA", SCOPE_ID)
-    updated = SecurityDecisionService.commit_decision(d.decision_id)
+    d = await SecurityDecisionService.create_or_sync_decision(DecisionType.REMEDIATION, uuid.uuid4(), "Deploy MFA", SCOPE_ID)
+    updated = await SecurityDecisionService.commit_decision(d.decision_id)
     assert updated.status == DecisionStatus.COMMITTED
 
-    history = DecisionHistoryService.get_history(d.decision_id)
+    history = await DecisionHistoryService.get_history(d.decision_id)
     event_types = [h.event_type for h in history]
     assert "COMMITTED" in event_types
 
 
-def test_decision_archive_transition():
+@pytest.mark.asyncio
+async def test_decision_archive_transition(mock_db):
     """Verify transition to ARCHIVED status."""
-    d = SecurityDecisionService.create_or_sync_decision(DecisionType.REMEDIATION, uuid.uuid4(), "Enable TLS 1.3", SCOPE_ID)
-    updated = SecurityDecisionService.archive_decision(d.decision_id)
+    d = await SecurityDecisionService.create_or_sync_decision(DecisionType.REMEDIATION, uuid.uuid4(), "Enable TLS 1.3", SCOPE_ID)
+    updated = await SecurityDecisionService.archive_decision(d.decision_id)
     assert updated.status == DecisionStatus.ARCHIVED
 
-    history = DecisionHistoryService.get_history(d.decision_id)
+    history = await DecisionHistoryService.get_history(d.decision_id)
     event_types = [h.event_type for h in history]
     assert "ARCHIVED" in event_types
 
 
 # --- Decision Terminal State Enforcement ---
 
-def test_decision_terminal_state_enforcement():
+@pytest.mark.asyncio
+async def test_decision_terminal_state_enforcement(mock_db):
     """Verify that an archived decision rejects status transitions."""
-    d = SecurityDecisionService.create_or_sync_decision(DecisionType.REMEDIATION, uuid.uuid4(), "MFA Rule", SCOPE_ID)
-    SecurityDecisionService.archive_decision(d.decision_id)
+    d = await SecurityDecisionService.create_or_sync_decision(DecisionType.REMEDIATION, uuid.uuid4(), "MFA Rule", SCOPE_ID)
+    await SecurityDecisionService.archive_decision(d.decision_id)
 
     # Attempt transition
-    res_rec = SecurityDecisionService.recommend_decision(d.decision_id)
-    res_com = SecurityDecisionService.commit_decision(d.decision_id)
+    res_rec = await SecurityDecisionService.recommend_decision(d.decision_id)
+    res_com = await SecurityDecisionService.commit_decision(d.decision_id)
 
     assert res_rec.status == DecisionStatus.ARCHIVED
     assert res_com.status == DecisionStatus.ARCHIVED
 
 
-def test_archived_decision_not_reactivated_by_sync():
+@pytest.mark.asyncio
+async def test_archived_decision_not_reactivated_by_sync(mock_db):
     """Verify sync doesn't reactivate archived decisions."""
-    d = SecurityDecisionService.create_or_sync_decision(DecisionType.REMEDIATION, uuid.uuid4(), "Sync Check", SCOPE_ID)
-    SecurityDecisionService.archive_decision(d.decision_id)
+    d = await SecurityDecisionService.create_or_sync_decision(DecisionType.REMEDIATION, uuid.uuid4(), "Sync Check", SCOPE_ID)
+    await SecurityDecisionService.archive_decision(d.decision_id)
 
     # Re-sync
-    res = SecurityDecisionService.create_or_sync_decision(d.decision_type, d.target_entity_id, d.option_name, SCOPE_ID)
+    res = await SecurityDecisionService.create_or_sync_decision(d.decision_type, d.target_entity_id, d.option_name, SCOPE_ID)
     assert res.status == DecisionStatus.ARCHIVED
 
 
 @pytest.mark.asyncio
 async def test_archived_decision_not_reactivated_by_worker(mock_db):
     """Verify background worker refresh does not reactivate archived decisions."""
-    d = SecurityDecisionService.create_or_sync_decision(DecisionType.REMEDIATION, uuid.uuid4(), "Worker Sync Check", SCOPE_ID)
-    SecurityDecisionService.archive_decision(d.decision_id)
+    d = await SecurityDecisionService.create_or_sync_decision(DecisionType.REMEDIATION, uuid.uuid4(), "Worker Sync Check", SCOPE_ID)
+    await SecurityDecisionService.archive_decision(d.decision_id)
 
     # Trigger worker sync
     from src.services.governance_risk_compliance_service import GovernanceRiskComplianceService
@@ -182,8 +181,8 @@ async def test_archived_decision_not_reactivated_by_worker(mock_db):
 @pytest.mark.asyncio
 async def test_archived_decision_not_reactivated_by_snapshot(mock_db):
     """Verify snapshot rebuild logic respects terminal archived states."""
-    d = SecurityDecisionService.create_or_sync_decision(DecisionType.REMEDIATION, uuid.uuid4(), "Snap Sync Check", SCOPE_ID)
-    SecurityDecisionService.archive_decision(d.decision_id)
+    d = await SecurityDecisionService.create_or_sync_decision(DecisionType.REMEDIATION, uuid.uuid4(), "Snap Sync Check", SCOPE_ID)
+    await SecurityDecisionService.archive_decision(d.decision_id)
 
     snap = await DecisionSnapshotService.generate_snapshot(mock_db, SCOPE_ID)
     assert snap["archived_count"] == 1
@@ -194,8 +193,8 @@ async def test_archived_decision_not_reactivated_by_snapshot(mock_db):
 @pytest.mark.asyncio
 async def test_archived_decision_not_reactivated_by_drift(mock_db):
     """Verify drift updates ignore archived decisions and preserve terminal status."""
-    d = SecurityDecisionService.create_or_sync_decision(DecisionType.REMEDIATION, uuid.uuid4(), "Drift Check", SCOPE_ID)
-    SecurityDecisionService.archive_decision(d.decision_id)
+    d = await SecurityDecisionService.create_or_sync_decision(DecisionType.REMEDIATION, uuid.uuid4(), "Drift Check", SCOPE_ID)
+    await SecurityDecisionService.archive_decision(d.decision_id)
 
     prev_snap = {
         "total_decisions": 1,
@@ -209,10 +208,11 @@ async def test_archived_decision_not_reactivated_by_drift(mock_db):
     assert d.status == DecisionStatus.ARCHIVED
 
 
-def test_archived_decision_not_reactivated_by_tradeoff():
+@pytest.mark.asyncio
+async def test_archived_decision_not_reactivated_by_tradeoff(mock_db):
     """Verify tradeoff updates ignore archived decisions."""
-    d = SecurityDecisionService.create_or_sync_decision(DecisionType.REMEDIATION, uuid.uuid4(), "Tradeoff Check", SCOPE_ID)
-    SecurityDecisionService.archive_decision(d.decision_id)
+    d = await SecurityDecisionService.create_or_sync_decision(DecisionType.REMEDIATION, uuid.uuid4(), "Tradeoff Check", SCOPE_ID)
+    await SecurityDecisionService.archive_decision(d.decision_id)
 
     DecisionTradeoffService.calculate()
     assert d.status == DecisionStatus.ARCHIVED
@@ -221,40 +221,44 @@ def test_archived_decision_not_reactivated_by_tradeoff():
 
 # --- Immutable History preservation ---
 
-def test_decision_history_preserved():
+@pytest.mark.asyncio
+async def test_decision_history_preserved(mock_db):
     """Verify decision recommendations append history but never overwrite previous history."""
-    d = SecurityDecisionService.create_or_sync_decision(DecisionType.REMEDIATION, uuid.uuid4(), "MFA Rule", SCOPE_ID)
-    SecurityDecisionService.archive_decision(d.decision_id)
+    d = await SecurityDecisionService.create_or_sync_decision(DecisionType.REMEDIATION, uuid.uuid4(), "MFA Rule", SCOPE_ID)
+    await SecurityDecisionService.archive_decision(d.decision_id)
 
-    history = DecisionHistoryService.get_history(d.decision_id)
+    history = await DecisionHistoryService.get_history(d.decision_id)
     assert len(history) == 2
     assert history[0].event_type == "CREATED"
     assert history[1].event_type == "ARCHIVED"
 
 
-def test_decision_history_immutable():
+@pytest.mark.asyncio
+async def test_decision_history_immutable(mock_db):
     """Verify history entries returned are deep copies and cannot be modified by callers."""
-    d = SecurityDecisionService.create_or_sync_decision(DecisionType.REMEDIATION, uuid.uuid4(), "MFA Rule", SCOPE_ID)
-    history = DecisionHistoryService.get_history(d.decision_id)
+    d = await SecurityDecisionService.create_or_sync_decision(DecisionType.REMEDIATION, uuid.uuid4(), "MFA Rule", SCOPE_ID)
+    history = await DecisionHistoryService.get_history(d.decision_id)
     
     with pytest.raises(TypeError):
         history[0] = "MUTATED"
 
 
-def test_decision_history_order_preserved():
+@pytest.mark.asyncio
+async def test_decision_history_order_preserved(mock_db):
     """Verify history log entries are sorted chronologically and retain exact sequences."""
-    d = SecurityDecisionService.create_or_sync_decision(DecisionType.REMEDIATION, uuid.uuid4(), "MFA Rule", SCOPE_ID)
-    SecurityDecisionService.archive_decision(d.decision_id)
+    d = await SecurityDecisionService.create_or_sync_decision(DecisionType.REMEDIATION, uuid.uuid4(), "MFA Rule", SCOPE_ID)
+    await SecurityDecisionService.archive_decision(d.decision_id)
 
-    history = DecisionHistoryService.get_history(d.decision_id)
+    history = await DecisionHistoryService.get_history(d.decision_id)
     assert history[0].timestamp <= history[1].timestamp
 
 
 # --- Scoring Determinism & Derived Calculations ---
 
-def test_tradeoff_matrix_deterministic():
+@pytest.mark.asyncio
+async def test_tradeoff_matrix_deterministic(mock_db):
     """Verify tradeoff calculation logic is fully deterministic."""
-    d = SecurityDecisionService.create_or_sync_decision(DecisionType.REMEDIATION, uuid.uuid4(), "Patch SSH", SCOPE_ID)
+    d = await SecurityDecisionService.create_or_sync_decision(DecisionType.REMEDIATION, uuid.uuid4(), "Patch SSH", SCOPE_ID)
     
     DecisionTradeoffService.calculate()
     t1 = d.tradeoff_matrix
@@ -266,17 +270,19 @@ def test_tradeoff_matrix_deterministic():
     assert t1.estimated_cost == t2.estimated_cost
 
 
-def test_operational_impact_estimation():
+@pytest.mark.asyncio
+async def test_operational_impact_estimation(mock_db):
     """Verify operational impact score estimation mapping."""
-    d = SecurityDecisionService.create_or_sync_decision(DecisionType.REMEDIATION, uuid.uuid4(), "Patch SSH", SCOPE_ID)
+    d = await SecurityDecisionService.create_or_sync_decision(DecisionType.REMEDIATION, uuid.uuid4(), "Patch SSH", SCOPE_ID)
     DecisionTradeoffService.calculate()
     assert d.impact_metrics.operational_impact_score == 10.0 * (1.0 - 0.8) # 2.0
     assert d.impact_metrics.decision_impact == DecisionImpact.LOW
 
 
-def test_risk_reduction_calculation():
+@pytest.mark.asyncio
+async def test_risk_reduction_calculation(mock_db):
     """Verify risk reduction calculation utilizes factors and baseline correctly."""
-    d = SecurityDecisionService.create_or_sync_decision(DecisionType.REMEDIATION, uuid.uuid4(), "Patch SSH", SCOPE_ID)
+    d = await SecurityDecisionService.create_or_sync_decision(DecisionType.REMEDIATION, uuid.uuid4(), "Patch SSH", SCOPE_ID)
     DecisionTradeoffService.calculate()
     assert d.impact_metrics.confidence_score > 0.0
     assert d.tradeoff_matrix.estimated_risk_reduction > 0.0
@@ -287,7 +293,7 @@ def test_risk_reduction_calculation():
 @pytest.mark.asyncio
 async def test_decision_drift_detection(mock_db):
     """Verify structural drift logic detects decision benefit and count shifts."""
-    d = SecurityDecisionService.create_or_sync_decision(DecisionType.REMEDIATION, uuid.uuid4(), "MFA Drift", SCOPE_ID)
+    d = await SecurityDecisionService.create_or_sync_decision(DecisionType.REMEDIATION, uuid.uuid4(), "MFA Drift", SCOPE_ID)
     DecisionTradeoffService.calculate()
 
     prev_snap = {
@@ -305,7 +311,8 @@ async def test_decision_drift_detection(mock_db):
     assert "decisions count changed" in drifts[1]["details"].lower()
 
 
-def test_decision_drift_clearing():
+@pytest.mark.asyncio
+async def test_decision_drift_clearing(mock_db):
     """Verify drift logs can be cleared."""
     DecisionDriftService._drifts.append({"test": "drift"})
     DecisionDriftService.clear_drifts()
@@ -317,11 +324,11 @@ def test_decision_drift_clearing():
 @pytest.mark.asyncio
 async def test_snapshot_rebuild_consistency(mock_db):
     """Verify snapshot generation computes counts and average net benefits correctly."""
-    d1 = SecurityDecisionService.create_or_sync_decision(DecisionType.REMEDIATION, uuid.uuid4(), "D1", SCOPE_ID)
-    d2 = SecurityDecisionService.create_or_sync_decision(DecisionType.MITIGATION, uuid.uuid4(), "D2", SCOPE_ID)
+    d1 = await SecurityDecisionService.create_or_sync_decision(DecisionType.REMEDIATION, uuid.uuid4(), "D1", SCOPE_ID)
+    d2 = await SecurityDecisionService.create_or_sync_decision(DecisionType.MITIGATION, uuid.uuid4(), "D2", SCOPE_ID)
     
-    SecurityDecisionService.recommend_decision(d1.decision_id)
-    SecurityDecisionService.commit_decision(d2.decision_id)
+    await SecurityDecisionService.recommend_decision(d1.decision_id)
+    await SecurityDecisionService.commit_decision(d2.decision_id)
 
     DecisionTradeoffService.calculate()
 
@@ -334,7 +341,7 @@ async def test_snapshot_rebuild_consistency(mock_db):
 @pytest.mark.asyncio
 async def test_snapshot_rebuild_after_cache_deletion(mock_db):
     """Verify get_snapshot rebuilds from source if the cache is missing or deleted."""
-    SecurityDecisionService.create_or_sync_decision(DecisionType.REMEDIATION, uuid.uuid4(), "D1", SCOPE_ID)
+    await SecurityDecisionService.create_or_sync_decision(DecisionType.REMEDIATION, uuid.uuid4(), "D1", SCOPE_ID)
     DecisionSnapshotService.clear_snapshots()
 
     snap = await DecisionSnapshotService.get_snapshot(mock_db, SCOPE_ID)
@@ -345,7 +352,7 @@ async def test_snapshot_rebuild_after_cache_deletion(mock_db):
 async def test_snapshot_rebuild_after_cache_corruption(mock_db):
     """Verify snapshot rebuilds if cache exists but keys are corrupted/missing."""
     DecisionSnapshotService._snapshots[SCOPE_ID] = {"corrupted": True}
-    SecurityDecisionService.create_or_sync_decision(DecisionType.REMEDIATION, uuid.uuid4(), "D1", SCOPE_ID)
+    await SecurityDecisionService.create_or_sync_decision(DecisionType.REMEDIATION, uuid.uuid4(), "D1", SCOPE_ID)
 
     snap = await DecisionSnapshotService.get_snapshot(mock_db, SCOPE_ID)
     assert "total_decisions" in snap
@@ -355,7 +362,7 @@ async def test_snapshot_rebuild_after_cache_corruption(mock_db):
 @pytest.mark.asyncio
 async def test_snapshot_not_authoritative(mock_db):
     """Verify snapshot doesn't store state exclusively; clearing snapshots doesn't delete active decisions."""
-    SecurityDecisionService.create_or_sync_decision(DecisionType.REMEDIATION, uuid.uuid4(), "D1", SCOPE_ID)
+    await SecurityDecisionService.create_or_sync_decision(DecisionType.REMEDIATION, uuid.uuid4(), "D1", SCOPE_ID)
     await DecisionSnapshotService.generate_snapshot(mock_db, SCOPE_ID)
 
     DecisionSnapshotService.clear_snapshots()
@@ -365,7 +372,7 @@ async def test_snapshot_not_authoritative(mock_db):
 @pytest.mark.asyncio
 async def test_snapshot_rebuild_from_source_of_truth(mock_db):
     """Verify get_snapshot loads from the source of truth when cache is empty."""
-    d = SecurityDecisionService.create_or_sync_decision(DecisionType.REMEDIATION, uuid.uuid4(), "D1", SCOPE_ID)
+    d = await SecurityDecisionService.create_or_sync_decision(DecisionType.REMEDIATION, uuid.uuid4(), "D1", SCOPE_ID)
     
     DecisionSnapshotService.clear_snapshots()
     snap = await DecisionSnapshotService.get_snapshot(mock_db, SCOPE_ID)
@@ -399,7 +406,7 @@ async def test_ai_context_decision_injection(mock_db):
         "ports": [], "services": [], "technologies": [], "risk": {}, "findings": [], "exposure": {}
     })
 
-    SecurityDecisionService.create_or_sync_decision(DecisionType.REMEDIATION, uuid.uuid4(), "D1", SCOPE_ID)
+    await SecurityDecisionService.create_or_sync_decision(DecisionType.REMEDIATION, uuid.uuid4(), "D1", SCOPE_ID)
 
     try:
         ctx = await AIContextBuilder.build_asset_context(mock_db, uuid.uuid4())
@@ -409,7 +416,8 @@ async def test_ai_context_decision_injection(mock_db):
         AssetReportService.generate_asset_report = original_report
 
 
-def test_ai_advisory_only_enforcement():
+@pytest.mark.asyncio
+async def test_ai_advisory_only_enforcement(mock_db):
     """Verify Copilot prompt builder restrains AI from mutating decisions."""
     from src.services.ai_prompt_builder import AIPromptBuilder
     prompt = AIPromptBuilder.build_asset_prompt({"context": "empty"})
@@ -426,7 +434,7 @@ async def test_rbac_decision_scope_validation(mock_db):
     from src.api.v1.dependencies.auth import get_current_user
     import src.api.v1.routers.security_decision as dec_router
 
-    d = SecurityDecisionService.create_or_sync_decision(DecisionType.REMEDIATION, uuid.uuid4(), "D1", SCOPE_ID)
+    d = await SecurityDecisionService.create_or_sync_decision(DecisionType.REMEDIATION, uuid.uuid4(), "D1", SCOPE_ID)
 
     client = TestClient(app)
 
@@ -493,44 +501,45 @@ async def test_rbac_decision_scope_validation(mock_db):
 @pytest.mark.asyncio
 async def test_decision_identity_preserved_after_worker_refresh(mock_db):
     """Verify that worker refresh preserves decision identity and history."""
-    d = SecurityDecisionService.create_or_sync_decision(DecisionType.REMEDIATION, uuid.uuid4(), "Worker Sync Check", SCOPE_ID)
-    history1 = DecisionHistoryService.get_history(d.decision_id)
+    d = await SecurityDecisionService.create_or_sync_decision(DecisionType.REMEDIATION, uuid.uuid4(), "Worker Sync Check", SCOPE_ID)
+    history1 = await DecisionHistoryService.get_history(d.decision_id)
 
     # Sync
     await SecurityDecisionService.sync_decision_recommendations(mock_db)
     
     assert d.decision_id is not None
-    assert DecisionHistoryService.get_history(d.decision_id) == history1
+    assert await DecisionHistoryService.get_history(d.decision_id) == history1
 
 
-def test_decision_identity_preserved_after_tradeoff_refresh():
+@pytest.mark.asyncio
+async def test_decision_identity_preserved_after_tradeoff_refresh(mock_db):
     """Verify that tradeoff scoring preserves decision identity and history."""
-    d = SecurityDecisionService.create_or_sync_decision(DecisionType.REMEDIATION, uuid.uuid4(), "Tradeoff Sync Check", SCOPE_ID)
-    history1 = DecisionHistoryService.get_history(d.decision_id)
+    d = await SecurityDecisionService.create_or_sync_decision(DecisionType.REMEDIATION, uuid.uuid4(), "Tradeoff Sync Check", SCOPE_ID)
+    history1 = await DecisionHistoryService.get_history(d.decision_id)
 
     DecisionTradeoffService.calculate()
 
     assert d.decision_id is not None
-    assert DecisionHistoryService.get_history(d.decision_id) == history1
+    assert await DecisionHistoryService.get_history(d.decision_id) == history1
 
 
 @pytest.mark.asyncio
 async def test_decision_identity_preserved_after_snapshot_rebuild(mock_db):
     """Verify that snapshot rebuild preserves decision identity and history."""
-    d = SecurityDecisionService.create_or_sync_decision(DecisionType.REMEDIATION, uuid.uuid4(), "Snapshot Rebuild Check", SCOPE_ID)
-    history1 = DecisionHistoryService.get_history(d.decision_id)
+    d = await SecurityDecisionService.create_or_sync_decision(DecisionType.REMEDIATION, uuid.uuid4(), "Snapshot Rebuild Check", SCOPE_ID)
+    history1 = await DecisionHistoryService.get_history(d.decision_id)
 
     await DecisionSnapshotService.generate_snapshot(mock_db, SCOPE_ID)
 
     assert d.decision_id is not None
-    assert DecisionHistoryService.get_history(d.decision_id) == history1
+    assert await DecisionHistoryService.get_history(d.decision_id) == history1
 
 
 @pytest.mark.asyncio
 async def test_decision_identity_preserved_after_drift_processing(mock_db):
     """Verify that drift processing preserves decision identity and history."""
-    d = SecurityDecisionService.create_or_sync_decision(DecisionType.REMEDIATION, uuid.uuid4(), "Drift Process Check", SCOPE_ID)
-    history1 = DecisionHistoryService.get_history(d.decision_id)
+    d = await SecurityDecisionService.create_or_sync_decision(DecisionType.REMEDIATION, uuid.uuid4(), "Drift Process Check", SCOPE_ID)
+    history1 = await DecisionHistoryService.get_history(d.decision_id)
 
     prev_snap = {
         "total_decisions": 1,
@@ -542,12 +551,13 @@ async def test_decision_identity_preserved_after_drift_processing(mock_db):
     await DecisionDriftService.process_drift(mock_db, SCOPE_ID, prev_snap)
 
     assert d.decision_id is not None
-    assert DecisionHistoryService.get_history(d.decision_id) == history1
+    assert await DecisionHistoryService.get_history(d.decision_id) == history1
 
 
-def test_tradeoff_score_determinism():
+@pytest.mark.asyncio
+async def test_tradeoff_score_determinism(mock_db):
     """Verify tradeoff score calculations are deterministic for identical inputs."""
-    d = SecurityDecisionService.create_or_sync_decision(DecisionType.REMEDIATION, uuid.uuid4(), "SSH Tradeoff", SCOPE_ID)
+    d = await SecurityDecisionService.create_or_sync_decision(DecisionType.REMEDIATION, uuid.uuid4(), "SSH Tradeoff", SCOPE_ID)
     
     DecisionTradeoffService.calculate()
     s1 = d.tradeoff_matrix.net_benefit
@@ -562,8 +572,8 @@ def test_tradeoff_score_determinism():
 @pytest.mark.asyncio
 async def test_scope_isolation_for_tradeoffs(mock_db):
     """Verify tradeoff calculation respects scope boundaries and doesn't leak records."""
-    d1 = SecurityDecisionService.create_or_sync_decision(DecisionType.REMEDIATION, uuid.uuid4(), "MFA Rule", SCOPE_ID)
-    d2 = SecurityDecisionService.create_or_sync_decision(DecisionType.MITIGATION, uuid.uuid4(), "MIT Rule", ALT_SCOPE_ID)
+    d1 = await SecurityDecisionService.create_or_sync_decision(DecisionType.REMEDIATION, uuid.uuid4(), "MFA Rule", SCOPE_ID)
+    d2 = await SecurityDecisionService.create_or_sync_decision(DecisionType.MITIGATION, uuid.uuid4(), "MIT Rule", ALT_SCOPE_ID)
 
     DecisionTradeoffService.calculate()
 
@@ -571,9 +581,10 @@ async def test_scope_isolation_for_tradeoffs(mock_db):
     assert d2.tradeoff_matrix is not None
 
 
-def test_decision_score_stability():
+@pytest.mark.asyncio
+async def test_decision_score_stability(mock_db):
     """Verify decision scores are stable and do not drift without input parameters changes."""
-    d = SecurityDecisionService.create_or_sync_decision(DecisionType.REMEDIATION, uuid.uuid4(), "SSH Test", SCOPE_ID)
+    d = await SecurityDecisionService.create_or_sync_decision(DecisionType.REMEDIATION, uuid.uuid4(), "SSH Test", SCOPE_ID)
     DecisionTradeoffService.calculate()
 
     s1 = d.tradeoff_matrix.net_benefit

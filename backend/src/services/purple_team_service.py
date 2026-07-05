@@ -1,7 +1,8 @@
 import uuid
 from datetime import datetime, timezone
-from typing import Dict, List, Optional, Union, Sequence
+from typing import Dict, List, Optional, Union, Sequence, Any
 
+from sqlalchemy.ext.asyncio import AsyncSession
 from src.domain.entities.purple_team import (
     ExerciseSeverity,
     ExerciseStatus,
@@ -11,6 +12,9 @@ from src.domain.entities.purple_team import (
 from src.services.exercise_type_registry import ExerciseTypeRegistry
 from src.services.purple_team_fingerprint_service import PurpleTeamFingerprintService
 from src.services.purple_team_history_service import PurpleTeamHistoryService
+from src.infrastructure.database.models import PurpleTeamExercise as DBExercise, IntelligenceEvent
+from src.infrastructure.database.unit_of_work import UnitOfWork
+from src.core.tenant import get_current_tenant_id
 
 
 class PurpleTeamExerciseRecord:
@@ -57,6 +61,35 @@ class PurpleTeamService:
         cls._fingerprint_lookup.clear()
 
     @classmethod
+    async def bootstrap(cls, db: AsyncSession) -> None:
+        """Bootstrap the L2 cache from PostgreSQL database."""
+        cls.clear_exercises()
+        async with UnitOfWork() as uow:
+            db_exercises = await uow.purple_team_repo.list()
+            for db_e in db_exercises:
+                # Load related validations to recover techniques
+                db_vals = await uow.purple_team_repo.list_validations(db_e.id)
+                techniques = [v.technique_id for v in db_vals]
+
+                record = PurpleTeamExerciseRecord(
+                    exercise_id=db_e.id,
+                    exercise_fingerprint=db_e.exercise_fingerprint,
+                    name=db_e.name,
+                    description=db_e.description,
+                    exercise_type=ExerciseType(db_e.exercise_type),
+                    severity=ExerciseSeverity(db_e.severity),
+                    status=ExerciseStatus(db_e.status),
+                    scope_id=db_e.scope_id,
+                    owner=db_e.owner,
+                    created_at=db_e.created_at,
+                    updated_at=db_e.updated_at,
+                    related_techniques=techniques,
+                    related_entities=[],
+                )
+                cls._exercises[db_e.id] = record
+                cls._fingerprint_lookup[db_e.exercise_fingerprint] = db_e.id
+
+    @classmethod
     def get_all_exercises(cls) -> List[PurpleTeamExerciseRecord]:
         """Retrieve all exercises."""
         return list(cls._exercises.values())
@@ -75,7 +108,7 @@ class PurpleTeamService:
         return None
 
     @classmethod
-    def create_or_sync_exercise(
+    async def create_or_sync_exercise(
         cls,
         name: str,
         description: str,
@@ -107,6 +140,8 @@ class PurpleTeamService:
         )
 
         existing = cls.get_exercise_by_fingerprint(fingerprint)
+        tenant_id = get_current_tenant_id() or uuid.UUID("00000000-0000-0000-0000-000000000000")
+
         if existing:
             if existing.status == ExerciseStatus.CLOSED:
                 # CLOSED is a terminal state. Sync should not modify closed exercises.
@@ -129,11 +164,33 @@ class PurpleTeamService:
 
             if changed:
                 existing.updated_at = datetime.now(timezone.utc)
-                PurpleTeamHistoryService.record_event(
-                    existing.exercise_id,
-                    "UPDATED",
-                    f"Exercise updated: severity={existing.severity.value}, status={existing.status.value}",
-                )
+                async with UnitOfWork() as uow:
+                    db_e = await uow.purple_team_repo.get(existing.exercise_id)
+                    if db_e:
+                        db_e.description = existing.description
+                        db_e.severity = existing.severity.value
+                        db_e.owner = existing.owner
+                        db_e.scope_id = existing.scope_id
+                        db_e.updated_at = existing.updated_at
+
+                        await PurpleTeamHistoryService.record_event(
+                            existing.exercise_id,
+                            "UPDATED",
+                            f"Exercise updated: severity={existing.severity.value}, status={existing.status.value}",
+                            uow=uow,
+                        )
+                        # Stage outbox event
+                        outbox_evt = IntelligenceEvent(
+                            tenant_id=tenant_id,
+                            event_type="exercise.updated",
+                            payload={
+                                "exercise_id": str(existing.exercise_id),
+                                "status": existing.status.value,
+                            }
+                        )
+                        uow.session.add(outbox_evt)
+                        await uow.commit()
+
             return existing
 
         # Create new open exercise
@@ -154,15 +211,44 @@ class PurpleTeamService:
         cls._exercises[exercise_id] = record
         cls._fingerprint_lookup[fingerprint] = exercise_id
 
-        PurpleTeamHistoryService.record_event(
-            exercise_id,
-            "CREATED",
-            f"Created open exercise: '{name}' ({resolved_type.value})",
-        )
+        async with UnitOfWork() as uow:
+            db_e = DBExercise(
+                tenant_id=tenant_id,
+                id=exercise_id,
+                exercise_fingerprint=fingerprint,
+                name=name,
+                description=description,
+                exercise_type=resolved_type.value,
+                severity=severity.value,
+                status=ExerciseStatus.OPEN.value,
+                owner=owner,
+                scope_id=scope_id,
+            )
+            await uow.purple_team_repo.save(db_e)
+
+            await PurpleTeamHistoryService.record_event(
+                exercise_id,
+                "CREATED",
+                f"Created open exercise: '{name}' ({resolved_type.value})",
+                uow=uow,
+            )
+
+            # Stage outbox event
+            outbox_evt = IntelligenceEvent(
+                tenant_id=tenant_id,
+                event_type="exercise.started",
+                payload={
+                    "exercise_id": str(exercise_id),
+                    "status": ExerciseStatus.OPEN.value,
+                }
+            )
+            uow.session.add(outbox_evt)
+            await uow.commit()
+
         return record
 
     @classmethod
-    def activate_exercise(cls, exercise_id: uuid.UUID, owner: Optional[str] = None) -> PurpleTeamExerciseRecord:
+    async def activate_exercise(cls, exercise_id: uuid.UUID, owner: Optional[str] = None) -> PurpleTeamExerciseRecord:
         """Transition exercise to ACTIVE status (from OPEN or UNDER_REVIEW)."""
         exercise = cls.get_exercise(exercise_id)
         if not exercise:
@@ -182,13 +268,34 @@ class PurpleTeamService:
         if owner:
             exercise.owner = owner
 
-        PurpleTeamHistoryService.record_event(
-            exercise_id, "ACTIVATED", f"Exercise activated. Owner: {owner}"
-        )
+        tenant_id = get_current_tenant_id() or uuid.UUID("00000000-0000-0000-0000-000000000000")
+        async with UnitOfWork() as uow:
+            db_e = await uow.purple_team_repo.get(exercise_id)
+            if db_e:
+                db_e.status = ExerciseStatus.ACTIVE.value
+                db_e.updated_at = exercise.updated_at
+                if owner:
+                    db_e.owner = owner
+
+                await PurpleTeamHistoryService.record_event(
+                    exercise_id, "ACTIVATED", f"Exercise activated. Owner: {owner}", uow=uow
+                )
+                # Stage outbox event
+                outbox_evt = IntelligenceEvent(
+                    tenant_id=tenant_id,
+                    event_type="exercise.status_changed",
+                    payload={
+                        "exercise_id": str(exercise_id),
+                        "status": ExerciseStatus.ACTIVE.value,
+                    }
+                )
+                uow.session.add(outbox_evt)
+                await uow.commit()
+
         return exercise
 
     @classmethod
-    def review_exercise(cls, exercise_id: uuid.UUID) -> PurpleTeamExerciseRecord:
+    async def review_exercise(cls, exercise_id: uuid.UUID) -> PurpleTeamExerciseRecord:
         """Transition exercise to UNDER_REVIEW status (from ACTIVE)."""
         exercise = cls.get_exercise(exercise_id)
         if not exercise:
@@ -206,13 +313,32 @@ class PurpleTeamService:
         exercise.status = ExerciseStatus.UNDER_REVIEW
         exercise.updated_at = datetime.now(timezone.utc)
 
-        PurpleTeamHistoryService.record_event(
-            exercise_id, "REVIEWED", "Exercise transitioned to under review"
-        )
+        tenant_id = get_current_tenant_id() or uuid.UUID("00000000-0000-0000-0000-000000000000")
+        async with UnitOfWork() as uow:
+            db_e = await uow.purple_team_repo.get(exercise_id)
+            if db_e:
+                db_e.status = ExerciseStatus.UNDER_REVIEW.value
+                db_e.updated_at = exercise.updated_at
+
+                await PurpleTeamHistoryService.record_event(
+                    exercise_id, "REVIEWED", "Exercise transitioned to under review", uow=uow
+                )
+                # Stage outbox event
+                outbox_evt = IntelligenceEvent(
+                    tenant_id=tenant_id,
+                    event_type="exercise.status_changed",
+                    payload={
+                        "exercise_id": str(exercise_id),
+                        "status": ExerciseStatus.UNDER_REVIEW.value,
+                    }
+                )
+                uow.session.add(outbox_evt)
+                await uow.commit()
+
         return exercise
 
     @classmethod
-    def complete_exercise(cls, exercise_id: uuid.UUID) -> PurpleTeamExerciseRecord:
+    async def complete_exercise(cls, exercise_id: uuid.UUID) -> PurpleTeamExerciseRecord:
         """Transition exercise to COMPLETED status (from ACTIVE or UNDER_REVIEW)."""
         exercise = cls.get_exercise(exercise_id)
         if not exercise:
@@ -230,13 +356,32 @@ class PurpleTeamService:
         exercise.status = ExerciseStatus.COMPLETED
         exercise.updated_at = datetime.now(timezone.utc)
 
-        PurpleTeamHistoryService.record_event(
-            exercise_id, "COMPLETED", "Exercise completed"
-        )
+        tenant_id = get_current_tenant_id() or uuid.UUID("00000000-0000-0000-0000-000000000000")
+        async with UnitOfWork() as uow:
+            db_e = await uow.purple_team_repo.get(exercise_id)
+            if db_e:
+                db_e.status = ExerciseStatus.COMPLETED.value
+                db_e.updated_at = exercise.updated_at
+
+                await PurpleTeamHistoryService.record_event(
+                    exercise_id, "COMPLETED", "Exercise completed", uow=uow
+                )
+                # Stage outbox event
+                outbox_evt = IntelligenceEvent(
+                    tenant_id=tenant_id,
+                    event_type="exercise.completed",
+                    payload={
+                        "exercise_id": str(exercise_id),
+                        "status": ExerciseStatus.COMPLETED.value,
+                    }
+                )
+                uow.session.add(outbox_evt)
+                await uow.commit()
+
         return exercise
 
     @classmethod
-    def close_exercise(cls, exercise_id: uuid.UUID) -> PurpleTeamExerciseRecord:
+    async def close_exercise(cls, exercise_id: uuid.UUID) -> PurpleTeamExerciseRecord:
         """Transition exercise to CLOSED status (terminal state, from COMPLETED)."""
         exercise = cls.get_exercise(exercise_id)
         if not exercise:
@@ -251,9 +396,28 @@ class PurpleTeamService:
         exercise.status = ExerciseStatus.CLOSED
         exercise.updated_at = datetime.now(timezone.utc)
 
-        PurpleTeamHistoryService.record_event(
-            exercise_id, "CLOSED", "Exercise closed (terminal state)"
-        )
+        tenant_id = get_current_tenant_id() or uuid.UUID("00000000-0000-0000-0000-000000000000")
+        async with UnitOfWork() as uow:
+            db_e = await uow.purple_team_repo.get(exercise_id)
+            if db_e:
+                db_e.status = ExerciseStatus.CLOSED.value
+                db_e.updated_at = exercise.updated_at
+
+                await PurpleTeamHistoryService.record_event(
+                    exercise_id, "CLOSED", "Exercise closed (terminal state)", uow=uow
+                )
+                # Stage outbox event
+                outbox_evt = IntelligenceEvent(
+                    tenant_id=tenant_id,
+                    event_type="exercise.status_changed",
+                    payload={
+                        "exercise_id": str(exercise_id),
+                        "status": ExerciseStatus.CLOSED.value,
+                    }
+                )
+                uow.session.add(outbox_evt)
+                await uow.commit()
+
         return exercise
 
     @classmethod

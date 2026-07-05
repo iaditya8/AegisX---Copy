@@ -227,9 +227,9 @@ class AIContextBuilder:
                     "event_type": h.event_type,
                     "details": h.details,
                 }
-                for h in IncidentHistoryService.get_history(inc.incident_id)
+                for h in await IncidentHistoryService.get_history(inc.incident_id)
             ]
-            evidence = IncidentEvidenceService.get_evidence(inc.incident_id)
+            evidence = await IncidentEvidenceService.get_evidence(inc.incident_id)
 
             active_incidents_list.append(
                 {
@@ -286,9 +286,9 @@ class AIContextBuilder:
                 "event_type": h.event_type,
                 "details": h.details,
             }
-            for h in IncidentHistoryService.get_history(incident_id)
+            for h in await IncidentHistoryService.get_history(incident_id)
         ]
-        evidence = IncidentEvidenceService.get_evidence(incident_id)
+        evidence = await IncidentEvidenceService.get_evidence(incident_id)
 
         asset_context = {}
         scope_id = None
@@ -427,11 +427,11 @@ class AIContextBuilder:
         if scope_id:
             hunts = [h for h in hunts if h.scope_id == scope_id]
 
-        active_hunts_list = [
-            HuntService.to_response(h).model_dump()
-            for h in hunts
-            if h.status.value in ["OPEN", "ACTIVE", "UNDER_REVIEW", "ESCALATED"]
-        ]
+        active_hunts_list = []
+        for h in hunts:
+            if h.status.value in ["OPEN", "ACTIVE", "UNDER_REVIEW", "ESCALATED"]:
+                resp = await HuntService.to_response(h)
+                active_hunts_list.append(resp.model_dump())
 
         for h in active_hunts_list:
             h["hunt_id"] = str(h["hunt_id"])
@@ -483,7 +483,7 @@ class AIContextBuilder:
             ex["exercise_id"] = str(ex_id_raw)
             ex["scope_id"] = str(ex["scope_id"]) if ex["scope_id"] else None
             ex_id = uuid.UUID(ex_id_raw) if isinstance(ex_id_raw, str) else ex_id_raw
-            ex["findings"] = [f.model_dump() for f in PurpleTeamFindingService.get_findings(ex_id)]
+            ex["findings"] = [f.model_dump() for f in await PurpleTeamFindingService.get_findings(ex_id)]
             ex["validations"] = [
                 {
                     "validation_id": str(v.validation_id),
@@ -1207,7 +1207,7 @@ class AIContextBuilder:
                         "event_type": h.event_type,
                         "details": h.details,
                     }
-                    for h in PostureHistoryService.get_history(p.posture_id)
+                    for h in await PostureHistoryService.get_history(p.posture_id)
                 ]
                 pdata["correlations"] = RiskCorrelationService.get_correlations(p.posture_id)
                 active_postures_list.append(pdata)
@@ -1311,7 +1311,7 @@ class AIContextBuilder:
                     "event_type": h.event_type,
                     "details": h.details,
                 }
-                for h in ProgramHistoryService.get_history(p.program_id)
+                for h in await ProgramHistoryService.get_history(p.program_id)
             ]
             pdata["correlations"] = ProgramCorrelationService.get_correlations(p.program_id)
             programs_list.append(pdata)
@@ -1807,7 +1807,7 @@ class AIContextBuilder:
                         "event_type": h.event_type,
                         "details": h.details,
                     }
-                    for h in DecisionHistoryService.get_history(d.decision_id)
+                    for h in await DecisionHistoryService.get_history(d.decision_id)
                 ]
             }
             records_list.append(rdata)
@@ -1928,6 +1928,7 @@ class AIContextBuilder:
 
         records_list = []
         for n in nodes:
+            hist_entries = await FabricHistoryService.get_history(n.node_id)
             rdata = {
                 "node_id": str(n.node_id),
                 "node_fingerprint": n.node_fingerprint,
@@ -1945,7 +1946,7 @@ class AIContextBuilder:
                         "event_type": h.event_type,
                         "details": h.details,
                     }
-                    for h in FabricHistoryService.get_history(n.node_id)
+                    for h in hist_entries
                 ]
             }
             records_list.append(rdata)

@@ -69,7 +69,7 @@ class ExposureCorrelationService:
                     break
             if has_asset:
                 # Add findings for this exercise
-                asset_pt_findings.extend(PurpleTeamFindingService.get_findings(ex.exercise_id))
+                asset_pt_findings.extend(await PurpleTeamFindingService.get_findings(ex.exercise_id))
 
         # Convert to correlation dicts
         current = cls._correlations.setdefault(exposure_id, [])

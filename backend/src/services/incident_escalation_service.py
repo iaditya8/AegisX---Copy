@@ -33,7 +33,7 @@ class IncidentEscalationService:
         )
 
         # Append history log entry
-        IncidentHistoryService.record_event(
+        await IncidentHistoryService.record_event(
             incident_id=incident_id,
             event_type="ESCALATED",
             details=f"Incident escalated to team: {team_name}.",
@@ -96,7 +96,7 @@ class IncidentEscalationService:
             db, incident_id, IncidentStatus.ESCALATED, actor_id=actor_id
         )
 
-        IncidentHistoryService.record_event(
+        await IncidentHistoryService.record_event(
             incident_id=incident_id,
             event_type="ESCALATED",
             details="Incident escalated to asset owner.",
@@ -136,7 +136,7 @@ class IncidentEscalationService:
             db, incident_id, IncidentStatus.ESCALATED, actor_id=actor_id
         )
 
-        IncidentHistoryService.record_event(
+        await IncidentHistoryService.record_event(
             incident_id=incident_id,
             event_type="ESCALATED",
             details="Incident escalated to management.",
@@ -181,7 +181,7 @@ class IncidentEscalationService:
                     db, inc.incident_id, IncidentStatus.ESCALATED
                 )
                 # Log event in history
-                IncidentHistoryService.record_event(
+                await IncidentHistoryService.record_event(
                     incident_id=inc.incident_id,
                     event_type="AUTO_ESCALATED",
                     details="Incident automatically escalated due to SLA breach (CRITICAL severity > 1 hour threshold).",

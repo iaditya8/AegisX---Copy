@@ -10,7 +10,7 @@ from src.domain.entities.security_posture import (
     RiskCategory,
     SecurityPostureResponse,
 )
-from src.infrastructure.database.models import Asset, Finding
+from src.infrastructure.database.models import Asset, Finding, SecurityPosture as DBPosture, IntelligenceEvent
 from src.services.security_posture_registry import SecurityPostureRegistry
 from src.services.risk_category_registry import RiskCategoryRegistry
 from src.services.risk_severity_registry import RiskSeverityRegistry
@@ -21,6 +21,8 @@ from src.services.risk_prioritization_service import RiskPrioritizationService
 from src.services.risk_correlation_service import RiskCorrelationService
 from src.services.exposure_service import ExposureService
 from src.services.alert_lifecycle_service import AlertLifecycleService
+from src.infrastructure.database.unit_of_work import UnitOfWork
+from src.core.tenant import get_current_tenant_id
 
 
 class PostureRecord:
@@ -71,6 +73,33 @@ class SecurityPostureService:
         cls._fingerprint_lookup.clear()
 
     @classmethod
+    async def bootstrap(cls, db: AsyncSession) -> None:
+        """Bootstrap the L2 cache from PostgreSQL database."""
+        cls.clear_postures()
+        async with UnitOfWork() as uow:
+            db_postures = await uow.posture_repo.list()
+            for db_p in db_postures:
+                record = PostureRecord(
+                    posture_id=db_p.id,
+                    posture_fingerprint=db_p.posture_fingerprint,
+                    title=db_p.title,
+                    description=db_p.description,
+                    posture_score=float(db_p.posture_score),
+                    risk_score=float(db_p.risk_score),
+                    severity=PostureSeverity(db_p.severity),
+                    category=RiskCategory(db_p.category),
+                    status=RiskStatus(db_p.status),
+                    asset_id=db_p.asset_id,
+                    risk_source=db_p.risk_source,
+                    owner=db_p.owner,
+                    scope_id=db_p.scope_id,
+                    created_at=db_p.created_at,
+                    updated_at=db_p.updated_at,
+                )
+                cls._postures[db_p.id] = record
+                cls._fingerprint_lookup[db_p.posture_fingerprint] = db_p.id
+
+    @classmethod
     def get_all_postures(cls) -> List[PostureRecord]:
         """Retrieve all security posture records."""
         return list(cls._postures.values())
@@ -109,6 +138,8 @@ class SecurityPostureService:
         fingerprint = PostureFingerprintService.generate_fingerprint(resolved_cat, asset_id, risk_source)
 
         existing = cls.get_posture_by_fingerprint(fingerprint)
+        tenant_id = get_current_tenant_id() or uuid.UUID("00000000-0000-0000-0000-000000000000")
+
         if existing:
             if existing.status == RiskStatus.CLOSED:
                 # CLOSED is terminal. Subsequent refreshes or updates cannot modify it.
@@ -135,19 +166,44 @@ class SecurityPostureService:
                 existing.risk_score = new_risk_score
                 existing.posture_score = new_posture_score
                 changed = True
-                PostureHistoryService.record_event(
-                    existing.posture_id,
-                    "SCORE_CHANGED",
-                    f"Risk score updated: {new_risk_score}, Posture score updated: {new_posture_score}",
-                )
 
             if changed:
                 existing.updated_at = datetime.now(timezone.utc)
-                PostureHistoryService.record_event(
-                    existing.posture_id,
-                    "DRIFT_DETECTED",
-                    f"Posture sync updated: severity={existing.severity.value}, status={existing.status.value}",
-                )
+                async with UnitOfWork() as uow:
+                    db_p = await uow.posture_repo.get(existing.posture_id)
+                    if db_p:
+                        db_p.description = existing.description
+                        db_p.owner = existing.owner
+                        db_p.severity = existing.severity.value
+                        db_p.risk_score = existing.risk_score
+                        db_p.posture_score = existing.posture_score
+                        db_p.updated_at = existing.updated_at
+
+                        await PostureHistoryService.record_event(
+                            existing.posture_id,
+                            "SCORE_CHANGED",
+                            f"Risk score updated: {new_risk_score}, Posture score updated: {new_posture_score}",
+                            uow=uow,
+                        )
+                        await PostureHistoryService.record_event(
+                            existing.posture_id,
+                            "DRIFT_DETECTED",
+                            f"Posture sync updated: severity={existing.severity.value}, status={existing.status.value}",
+                            uow=uow,
+                        )
+
+                        # Stage outbox event
+                        outbox_evt = IntelligenceEvent(
+                            tenant_id=tenant_id,
+                            event_type="posture.updated",
+                            payload={
+                                "posture_id": str(existing.posture_id),
+                                "status": existing.status.value,
+                            }
+                        )
+                        uow.session.add(outbox_evt)
+                        await uow.commit()
+
             return existing
 
         # Create new open posture record
@@ -172,11 +228,44 @@ class SecurityPostureService:
         cls._postures[posture_id] = record
         cls._fingerprint_lookup[fingerprint] = posture_id
 
-        PostureHistoryService.record_event(
-            posture_id,
-            "CREATED",
-            f"Created security posture: '{title}' ({resolved_cat.value})",
-        )
+        async with UnitOfWork() as uow:
+            db_p = DBPosture(
+                tenant_id=tenant_id,
+                id=posture_id,
+                posture_fingerprint=fingerprint,
+                title=title,
+                description=description,
+                posture_score=record.posture_score,
+                risk_score=record.risk_score,
+                severity=resolved_severity.value,
+                category=resolved_cat.value,
+                status=RiskStatus.OPEN.value,
+                asset_id=asset_id,
+                risk_source=risk_source,
+                owner=owner,
+                scope_id=scope_id,
+            )
+            await uow.posture_repo.save(db_p)
+
+            await PostureHistoryService.record_event(
+                posture_id,
+                "CREATED",
+                f"Created security posture: '{title}' ({resolved_cat.value})",
+                uow=uow,
+            )
+
+            # Stage outbox event
+            outbox_evt = IntelligenceEvent(
+                tenant_id=tenant_id,
+                event_type="posture.created",
+                payload={
+                    "posture_id": str(posture_id),
+                    "status": RiskStatus.OPEN.value,
+                }
+            )
+            uow.session.add(outbox_evt)
+            await uow.commit()
+
         return record
 
     @classmethod
@@ -283,7 +372,7 @@ class SecurityPostureService:
         return synced
 
     @classmethod
-    def accept_risk(cls, posture_id: uuid.UUID) -> PostureRecord:
+    async def accept_risk(cls, posture_id: uuid.UUID) -> PostureRecord:
         """Transition security posture status to ACCEPTED."""
         posture = cls.get_posture(posture_id)
         if not posture:
@@ -297,13 +386,32 @@ class SecurityPostureService:
 
         posture.status = RiskStatus.ACCEPTED
         posture.updated_at = datetime.now(timezone.utc)
-        PostureHistoryService.record_event(
-            posture_id, "ACCEPTED", "Risk accepted by operator"
-        )
+
+        tenant_id = get_current_tenant_id() or uuid.UUID("00000000-0000-0000-0000-000000000000")
+        async with UnitOfWork() as uow:
+            db_p = await uow.posture_repo.get(posture_id)
+            if db_p:
+                db_p.status = RiskStatus.ACCEPTED.value
+                db_p.updated_at = posture.updated_at
+                await PostureHistoryService.record_event(
+                    posture_id, "ACCEPTED", "Risk accepted by operator", uow=uow
+                )
+                # Stage outbox event
+                outbox_evt = IntelligenceEvent(
+                    tenant_id=tenant_id,
+                    event_type="posture.accepted",
+                    payload={
+                        "posture_id": str(posture_id),
+                        "status": RiskStatus.ACCEPTED.value,
+                    }
+                )
+                uow.session.add(outbox_evt)
+                await uow.commit()
+
         return posture
 
     @classmethod
-    def mitigate_risk(cls, posture_id: uuid.UUID) -> PostureRecord:
+    async def mitigate_risk(cls, posture_id: uuid.UUID) -> PostureRecord:
         """Transition security posture status to MITIGATED."""
         posture = cls.get_posture(posture_id)
         if not posture:
@@ -317,13 +425,32 @@ class SecurityPostureService:
 
         posture.status = RiskStatus.MITIGATED
         posture.updated_at = datetime.now(timezone.utc)
-        PostureHistoryService.record_event(
-            posture_id, "MITIGATED", "Risk mitigated successfully"
-        )
+
+        tenant_id = get_current_tenant_id() or uuid.UUID("00000000-0000-0000-0000-000000000000")
+        async with UnitOfWork() as uow:
+            db_p = await uow.posture_repo.get(posture_id)
+            if db_p:
+                db_p.status = RiskStatus.MITIGATED.value
+                db_p.updated_at = posture.updated_at
+                await PostureHistoryService.record_event(
+                    posture_id, "MITIGATED", "Risk mitigated successfully", uow=uow
+                )
+                # Stage outbox event
+                outbox_evt = IntelligenceEvent(
+                    tenant_id=tenant_id,
+                    event_type="posture.mitigated",
+                    payload={
+                        "posture_id": str(posture_id),
+                        "status": RiskStatus.MITIGATED.value,
+                    }
+                )
+                uow.session.add(outbox_evt)
+                await uow.commit()
+
         return posture
 
     @classmethod
-    def close_posture(cls, posture_id: uuid.UUID) -> PostureRecord:
+    async def close_posture(cls, posture_id: uuid.UUID) -> PostureRecord:
         """Transition security posture status to CLOSED (terminal state)."""
         posture = cls.get_posture(posture_id)
         if not posture:
@@ -334,9 +461,28 @@ class SecurityPostureService:
 
         posture.status = RiskStatus.CLOSED
         posture.updated_at = datetime.now(timezone.utc)
-        PostureHistoryService.record_event(
-            posture_id, "CLOSED", "Posture closed. This is a terminal state."
-        )
+
+        tenant_id = get_current_tenant_id() or uuid.UUID("00000000-0000-0000-0000-000000000000")
+        async with UnitOfWork() as uow:
+            db_p = await uow.posture_repo.get(posture_id)
+            if db_p:
+                db_p.status = RiskStatus.CLOSED.value
+                db_p.updated_at = posture.updated_at
+                await PostureHistoryService.record_event(
+                    posture_id, "CLOSED", "Posture closed. This is a terminal state.", uow=uow
+                )
+                # Stage outbox event
+                outbox_evt = IntelligenceEvent(
+                    tenant_id=tenant_id,
+                    event_type="posture.closed",
+                    payload={
+                        "posture_id": str(posture_id),
+                        "status": RiskStatus.CLOSED.value,
+                    }
+                )
+                uow.session.add(outbox_evt)
+                await uow.commit()
+
         return posture
 
     @classmethod

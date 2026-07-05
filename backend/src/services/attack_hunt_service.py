@@ -47,7 +47,7 @@ class AttackHuntService:
             related_entities = [{"entity_type": "Technique", "entity_id": tech_id}]
 
             # Create or sync hunt
-            hunt = HuntService.create_or_sync_hunt(
+            hunt = await HuntService.create_or_sync_hunt(
                 title=title,
                 description=desc,
                 hunt_type=hunt_type,
@@ -57,16 +57,16 @@ class AttackHuntService:
 
             # Auto-create standard hypothesis
             hypothesis_text = f"Verify whether malicious activity exploiting technique {tech_id} is present and undetected in the environment."
-            existing_hyps = HuntHypothesisService.get_hypotheses(hunt.hunt_id)
+            existing_hyps = await HuntHypothesisService.get_hypotheses(hunt.hunt_id)
             if not any(h.description == hypothesis_text for h in existing_hyps):
-                HuntHypothesisService.create_hypothesis(hunt.hunt_id, hypothesis_text)
+                await HuntHypothesisService.create_hypothesis(hunt.hunt_id, hypothesis_text)
 
             # Correlate with existing findings referencing this technique
             for f in findings:
                 metadata_str = str(f.metadata_json or "").lower()
                 text_to_search = f"{f.title} {f.description} {metadata_str}".lower()
                 if tech_id.lower() in text_to_search:
-                    HuntFindingService.create_finding(
+                    await HuntFindingService.create_finding(
                         hunt_id=hunt.hunt_id,
                         entity_type="Finding",
                         entity_id=f.id,

@@ -32,6 +32,24 @@ class CacheBootstrapService:
         AutonomousSecurityPlanningService.clear_plans()
         UnifiedSecurityIntelligenceFabricService.clear_fabric()
 
+        from src.services.incident_service import IncidentService
+        from src.services.risk_acceptance_service import RiskAcceptanceService
+        from src.services.remediation_service import RemediationService
+        from src.services.hunt_service import HuntService
+        from src.services.attack_validation_service import AttackValidationService
+        from src.services.security_posture_service import SecurityPostureService
+        from src.services.security_program_service import SecurityProgramService
+        from src.services.purple_team_service import PurpleTeamService
+
+        IncidentService.clear_incidents()
+        RiskAcceptanceService.clear_acceptances()
+        RemediationService.clear_remediations()
+        HuntService.clear_hunts()
+        AttackValidationService.clear_validations()
+        SecurityPostureService.clear_postures()
+        SecurityProgramService.clear_programs()
+        PurpleTeamService.clear_exercises()
+
         # 2. Get active scopes
         if scope_id:
             scopes = [scope_id]
@@ -49,6 +67,15 @@ class CacheBootstrapService:
         await ThreatIntelligenceService.sync_threats(db)
         from src.services.graph_bootstrap_service import GraphBootstrapService
         await GraphBootstrapService.bootstrap()
+
+        await IncidentService.bootstrap(db)
+        await RiskAcceptanceService.bootstrap(db)
+        await RemediationService.bootstrap(db)
+        await HuntService.bootstrap(db)
+        await AttackValidationService.bootstrap(db)
+        await SecurityPostureService.bootstrap(db)
+        await SecurityProgramService.bootstrap(db)
+        await PurpleTeamService.bootstrap(db)
 
         # 4. Recalculate derived scores (Calculations and playbooks)
         from src.services.analyst_performance_service import AnalystPerformanceService

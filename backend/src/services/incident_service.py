@@ -1,13 +1,13 @@
 import uuid
 from datetime import datetime, timezone
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Any
 
 from sqlalchemy.ext.asyncio import AsyncSession
 from src.domain.entities.incident import (
     IncidentSeverity,
     IncidentStatus,
 )
-from src.infrastructure.database.models import Asset, Finding
+from src.infrastructure.database.models import Asset, Finding, Incident as DBIncident, IntelligenceEvent
 from src.services.alert_lifecycle_service import AlertLifecycleService
 from src.services.audit_service import create_audit_entry
 from src.services.incident_evidence_service import IncidentEvidenceService
@@ -15,6 +15,8 @@ from src.services.incident_fingerprint_service import IncidentFingerprintService
 from src.services.incident_history_service import IncidentHistoryService
 from src.services.incident_severity_registry import IncidentSeverityRegistry
 from src.services.workflow_event_service import WorkflowEventService
+from src.infrastructure.database.unit_of_work import UnitOfWork
+from src.core.tenant import get_current_tenant_id
 
 
 class IncidentRecord:
@@ -52,7 +54,7 @@ class IncidentRecord:
 
 
 class IncidentService:
-    # In-memory store of incidents
+    # Warm L2 cache
     _incidents: Dict[uuid.UUID, IncidentRecord] = {}
     _fingerprint_lookup: Dict[str, uuid.UUID] = {}
 
@@ -61,6 +63,41 @@ class IncidentService:
         """Clear all in-memory incident records."""
         cls._incidents.clear()
         cls._fingerprint_lookup.clear()
+
+    @classmethod
+    async def bootstrap(cls, db: AsyncSession) -> None:
+        """Bootstrap the L2 cache from PostgreSQL database."""
+        cls.clear_incidents()
+        async with UnitOfWork() as uow:
+            db_incidents = await uow.incident_repo.list()
+            for db_inc in db_incidents:
+                record = IncidentRecord(
+                    incident_id=db_inc.id,
+                    incident_fingerprint=db_inc.incident_fingerprint,
+                    title=db_inc.title,
+                    description=db_inc.description,
+                    severity=IncidentSeverity(db_inc.severity),
+                    status=IncidentStatus(db_inc.status),
+                    owner=db_inc.owner,
+                    created_at=db_inc.created_at,
+                    updated_at=db_inc.updated_at,
+                    alert_ids=db_inc.alert_ids,
+                    asset_ids=db_inc.asset_ids,
+                    finding_ids=db_inc.finding_ids,
+                    recommendation_ids=db_inc.recommendation_ids,
+                    remediation_ids=db_inc.remediation_ids,
+                )
+                cls._incidents[db_inc.id] = record
+                cls._fingerprint_lookup[db_inc.incident_fingerprint] = db_inc.id
+
+                # Load history and evidence cache
+                db_histories = await uow.incident_repo.list_history(db_inc.id)
+                for db_hist in db_histories:
+                    IncidentHistoryService._add_to_cache(db_inc.id, db_hist)
+
+                db_evidences = await uow.incident_repo.list_evidence(db_inc.id)
+                for db_ev in db_evidences:
+                    IncidentEvidenceService._add_to_cache(db_inc.id, db_ev.category, db_ev)
 
     @classmethod
     def get_all_incidents(cls) -> List[IncidentRecord]:
@@ -88,7 +125,6 @@ class IncidentService:
         if old_status == new_status:
             return
 
-        # CLOSED is strictly terminal
         if old_status == IncidentStatus.CLOSED:
             raise ValueError("Incident is CLOSED and cannot be mutated or reopened.")
 
@@ -132,23 +168,60 @@ class IncidentService:
         if isinstance(new_status, str):
             new_status = IncidentStatus(new_status)
 
-        # Enforce CLOSED terminal validation
         cls.validate_transition(incident.status, new_status)
 
         old_status = incident.status
         incident.status = new_status
         incident.updated_at = datetime.now(timezone.utc)
 
-        # Record event in immutable history log
-        IncidentHistoryService.record_event(
-            incident_id=incident_id,
-            event_type=(
-                new_status.value
-                if new_status != IncidentStatus.INVESTIGATING
-                else "INVESTIGATION_STARTED"
-            ),
-            details=f"Status transitioned from {old_status.value} to {new_status.value}.",
-        )
+        tenant_id = get_current_tenant_id() or uuid.UUID("00000000-0000-0000-0000-000000000000")
+        async with UnitOfWork() as uow:
+            db_inc = await uow.incident_repo.get(incident_id)
+            if not db_inc:
+                db_inc = DBIncident(
+                    tenant_id=tenant_id,
+                    id=incident_id,
+                    incident_fingerprint=incident.incident_fingerprint,
+                    title=incident.title,
+                    description=incident.description,
+                    severity=incident.severity.value if hasattr(incident.severity, "value") else str(incident.severity),
+                    status=old_status.value if hasattr(old_status, "value") else str(old_status),
+                    alert_ids=incident.alert_ids,
+                    asset_ids=incident.asset_ids,
+                    finding_ids=incident.finding_ids,
+                    recommendation_ids=incident.recommendation_ids,
+                    remediation_ids=incident.remediation_ids,
+                )
+                await uow.incident_repo.save(db_inc)
+            
+            db_inc.status = new_status.value
+            db_inc.updated_at = incident.updated_at
+            db_inc.updated_by = actor_id
+                
+            # Record event in immutable history log
+            await IncidentHistoryService.record_event(
+                incident_id=incident_id,
+                event_type=(
+                    new_status.value
+                    if new_status != IncidentStatus.INVESTIGATING
+                    else "INVESTIGATION_STARTED"
+                ),
+                details=f"Status transitioned from {old_status.value} to {new_status.value}.",
+                uow=uow,
+            )
+
+            # Stage outbox event
+            outbox_evt = IntelligenceEvent(
+                tenant_id=tenant_id,
+                event_type=f"incident.{new_status.value.lower()}",
+                payload={
+                    "incident_id": str(incident_id),
+                    "old_status": old_status.value,
+                    "new_status": new_status.value,
+                }
+            )
+            uow.session.add(outbox_evt)
+            await uow.commit()
 
         # Emit workflow event
         await WorkflowEventService.emit_event(
@@ -175,7 +248,6 @@ class IncidentService:
         )
 
         from src.services.incident_snapshot_service import IncidentSnapshotService
-
         IncidentSnapshotService.invalidate_cache()
 
         return incident
@@ -193,7 +265,6 @@ class IncidentService:
         if not incident:
             raise ValueError(f"Incident with ID {incident_id} not found.")
 
-        # Enforce Closed Incident Enforcement
         if incident.status == IncidentStatus.CLOSED:
             raise ValueError("Incident is CLOSED and cannot be modified.")
 
@@ -201,12 +272,50 @@ class IncidentService:
         incident.owner = owner_id
         incident.updated_at = datetime.now(timezone.utc)
 
-        # Record assignment log in immutable history
-        IncidentHistoryService.record_event(
-            incident_id=incident_id,
-            event_type="ASSIGNED",
-            details=f"Owner changed from {old_owner} to {owner_id}.",
-        )
+        tenant_id = get_current_tenant_id() or uuid.UUID("00000000-0000-0000-0000-000000000000")
+        async with UnitOfWork() as uow:
+            db_inc = await uow.incident_repo.get(incident_id)
+            if not db_inc:
+                db_inc = DBIncident(
+                    tenant_id=tenant_id,
+                    id=incident_id,
+                    incident_fingerprint=incident.incident_fingerprint,
+                    title=incident.title,
+                    description=incident.description,
+                    severity=incident.severity.value if hasattr(incident.severity, "value") else str(incident.severity),
+                    status=incident.status.value if hasattr(incident.status, "value") else str(incident.status),
+                    alert_ids=incident.alert_ids,
+                    asset_ids=incident.asset_ids,
+                    finding_ids=incident.finding_ids,
+                    recommendation_ids=incident.recommendation_ids,
+                    remediation_ids=incident.remediation_ids,
+                )
+                await uow.incident_repo.save(db_inc)
+            
+            db_inc.owner = owner_id
+            db_inc.updated_at = incident.updated_at
+            db_inc.updated_by = actor_id
+
+            # Record assignment log in immutable history
+            await IncidentHistoryService.record_event(
+                incident_id=incident_id,
+                event_type="ASSIGNED",
+                details=f"Owner changed from {old_owner} to {owner_id}.",
+                uow=uow,
+            )
+
+            # Stage outbox event
+            outbox_evt = IntelligenceEvent(
+                tenant_id=tenant_id,
+                event_type="incident.assigned",
+                payload={
+                    "incident_id": str(incident_id),
+                    "old_owner": str(old_owner) if old_owner else None,
+                    "new_owner": str(owner_id) if owner_id else None,
+                }
+            )
+            uow.session.add(outbox_evt)
+            await uow.commit()
 
         # Log audit entry
         await create_audit_entry(
@@ -222,7 +331,6 @@ class IncidentService:
         )
 
         from src.services.incident_snapshot_service import IncidentSnapshotService
-
         IncidentSnapshotService.invalidate_cache()
 
         return incident
@@ -231,12 +339,10 @@ class IncidentService:
     async def sync_alerts(cls, db: AsyncSession) -> None:
         """Group all active alerts into unified incidents and reconcile them."""
         alerts = AlertLifecycleService.get_all_alerts()
-        # Active alerts are those that are not resolved or suppressed
         active_alerts = [
             a for a in alerts if a.status.value not in ["RESOLVED", "SUPPRESSED"]
         ]
 
-        # Group alerts by asset_id (if none, group separately by alert_id)
         asset_groups: Dict[Optional[uuid.UUID], List[Any]] = {}
         no_asset_alerts = []
 
@@ -246,12 +352,13 @@ class IncidentService:
             else:
                 no_asset_alerts.append(a)
 
-        # Standard group lists
         groups = []
         for asset_id, grouped in asset_groups.items():
             groups.append((asset_id, grouped))
         for na_alert in no_asset_alerts:
             groups.append((None, [na_alert]))
+
+        tenant_id = get_current_tenant_id() or uuid.UUID("00000000-0000-0000-0000-000000000000")
 
         for asset_id, group_alerts in groups:
             alert_ids = [a.alert_id for a in group_alerts]
@@ -270,20 +377,15 @@ class IncidentService:
                 alert_ids, asset_ids, finding_ids
             )
 
-            # Preserve identity if fingerprint matches
             existing = cls.get_incident_by_fingerprint(fingerprint)
             if existing:
                 continue
 
-            # Check if there is an active incident for this asset that we should update?
-            # Incident identity rule says: Only if fingerprint matches we do not create.
-            # So if fingerprint differs (new alerts), we create a new incident.
             incident_id = uuid.uuid4()
             severity = IncidentSeverityRegistry.calculate_severity(
                 [a.severity for a in group_alerts]
             )
 
-            # Resolve nice title using database asset lookup if possible
             title = f"Security Incident on Asset: {asset_id}"
             if asset_id:
                 try:
@@ -301,7 +403,6 @@ class IncidentService:
                 desc_lines
             )
 
-            # Create the in-memory record
             record = IncidentRecord(
                 incident_id=incident_id,
                 incident_fingerprint=fingerprint,
@@ -319,46 +420,71 @@ class IncidentService:
             cls._incidents[incident_id] = record
             cls._fingerprint_lookup[fingerprint] = incident_id
 
-            # Append CREATED event to history
-            IncidentHistoryService.record_event(
-                incident_id=incident_id,
-                event_type="CREATED",
-                details=f"Incident initialized from alerts: {', '.join([str(aid) for aid in alert_ids])}.",
-            )
+            async with UnitOfWork() as uow:
+                db_inc = DBIncident(
+                    tenant_id=tenant_id,
+                    id=incident_id,
+                    incident_fingerprint=fingerprint,
+                    title=title,
+                    description=description,
+                    severity=severity.value,
+                    status=IncidentStatus.OPEN.value,
+                    alert_ids=alert_ids,
+                    asset_ids=asset_ids,
+                    finding_ids=finding_ids,
+                    recommendation_ids=recommendation_ids,
+                    remediation_ids=remediation_ids,
+                )
+                await uow.incident_repo.save(db_inc)
 
-            # Add read-only evidence references to evidence store
-            for a in group_alerts:
-                IncidentEvidenceService.add_evidence(incident_id, "alerts", a)
+                # Append CREATED event to history in DB
+                await IncidentHistoryService.record_event(
+                    incident_id=incident_id,
+                    event_type="CREATED",
+                    details=f"Incident initialized from alerts: {', '.join([str(aid) for aid in alert_ids])}.",
+                    uow=uow,
+                )
 
-            if asset_id:
-                try:
-                    db_asset = await db.get(Asset, asset_id)
-                    if db_asset:
-                        IncidentEvidenceService.add_evidence(
-                            incident_id, "assets", db_asset
+                # Add read-only evidence references to evidence store in DB
+                for a in group_alerts:
+                    await IncidentEvidenceService.add_evidence(incident_id, "alerts", a, uow=uow)
+
+                if asset_id:
+                    try:
+                        db_asset = await db.get(Asset, asset_id)
+                        if db_asset:
+                            await IncidentEvidenceService.add_evidence(
+                                incident_id, "assets", db_asset, uow=uow
+                            )
+                    except Exception:
+                        pass
+
+                for fid in finding_ids:
+                    try:
+                        db_finding = await db.get(Finding, fid)
+                        if db_finding:
+                            await IncidentEvidenceService.add_evidence(
+                                incident_id, "findings", db_finding, uow=uow
+                            )
+                    except Exception:
+                        pass
+
+                from src.services.remediation_service import RemediationService
+                for rmid in remediation_ids:
+                    rem = RemediationService.get_remediation(rmid)
+                    if rem:
+                        await IncidentEvidenceService.add_evidence(
+                            incident_id, "remediations", rem, uow=uow
                         )
-                except Exception:
-                    pass
 
-            for fid in finding_ids:
-                try:
-                    db_finding = await db.get(Finding, fid)
-                    if db_finding:
-                        IncidentEvidenceService.add_evidence(
-                            incident_id, "findings", db_finding
-                        )
-                except Exception:
-                    pass
-
-            # Import remediation service and pull in-memory remediations
-            from src.services.remediation_service import RemediationService
-
-            for rmid in remediation_ids:
-                rem = RemediationService.get_remediation(rmid)
-                if rem:
-                    IncidentEvidenceService.add_evidence(
-                        incident_id, "remediations", rem
-                    )
+                # Stage outbox event
+                outbox_evt = IntelligenceEvent(
+                    tenant_id=tenant_id,
+                    event_type="incident.open",
+                    payload={"incident_id": str(incident_id), "status": "OPEN"}
+                )
+                uow.session.add(outbox_evt)
+                await uow.commit()
 
             # Emit workflow event
             await WorkflowEventService.emit_event(
@@ -378,5 +504,4 @@ class IncidentService:
             )
 
         from src.services.incident_snapshot_service import IncidentSnapshotService
-
         IncidentSnapshotService.invalidate_cache()
