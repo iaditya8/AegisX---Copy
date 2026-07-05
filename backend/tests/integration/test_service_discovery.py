@@ -37,10 +37,14 @@ def sqlite_connect(dbapi_connection, connection_record):
 from src.infrastructure.database.models import Base
 
 
+TEST_TENANT_ID = uuid.UUID("00000000-0000-0000-0000-000000000000")
+
 @event.listens_for(Base, "init", propagate=True)
 def init_uuid(target, args, kwargs):
     if not hasattr(target, "id") or target.id is None:
         target.id = uuid.uuid4()
+    if hasattr(target, "tenant_id") and getattr(target, "tenant_id", None) is None:
+        target.tenant_id = TEST_TENANT_ID
 
 
 TestSessionLocal = async_sessionmaker(
@@ -61,14 +65,28 @@ async def seeded_db():
                     column.type = JSON().with_variant(sqlite.JSON(), "sqlite")
                 elif type(column.type).__name__ == "INET":
                     column.type = String().with_variant(sqlite.TEXT(), "sqlite")
+                elif type(column.type).__name__ == "ARRAY":
+                    column.type = JSON().with_variant(sqlite.JSON(), "sqlite")
+                elif type(column.type).__name__ == "UUID":
+                    from sqlalchemy.types import Uuid
+                    column.type = Uuid(as_uuid=True)
 
         await conn.run_sync(Base.metadata.drop_all)
         await conn.run_sync(Base.metadata.create_all)
 
     with patch(
         "src.infrastructure.celery.worker.AsyncSessionLocal", TestSessionLocal
-    ), patch("src.infrastructure.database.session.AsyncSessionLocal", TestSessionLocal):
+    ), patch(
+        "src.infrastructure.database.session.AsyncSessionLocal", TestSessionLocal
+    ), patch(
+        "src.infrastructure.database.unit_of_work.AsyncSessionLocal", TestSessionLocal
+    ):
         async with TestSessionLocal() as db:
+            from src.infrastructure.database.models import Tenant
+            tenant = Tenant(id=TEST_TENANT_ID, name="Test Tenant")
+            db.add(tenant)
+            await db.flush()
+
             user_id = uuid.uuid4()
             user = User(
                 id=user_id,

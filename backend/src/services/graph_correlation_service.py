@@ -7,7 +7,7 @@ from src.services.graph_relationship_weight_registry import GraphRelationshipWei
 
 class GraphCorrelationService:
     @classmethod
-    def recalculate_cross_domain_links(cls) -> None:
+    async def recalculate_cross_domain_links(cls) -> None:
         """Trace cross-domain alignments and generate edges deterministically (derived intelligence)."""
         from src.services.security_intelligence_graph_service import SecurityIntelligenceGraphService
 
@@ -76,7 +76,7 @@ class GraphCorrelationService:
         from src.services.threat_intelligence_service import ThreatIntelligenceService
         from src.services.security_knowledge_service import SecurityKnowledgeService
         threats = ThreatIntelligenceService.get_all_threats()
-        knows = SecurityKnowledgeService.get_all_knowledge()
+        knows = await SecurityKnowledgeService.get_all_knowledge()
         for t in threats:
             t_node = cls._find_node_by_entity(nodes_by_type.get(NodeType.THREAT_INTEL, []), t.threat_intel_id)
             if not t_node:

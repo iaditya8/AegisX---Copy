@@ -772,9 +772,9 @@ async def _execute_workflow_async(
                             from src.services.soc_snapshot_service import SOCSnapshotService
 
                             await SecurityOperationsAnalyticsService.sync_analytics(db)
-                            AnalystPerformanceService.calculate()
-                            OperationalKPIService.calculate()
-                            OperationalKRIService.calculate()
+                            await AnalystPerformanceService.calculate()
+                            await OperationalKPIService.calculate()
+                            await OperationalKRIService.calculate()
                             
                             prev_soc_snap = SOCSnapshotService._snapshots.get(scope_id)
                             await SOCDriftService.process_drift(db, scope_id=scope_id, prev_snapshot=prev_soc_snap)
@@ -884,7 +884,7 @@ async def _execute_workflow_async(
                             from src.services.graph_snapshot_service import GraphSnapshotService
 
                             await SecurityIntelligenceGraphService.rebuild_graph_topology(db)
-                            GraphCorrelationService.recalculate_cross_domain_links()
+                            await GraphCorrelationService.recalculate_cross_domain_links()
 
                             prev_graph_snap = GraphSnapshotService._snapshots.get(scope_id)
                             await GraphDriftService.process_drift(db, scope_id=scope_id, prev_snapshot=prev_graph_snap)

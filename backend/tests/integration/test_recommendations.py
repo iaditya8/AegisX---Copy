@@ -135,9 +135,16 @@ async def test_recommendation_deduplication(mock_db, mock_asset, mock_finding) -
         )
     )
 
-    mock_result = MagicMock()
-    mock_result.scalars.return_value.all.return_value = [mock_finding]
-    mock_db.execute = AsyncMock(return_value=mock_result)
+    async def mock_execute(query, *args, **kwargs):
+        mock_result = MagicMock()
+        query_str = str(query).lower()
+        if "finding_history" in query_str or "findinghistory" in query_str:
+            mock_result.scalars.return_value.all.return_value = []
+        else:
+            mock_result.scalars.return_value.all.return_value = [mock_finding]
+        return mock_result
+
+    mock_db.execute = AsyncMock(side_effect=mock_execute)
     mock_db.commit = AsyncMock()
     mock_db.add = MagicMock()
 

@@ -171,7 +171,7 @@ class SecurityDecisionService:
         """Query GRC assessments and other active domains to sync decision recommendations."""
         # 1. GRC Assessments
         from src.services.governance_risk_compliance_service import GovernanceRiskComplianceService
-        assessments = GovernanceRiskComplianceService.get_all_assessments()
+        assessments = await GovernanceRiskComplianceService.get_all_assessments()
         for assess in assessments:
             if isinstance(assess, dict):
                 fw_type = assess.get("framework_type") or assess.get("framework_name") or "Framework"

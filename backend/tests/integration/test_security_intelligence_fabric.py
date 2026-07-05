@@ -50,6 +50,18 @@ def mock_db():
     db.get = AsyncMock()
     db.commit = AsyncMock()
     db.refresh = AsyncMock()
+    db.rollback = AsyncMock()
+    db.flush = AsyncMock()
+
+    def mock_add(entity):
+        import uuid
+        for pk in ["id", "resilience_id", "analytics_id", "knowledge_id", "assessment_id", "risk_id"]:
+            if hasattr(entity, pk) and getattr(entity, pk, None) is None:
+                try:
+                    setattr(entity, pk, uuid.uuid4())
+                except Exception:
+                    pass
+    db.add = MagicMock(side_effect=mock_add)
     return db
 
 
@@ -569,6 +581,8 @@ async def test_worker_integration(mock_db):
     """Verify Celery task runner executes all Sprint 37 steps successfully."""
     from src.infrastructure.celery.worker import _execute_workflow_async
     
+    with open("debug_log.txt", "a") as f:
+        f.write(f"\n[TEST WORKER] mock_db={mock_db}, type={type(mock_db)}, mock_db.add={getattr(mock_db, 'add', None)}\n")
     workflow_id = uuid.uuid4()
     scan_run_id = uuid.uuid4()
 
@@ -597,8 +611,8 @@ async def test_worker_integration(mock_db):
     mock_db.get = AsyncMock(side_effect=mock_get)
     mock_db.execute = AsyncMock(return_value=mock_result)
 
-    mock_session_factory = MagicMock()
-    mock_session_factory.return_value.__aenter__.return_value = mock_db
+    mock_session_factory = MagicMock(return_value=mock_db)
+    mock_db.__aenter__.return_value = mock_db
 
     with patch(
         "src.infrastructure.celery.worker.AsyncSessionLocal",

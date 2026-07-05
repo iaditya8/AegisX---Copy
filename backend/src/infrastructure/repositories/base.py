@@ -4,6 +4,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from src.infrastructure.database.models import Base
 
+from sqlalchemy import inspect
+
 ModelType = TypeVar("ModelType", bound=Base)
 
 
@@ -13,8 +15,11 @@ class BaseRepository(Generic[ModelType]):
         self.model_class = model_class
 
     async def get(self, id: uuid.UUID) -> Optional[ModelType]:
+        # Dynamically retrieve primary key column via mapper inspection
+        mapper = inspect(self.model_class)
+        pk_column = mapper.primary_key[0]
         result = await self.session.execute(
-            select(self.model_class).filter_by(id=id)
+            select(self.model_class).filter(pk_column == id)
         )
         return result.scalar_one_or_none()
 

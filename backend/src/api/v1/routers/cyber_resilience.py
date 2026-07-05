@@ -77,7 +77,7 @@ async def list_resilience(
     current_user: User = Depends(RoleChecker(["admin", "operator", "reader"])),
 ) -> StandardResponse[List[CyberResilienceResponse]]:
     """List all cyber resilience records."""
-    records = CyberResilienceService.get_all_resilience()
+    records = await CyberResilienceService.get_all_resilience()
 
     if current_user.role != "admin":
         allowed_scopes = await get_allowed_scope_ids(db, current_user)
@@ -93,7 +93,7 @@ async def get_active(
     current_user: User = Depends(RoleChecker(["admin", "operator", "reader"])),
 ) -> StandardResponse[List[CyberResilienceResponse]]:
     """Get active cyber resilience records."""
-    records = CyberResilienceService.get_all_resilience()
+    records = await CyberResilienceService.get_all_resilience()
     records = [r for r in records if r.status == ResilienceStatus.ACTIVE]
 
     if current_user.role != "admin":
@@ -110,7 +110,7 @@ async def get_completed(
     current_user: User = Depends(RoleChecker(["admin", "operator", "reader"])),
 ) -> StandardResponse[List[CyberResilienceResponse]]:
     """Get completed cyber resilience records."""
-    records = CyberResilienceService.get_all_resilience()
+    records = await CyberResilienceService.get_all_resilience()
     records = [
         r
         for r in records
@@ -135,7 +135,7 @@ async def get_critical_services(
     if scope_id:
         await check_scope_ownership(db, scope_id, current_user)
 
-    records = ServiceResilienceService.get_critical_services(scope_id)
+    records = await ServiceResilienceService.get_critical_services(scope_id)
 
     if current_user.role != "admin" and not scope_id:
         allowed_scopes = await get_allowed_scope_ids(db, current_user)
@@ -152,7 +152,7 @@ async def get_objectives(
     current_user: User = Depends(RoleChecker(["admin", "operator", "reader"])),
 ) -> StandardResponse[List[RecoveryObjectiveResponse]]:
     """Get objectives for a specific resilience record."""
-    record = CyberResilienceService.get_resilience(resilience_id)
+    record = await CyberResilienceService.get_resilience(resilience_id)
     if not record:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -220,7 +220,7 @@ async def activate_resilience(
     current_user: User = Depends(RoleChecker(["admin", "operator"])),
 ) -> StandardResponse[CyberResilienceResponse]:
     """Transition to ACTIVE."""
-    record = CyberResilienceService.get_resilience(id)
+    record = await CyberResilienceService.get_resilience(id)
     if not record:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -235,7 +235,7 @@ async def activate_resilience(
             detail="Cannot transition status of a completed or closed record",
         )
 
-    res = CyberResilienceService.transition_status(id, ResilienceStatus.ACTIVE)
+    res = await CyberResilienceService.transition_status(id, ResilienceStatus.ACTIVE)
     return StandardResponse(data=CyberResilienceService.to_response(res))
 
 
@@ -246,7 +246,7 @@ async def validate_resilience(
     current_user: User = Depends(RoleChecker(["admin", "operator"])),
 ) -> StandardResponse[CyberResilienceResponse]:
     """Transition to VALIDATED."""
-    record = CyberResilienceService.get_resilience(id)
+    record = await CyberResilienceService.get_resilience(id)
     if not record:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -261,7 +261,7 @@ async def validate_resilience(
             detail="Cannot transition status of a completed or closed record",
         )
 
-    res = CyberResilienceService.transition_status(id, ResilienceStatus.VALIDATED)
+    res = await CyberResilienceService.transition_status(id, ResilienceStatus.VALIDATED)
     return StandardResponse(data=CyberResilienceService.to_response(res))
 
 
@@ -272,7 +272,7 @@ async def complete_resilience(
     current_user: User = Depends(RoleChecker(["admin", "operator"])),
 ) -> StandardResponse[CyberResilienceResponse]:
     """Transition to COMPLETED."""
-    record = CyberResilienceService.get_resilience(id)
+    record = await CyberResilienceService.get_resilience(id)
     if not record:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -287,7 +287,7 @@ async def complete_resilience(
             detail="Cannot transition status of a completed or closed record",
         )
 
-    res = CyberResilienceService.transition_status(id, ResilienceStatus.COMPLETED)
+    res = await CyberResilienceService.transition_status(id, ResilienceStatus.COMPLETED)
     return StandardResponse(data=CyberResilienceService.to_response(res))
 
 
@@ -298,7 +298,7 @@ async def close_resilience(
     current_user: User = Depends(RoleChecker(["admin", "operator"])),
 ) -> StandardResponse[CyberResilienceResponse]:
     """Transition to CLOSED."""
-    record = CyberResilienceService.get_resilience(id)
+    record = await CyberResilienceService.get_resilience(id)
     if not record:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -313,5 +313,5 @@ async def close_resilience(
             detail="Cannot transition status of a completed or closed record",
         )
 
-    res = CyberResilienceService.transition_status(id, ResilienceStatus.CLOSED)
+    res = await CyberResilienceService.transition_status(id, ResilienceStatus.CLOSED)
     return StandardResponse(data=CyberResilienceService.to_response(res))

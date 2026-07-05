@@ -78,7 +78,7 @@ async def list_analytics(
     current_user: User = Depends(RoleChecker(["admin", "operator", "reader"])),
 ) -> StandardResponse[List[AnalyticsResponse]]:
     """List all security operations analytics records."""
-    records = SecurityOperationsAnalyticsService.get_all_analytics()
+    records = await SecurityOperationsAnalyticsService.get_all_analytics()
 
     if current_user.role != "admin":
         allowed_scopes = await get_allowed_scope_ids(db, current_user)
@@ -94,7 +94,7 @@ async def get_active(
     current_user: User = Depends(RoleChecker(["admin", "operator", "reader"])),
 ) -> StandardResponse[List[AnalyticsResponse]]:
     """Get active security operations analytics records."""
-    records = SecurityOperationsAnalyticsService.get_all_analytics()
+    records = await SecurityOperationsAnalyticsService.get_all_analytics()
     records = [r for r in records if r.status == AnalyticsStatus.ACTIVE]
 
     if current_user.role != "admin":
@@ -111,7 +111,7 @@ async def get_archived(
     current_user: User = Depends(RoleChecker(["admin", "operator", "reader"])),
 ) -> StandardResponse[List[AnalyticsResponse]]:
     """Get archived security operations analytics records."""
-    records = SecurityOperationsAnalyticsService.get_all_analytics()
+    records = await SecurityOperationsAnalyticsService.get_all_analytics()
     records = [r for r in records if r.status == AnalyticsStatus.ARCHIVED]
 
     if current_user.role != "admin":
@@ -129,7 +129,7 @@ async def get_single_analytics(
     current_user: User = Depends(RoleChecker(["admin", "operator", "reader"])),
 ) -> StandardResponse[AnalyticsResponse]:
     """Get a single SOC analytics record."""
-    record = SecurityOperationsAnalyticsService.get_analytics(id)
+    record = await SecurityOperationsAnalyticsService.get_analytics(id)
     if not record:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -146,7 +146,7 @@ async def list_analysts(
     current_user: User = Depends(RoleChecker(["admin", "operator", "reader"])),
 ) -> StandardResponse[List[AnalystPerformanceResponse]]:
     """List all security analysts."""
-    data = AnalystPerformanceService.get_analysts()
+    data = await AnalystPerformanceService.get_analysts()
     return StandardResponse(data=data)
 
 
@@ -155,7 +155,7 @@ async def get_rankings(
     current_user: User = Depends(RoleChecker(["admin", "operator", "reader"])),
 ) -> StandardResponse[List[AnalystPerformanceResponse]]:
     """Get analyst performance rankings."""
-    data = AnalystPerformanceService.get_rankings()
+    data = await AnalystPerformanceService.get_rankings()
     return StandardResponse(data=data)
 
 
@@ -182,7 +182,7 @@ async def get_kpis(
     current_user: User = Depends(RoleChecker(["admin", "operator", "reader"])),
 ) -> StandardResponse[List[OperationalKPIResponse]]:
     """Get SOC KPI metrics."""
-    data = OperationalKPIService.get_kpis()
+    data = await OperationalKPIService.get_kpis()
     return StandardResponse(data=data)
 
 
@@ -191,7 +191,7 @@ async def get_kris(
     current_user: User = Depends(RoleChecker(["admin", "operator", "reader"])),
 ) -> StandardResponse[List[OperationalKRIResponse]]:
     """Get SOC KRI metrics."""
-    data = OperationalKRIService.get_kris()
+    data = await OperationalKRIService.get_kris()
     return StandardResponse(data=data)
 
 
@@ -248,7 +248,7 @@ async def review_analytics(
     current_user: User = Depends(RoleChecker(["admin", "operator"])),
 ) -> StandardResponse[AnalyticsResponse]:
     """Transition record status to REVIEW."""
-    record = SecurityOperationsAnalyticsService.get_analytics(id)
+    record = await SecurityOperationsAnalyticsService.get_analytics(id)
     if not record:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -263,7 +263,7 @@ async def review_analytics(
             detail="Cannot transition status of an archived record",
         )
 
-    res = SecurityOperationsAnalyticsService.transition_status(id, AnalyticsStatus.REVIEW)
+    res = await SecurityOperationsAnalyticsService.transition_status(id, AnalyticsStatus.REVIEW)
     return StandardResponse(data=SecurityOperationsAnalyticsService.to_response(res))
 
 
@@ -274,7 +274,7 @@ async def archive_analytics(
     current_user: User = Depends(RoleChecker(["admin", "operator"])),
 ) -> StandardResponse[AnalyticsResponse]:
     """Transition record status to ARCHIVED."""
-    record = SecurityOperationsAnalyticsService.get_analytics(id)
+    record = await SecurityOperationsAnalyticsService.get_analytics(id)
     if not record:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -289,5 +289,5 @@ async def archive_analytics(
             detail="Cannot transition status of an archived record",
         )
 
-    res = SecurityOperationsAnalyticsService.transition_status(id, AnalyticsStatus.ARCHIVED)
+    res = await SecurityOperationsAnalyticsService.transition_status(id, AnalyticsStatus.ARCHIVED)
     return StandardResponse(data=SecurityOperationsAnalyticsService.to_response(res))

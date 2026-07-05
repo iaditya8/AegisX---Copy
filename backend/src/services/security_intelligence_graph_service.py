@@ -198,12 +198,12 @@ class SecurityIntelligenceGraphService:
 
         # 2. Risks from CyberRiskQuantificationService
         from src.services.cyber_risk_quantification_service import CyberRiskQuantificationService
-        for r in CyberRiskQuantificationService.get_all_risks():
+        for r in await CyberRiskQuantificationService.get_all_risks():
             cls.create_or_sync_node(NodeType.RISK, r.risk_id, r.scope_id)
 
         # 3. GRC Compliance Assessments from GovernanceRiskComplianceService
         from src.services.governance_risk_compliance_service import GovernanceRiskComplianceService
-        for c in GovernanceRiskComplianceService.get_all_assessments():
+        for c in await GovernanceRiskComplianceService.get_all_assessments():
             cls.create_or_sync_node(NodeType.COMPLIANCE, c.assessment_id, c.scope_id)
 
         # 4. Postures from SecurityPostureService
@@ -213,12 +213,12 @@ class SecurityIntelligenceGraphService:
 
         # 5. Resilience records
         from src.services.cyber_resilience_service import CyberResilienceService
-        for res in CyberResilienceService.get_all_resilience():
+        for res in await CyberResilienceService.get_all_resilience():
             cls.create_or_sync_node(NodeType.RESILIENCE, res.resilience_id, res.scope_id)
 
         # 6. GRC Knowledge items
         from src.services.security_knowledge_service import SecurityKnowledgeService
-        for k in SecurityKnowledgeService.get_all_knowledge():
+        for k in await SecurityKnowledgeService.get_all_knowledge():
             cls.create_or_sync_node(NodeType.KNOWLEDGE, k.knowledge_id, k.scope_id)
 
         # 7. Threat intelligence records

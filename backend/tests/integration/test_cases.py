@@ -126,13 +126,25 @@ def clean_stores():
 
 
 def setup_basic_mock_db(mock_db, mock_scope, mock_asset):
-    mock_db.get = AsyncMock(
-        side_effect=lambda model, ident: (
-            mock_asset
-            if model == Asset
-            else (mock_scope if model == Scope else None)
-        )
-    )
+    scopes_list = mock_scope if isinstance(mock_scope, list) else [mock_scope]
+    assets_list = mock_asset if isinstance(mock_asset, list) else [mock_asset]
+    
+    async def mock_get(model, ident):
+        if model == Asset:
+            for a in assets_list:
+                if a.id == ident:
+                    return a
+            if len(assets_list) == 1:
+                return assets_list[0]
+        elif model == Scope:
+            for s in scopes_list:
+                if s.id == ident:
+                    return s
+            if len(scopes_list) == 1:
+                return scopes_list[0]
+        return None
+
+    mock_db.get = AsyncMock(side_effect=mock_get)
 
 
 # --- 1. Domain / Severity Registry Tests ---
@@ -547,7 +559,16 @@ async def test_ai_context_case_injection(mock_db) -> None:
 @pytest.mark.asyncio
 async def test_rbac_case_scope_validation(mock_db, mock_scope, mock_asset, mock_operator) -> None:
     """Verify that operators are rejected when querying or modifying cases with assets outside scope."""
-    setup_basic_mock_db(mock_db, mock_scope, mock_asset)
+    other_scope = Scope()
+    other_scope.id = uuid.uuid4()
+    other_scope.owner_id = uuid.uuid4()
+    
+    other_asset = Asset()
+    other_asset.id = uuid.uuid4()
+    other_asset.scope_id = other_scope.id
+    other_asset.deleted_at = None
+
+    setup_basic_mock_db(mock_db, [mock_scope, other_scope], [mock_asset, other_asset])
 
     case_id = uuid.uuid4()
     case = CaseRecord(
@@ -557,7 +578,7 @@ async def test_rbac_case_scope_validation(mock_db, mock_scope, mock_asset, mock_
         description="Desc",
         severity=CaseSeverity.MEDIUM,
         status=CaseStatus.OPEN,
-        asset_ids=[uuid.uuid4()],  # Random asset not in scope
+        asset_ids=[other_asset.id],  # Asset outside operator's scope
     )
     CaseService._cases[case_id] = case
 

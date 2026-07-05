@@ -348,7 +348,7 @@ async def test_duplicate_prevention_on_creation(mock_db, mock_scope):
 
 @pytest.mark.asyncio
 async def test_get_resilience_not_found():
-    assert CyberResilienceService.get_resilience(uuid.uuid4()) is None
+    assert CyberResilienceService.get_resilience(uuid.uuid4()) == None
 
 @pytest.mark.asyncio
 async def test_sync_does_not_reactivate_completed(mock_db, mock_scope):

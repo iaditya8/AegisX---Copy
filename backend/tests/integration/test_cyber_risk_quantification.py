@@ -280,37 +280,37 @@ async def test_risk_sync_preserves_identity(mock_db, mock_scope):
 async def test_risk_accept_transition(mock_db, mock_scope):
     setup_basic_mock_db(mock_db, mock_scope)
     r = await CyberRiskQuantificationService.create_or_sync_risk("T1", "Desc", RiskScenarioType.DATA_BREACH, "RARE", "LOW", 1000.0)
-    res = CyberRiskQuantificationService.transition_status(r.risk_id, RiskQuantificationStatus.ACCEPTED)
+    res = await CyberRiskQuantificationService.transition_status(r.risk_id, RiskQuantificationStatus.ACCEPTED)
     assert res.status == RiskQuantificationStatus.ACCEPTED
 
 @pytest.mark.asyncio
 async def test_risk_mitigate_transition(mock_db, mock_scope):
     setup_basic_mock_db(mock_db, mock_scope)
     r = await CyberRiskQuantificationService.create_or_sync_risk("T1", "Desc", RiskScenarioType.DATA_BREACH, "RARE", "LOW", 1000.0)
-    res = CyberRiskQuantificationService.transition_status(r.risk_id, RiskQuantificationStatus.MITIGATED)
+    res = await CyberRiskQuantificationService.transition_status(r.risk_id, RiskQuantificationStatus.MITIGATED)
     assert res.status == RiskQuantificationStatus.MITIGATED
 
 @pytest.mark.asyncio
 async def test_risk_close_transition(mock_db, mock_scope):
     setup_basic_mock_db(mock_db, mock_scope)
     r = await CyberRiskQuantificationService.create_or_sync_risk("T1", "Desc", RiskScenarioType.DATA_BREACH, "RARE", "LOW", 1000.0)
-    res = CyberRiskQuantificationService.transition_status(r.risk_id, RiskQuantificationStatus.CLOSED)
+    res = await CyberRiskQuantificationService.transition_status(r.risk_id, RiskQuantificationStatus.CLOSED)
     assert res.status == RiskQuantificationStatus.CLOSED
 
 @pytest.mark.asyncio
 async def test_risk_terminal_state_enforcement(mock_db, mock_scope):
     setup_basic_mock_db(mock_db, mock_scope)
     r = await CyberRiskQuantificationService.create_or_sync_risk("T1", "Desc", RiskScenarioType.DATA_BREACH, "RARE", "LOW", 1000.0)
-    CyberRiskQuantificationService.transition_status(r.risk_id, RiskQuantificationStatus.CLOSED)
+    await CyberRiskQuantificationService.transition_status(r.risk_id, RiskQuantificationStatus.CLOSED)
     # Re-transitioning should do nothing and return the record in CLOSED status
-    res = CyberRiskQuantificationService.transition_status(r.risk_id, RiskQuantificationStatus.ACTIVE)
+    res = await CyberRiskQuantificationService.transition_status(r.risk_id, RiskQuantificationStatus.ACTIVE)
     assert res.status == RiskQuantificationStatus.CLOSED
 
 @pytest.mark.asyncio
 async def test_sync_does_not_reactivate_closed(mock_db, mock_scope):
     setup_basic_mock_db(mock_db, mock_scope)
     r = await CyberRiskQuantificationService.create_or_sync_risk("Cloud S3 Bucket Leaks", "Desc", RiskScenarioType.CLOUD_COMPROMISE, "OCCASIONAL", "HIGH", 120000.0)
-    CyberRiskQuantificationService.transition_status(r.risk_id, RiskQuantificationStatus.CLOSED)
+    await CyberRiskQuantificationService.transition_status(r.risk_id, RiskQuantificationStatus.CLOSED)
     await CyberRiskQuantificationService.sync_risks(mock_db)
     assert r.status == RiskQuantificationStatus.CLOSED
 
@@ -318,29 +318,29 @@ async def test_sync_does_not_reactivate_closed(mock_db, mock_scope):
 async def test_invalid_lifecycle_transition_accepted_to_mitigated(mock_db, mock_scope):
     setup_basic_mock_db(mock_db, mock_scope)
     r = await CyberRiskQuantificationService.create_or_sync_risk("T1", "Desc", RiskScenarioType.DATA_BREACH, "RARE", "LOW", 1000.0)
-    CyberRiskQuantificationService.transition_status(r.risk_id, RiskQuantificationStatus.ACCEPTED)
+    await CyberRiskQuantificationService.transition_status(r.risk_id, RiskQuantificationStatus.ACCEPTED)
     with pytest.raises(ValueError, match="Invalid transition"):
-        CyberRiskQuantificationService.transition_status(r.risk_id, RiskQuantificationStatus.MITIGATED)
+        await CyberRiskQuantificationService.transition_status(r.risk_id, RiskQuantificationStatus.MITIGATED)
 
 @pytest.mark.asyncio
 async def test_duplicate_prevention_on_creation_risk(mock_db, mock_scope):
     setup_basic_mock_db(mock_db, mock_scope)
     r1 = await CyberRiskQuantificationService.create_or_sync_risk("T1", "Desc", RiskScenarioType.DATA_BREACH, "RARE", "LOW", 1000.0)
     r2 = await CyberRiskQuantificationService.create_or_sync_risk("T1", "Desc", RiskScenarioType.DATA_BREACH, "RARE", "LOW", 1000.0)
-    assert len(CyberRiskQuantificationService.get_all_risks()) == 1
+    assert len(await CyberRiskQuantificationService.get_all_risks()) == 1
 
 @pytest.mark.asyncio
 async def test_get_risk_not_found_risk():
-    assert CyberRiskQuantificationService.get_risk(uuid.uuid4()) is None
+    assert await CyberRiskQuantificationService.get_risk(uuid.uuid4()) is None
 
 @pytest.mark.asyncio
 async def test_get_risk_by_fingerprint_not_found_risk():
-    assert CyberRiskQuantificationService.get_risk_by_fingerprint("nonexistent") is None
+    assert await CyberRiskQuantificationService.get_risk_by_fingerprint("nonexistent") is None
 
 @pytest.mark.asyncio
 async def test_transition_status_record_not_found_risk():
     with pytest.raises(ValueError, match="not found"):
-        CyberRiskQuantificationService.transition_status(uuid.uuid4(), RiskQuantificationStatus.ACTIVE)
+        await CyberRiskQuantificationService.transition_status(uuid.uuid4(), RiskQuantificationStatus.ACTIVE)
 
 @pytest.mark.asyncio
 async def test_risk_identity_preservation_on_exposure_value_update(mock_db, mock_scope):
@@ -382,7 +382,7 @@ async def test_risk_history_immutable(mock_db, mock_scope):
 async def test_risk_history_on_acceptance(mock_db, mock_scope):
     setup_basic_mock_db(mock_db, mock_scope)
     r = await CyberRiskQuantificationService.create_or_sync_risk("T1", "Desc", RiskScenarioType.DATA_BREACH, "RARE", "LOW", 1000.0)
-    CyberRiskQuantificationService.transition_status(r.risk_id, RiskQuantificationStatus.ACCEPTED)
+    await CyberRiskQuantificationService.transition_status(r.risk_id, RiskQuantificationStatus.ACCEPTED)
     hist = QuantifiedRiskHistoryService.get_history(r.risk_id)
     event_types = [h.event_type for h in hist]
     assert "ACCEPTED" in event_types
@@ -391,7 +391,7 @@ async def test_risk_history_on_acceptance(mock_db, mock_scope):
 async def test_risk_history_on_mitigation(mock_db, mock_scope):
     setup_basic_mock_db(mock_db, mock_scope)
     r = await CyberRiskQuantificationService.create_or_sync_risk("T1", "Desc", RiskScenarioType.DATA_BREACH, "RARE", "LOW", 1000.0)
-    CyberRiskQuantificationService.transition_status(r.risk_id, RiskQuantificationStatus.MITIGATED)
+    await CyberRiskQuantificationService.transition_status(r.risk_id, RiskQuantificationStatus.MITIGATED)
     hist = QuantifiedRiskHistoryService.get_history(r.risk_id)
     event_types = [h.event_type for h in hist]
     assert "MITIGATED" in event_types
@@ -400,7 +400,7 @@ async def test_risk_history_on_mitigation(mock_db, mock_scope):
 async def test_risk_history_on_closure(mock_db, mock_scope):
     setup_basic_mock_db(mock_db, mock_scope)
     r = await CyberRiskQuantificationService.create_or_sync_risk("T1", "Desc", RiskScenarioType.DATA_BREACH, "RARE", "LOW", 1000.0)
-    CyberRiskQuantificationService.transition_status(r.risk_id, RiskQuantificationStatus.CLOSED)
+    await CyberRiskQuantificationService.transition_status(r.risk_id, RiskQuantificationStatus.CLOSED)
     hist = QuantifiedRiskHistoryService.get_history(r.risk_id)
     event_types = [h.event_type for h in hist]
     assert "CLOSED" in event_types
@@ -409,7 +409,7 @@ async def test_risk_history_on_closure(mock_db, mock_scope):
 async def test_risk_history_ordering(mock_db, mock_scope):
     setup_basic_mock_db(mock_db, mock_scope)
     r = await CyberRiskQuantificationService.create_or_sync_risk("T1", "Desc", RiskScenarioType.DATA_BREACH, "RARE", "LOW", 1000.0)
-    CyberRiskQuantificationService.transition_status(r.risk_id, RiskQuantificationStatus.ACCEPTED)
+    await CyberRiskQuantificationService.transition_status(r.risk_id, RiskQuantificationStatus.ACCEPTED)
     hist = QuantifiedRiskHistoryService.get_history(r.risk_id)
     assert hist[0].timestamp <= hist[1].timestamp
 
@@ -530,7 +530,7 @@ async def test_snapshot_not_authoritative_risk(mock_db, mock_scope):
     await CyberRiskQuantificationService.sync_risks(mock_db)
     snap = await RiskQuantificationSnapshotService.generate_snapshot(mock_db, None)
     snap["summary"]["total_risk_records"] = 999
-    assert len(CyberRiskQuantificationService.get_all_risks()) == 2
+    assert len(await CyberRiskQuantificationService.get_all_risks()) == 2
 
 @pytest.mark.asyncio
 async def test_risk_drift_detection(mock_db, mock_scope):
@@ -693,7 +693,7 @@ async def test_worker_integration_risk(mock_db, mock_scope):
 async def test_closed_risk_not_reactivated_by_worker(mock_db, mock_scope):
     setup_basic_mock_db(mock_db, mock_scope)
     r = await CyberRiskQuantificationService.create_or_sync_risk("Cloud S3 Bucket Leaks", "Desc", RiskScenarioType.CLOUD_COMPROMISE, "OCCASIONAL", "HIGH", 120000.0)
-    CyberRiskQuantificationService.transition_status(r.risk_id, RiskQuantificationStatus.CLOSED)
+    await CyberRiskQuantificationService.transition_status(r.risk_id, RiskQuantificationStatus.CLOSED)
     
     from src.services.continuous_refresh_service import ContinuousRefreshService
     await ContinuousRefreshService.refresh_all(mock_db)
@@ -703,7 +703,7 @@ async def test_closed_risk_not_reactivated_by_worker(mock_db, mock_scope):
 async def test_closed_risk_not_reactivated_by_forecast(mock_db, mock_scope):
     setup_basic_mock_db(mock_db, mock_scope)
     r = await CyberRiskQuantificationService.create_or_sync_risk("T1", "Desc", RiskScenarioType.DATA_BREACH, "RARE", "LOW", 1000.0)
-    CyberRiskQuantificationService.transition_status(r.risk_id, RiskQuantificationStatus.CLOSED)
+    await CyberRiskQuantificationService.transition_status(r.risk_id, RiskQuantificationStatus.CLOSED)
     RiskForecastService.calculate()
     assert r.status == RiskQuantificationStatus.CLOSED
 
@@ -711,7 +711,7 @@ async def test_closed_risk_not_reactivated_by_forecast(mock_db, mock_scope):
 async def test_closed_risk_not_reactivated_by_snapshot(mock_db, mock_scope):
     setup_basic_mock_db(mock_db, mock_scope)
     r = await CyberRiskQuantificationService.create_or_sync_risk("T1", "Desc", RiskScenarioType.DATA_BREACH, "RARE", "LOW", 1000.0)
-    CyberRiskQuantificationService.transition_status(r.risk_id, RiskQuantificationStatus.CLOSED)
+    await CyberRiskQuantificationService.transition_status(r.risk_id, RiskQuantificationStatus.CLOSED)
     await RiskQuantificationSnapshotService.generate_snapshot(mock_db, None)
     assert r.status == RiskQuantificationStatus.CLOSED
 
@@ -719,7 +719,7 @@ async def test_closed_risk_not_reactivated_by_snapshot(mock_db, mock_scope):
 async def test_closed_risk_not_reactivated_by_drift(mock_db, mock_scope):
     setup_basic_mock_db(mock_db, mock_scope)
     r = await CyberRiskQuantificationService.create_or_sync_risk("T1", "Desc", RiskScenarioType.DATA_BREACH, "RARE", "LOW", 1000.0)
-    CyberRiskQuantificationService.transition_status(r.risk_id, RiskQuantificationStatus.CLOSED)
+    await CyberRiskQuantificationService.transition_status(r.risk_id, RiskQuantificationStatus.CLOSED)
     await RiskDriftService.process_drift(mock_db, None, None)
     assert r.status == RiskQuantificationStatus.CLOSED
 
@@ -731,28 +731,28 @@ async def test_risk_identity_preserved_after_worker_refresh(mock_db, mock_scope)
     from src.services.continuous_refresh_service import ContinuousRefreshService
     await ContinuousRefreshService.refresh_all(mock_db)
     
-    assert CyberRiskQuantificationService.get_all_risks()[0].risk_id == r.risk_id
+    assert (await CyberRiskQuantificationService.get_all_risks())[0].risk_id == r.risk_id
 
 @pytest.mark.asyncio
 async def test_risk_identity_preserved_after_forecast_refresh(mock_db, mock_scope):
     setup_basic_mock_db(mock_db, mock_scope)
     r = await CyberRiskQuantificationService.create_or_sync_risk("T1", "Desc", RiskScenarioType.DATA_BREACH, "RARE", "LOW", 1000.0)
     RiskForecastService.calculate()
-    assert CyberRiskQuantificationService.get_all_risks()[0].risk_id == r.risk_id
+    assert (await CyberRiskQuantificationService.get_all_risks())[0].risk_id == r.risk_id
 
 @pytest.mark.asyncio
 async def test_risk_identity_preserved_after_snapshot_rebuild(mock_db, mock_scope):
     setup_basic_mock_db(mock_db, mock_scope)
     r = await CyberRiskQuantificationService.create_or_sync_risk("T1", "Desc", RiskScenarioType.DATA_BREACH, "RARE", "LOW", 1000.0)
     await RiskQuantificationSnapshotService.generate_snapshot(mock_db, None)
-    assert CyberRiskQuantificationService.get_all_risks()[0].risk_id == r.risk_id
+    assert (await CyberRiskQuantificationService.get_all_risks())[0].risk_id == r.risk_id
 
 @pytest.mark.asyncio
 async def test_risk_identity_preserved_after_drift_processing(mock_db, mock_scope):
     setup_basic_mock_db(mock_db, mock_scope)
     r = await CyberRiskQuantificationService.create_or_sync_risk("T1", "Desc", RiskScenarioType.DATA_BREACH, "RARE", "LOW", 1000.0)
     await RiskDriftService.process_drift(mock_db, None, None)
-    assert CyberRiskQuantificationService.get_all_risks()[0].risk_id == r.risk_id
+    assert (await CyberRiskQuantificationService.get_all_risks())[0].risk_id == r.risk_id
 
 
 # ==========================================
@@ -939,7 +939,7 @@ async def test_extra_34(mock_db, mock_scope):
     setup_basic_mock_db(mock_db, mock_scope)
     r = await CyberRiskQuantificationService.create_or_sync_risk("T1", "Desc", RiskScenarioType.DATA_BREACH, "RARE", "LOW", 1000.0)
     # accept transition changes status
-    CyberRiskQuantificationService.transition_status(r.risk_id, RiskQuantificationStatus.ACCEPTED)
+    await CyberRiskQuantificationService.transition_status(r.risk_id, RiskQuantificationStatus.ACCEPTED)
     assert r.status == RiskQuantificationStatus.ACCEPTED
 
 @pytest.mark.asyncio
@@ -947,5 +947,5 @@ async def test_extra_35(mock_db, mock_scope):
     setup_basic_mock_db(mock_db, mock_scope)
     r = await CyberRiskQuantificationService.create_or_sync_risk("T1", "Desc", RiskScenarioType.DATA_BREACH, "RARE", "LOW", 1000.0)
     # mitigate transition changes status
-    CyberRiskQuantificationService.transition_status(r.risk_id, RiskQuantificationStatus.MITIGATED)
+    await CyberRiskQuantificationService.transition_status(r.risk_id, RiskQuantificationStatus.MITIGATED)
     assert r.status == RiskQuantificationStatus.MITIGATED

@@ -83,7 +83,7 @@ async def list_assessments(
     current_user: User = Depends(RoleChecker(["admin", "operator", "reader"])),
 ) -> StandardResponse[List[ComplianceAssessmentResponse]]:
     """List all compliance assessments."""
-    records = GovernanceRiskComplianceService.get_all_assessments()
+    records = await GovernanceRiskComplianceService.get_all_assessments()
 
     if current_user.role != "admin":
         allowed_scopes = await get_allowed_scope_ids(db, current_user)
@@ -99,7 +99,7 @@ async def get_active_assessments(
     current_user: User = Depends(RoleChecker(["admin", "operator", "reader"])),
 ) -> StandardResponse[List[ComplianceAssessmentResponse]]:
     """List active compliance assessments (non-closed)."""
-    records = GovernanceRiskComplianceService.get_all_assessments()
+    records = await GovernanceRiskComplianceService.get_all_assessments()
     records = [r for r in records if r.status != ComplianceStatus.CLOSED]
 
     if current_user.role != "admin":
@@ -126,7 +126,7 @@ async def get_gaps(
     current_user: User = Depends(RoleChecker(["admin", "operator", "reader"])),
 ) -> StandardResponse[List[ComplianceGapResponse]]:
     """Retrieve compliance gap log for an assessment."""
-    record = GovernanceRiskComplianceService.get_assessment(assessment_id)
+    record = await GovernanceRiskComplianceService.get_assessment(assessment_id)
     if not record:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -174,7 +174,7 @@ async def get_single_assessment(
     current_user: User = Depends(RoleChecker(["admin", "operator", "reader"])),
 ) -> StandardResponse[ComplianceAssessmentResponse]:
     """Get a single compliance assessment."""
-    record = GovernanceRiskComplianceService.get_assessment(id)
+    record = await GovernanceRiskComplianceService.get_assessment(id)
     if not record:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -213,7 +213,7 @@ async def review_assessment(
     current_user: User = Depends(RoleChecker(["admin", "operator"])),
 ) -> StandardResponse[ComplianceAssessmentResponse]:
     """Transition assessment status to IN_REVIEW."""
-    record = GovernanceRiskComplianceService.get_assessment(id)
+    record = await GovernanceRiskComplianceService.get_assessment(id)
     if not record:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -228,7 +228,7 @@ async def review_assessment(
             detail="Cannot transition status of a closed GRC assessment",
         )
 
-    res = GovernanceRiskComplianceService.transition_status(id, ComplianceStatus.IN_REVIEW)
+    res = await GovernanceRiskComplianceService.transition_status(id, ComplianceStatus.IN_REVIEW)
     return StandardResponse(data=GovernanceRiskComplianceService.to_response(res))
 
 
@@ -239,7 +239,7 @@ async def compliant_assessment(
     current_user: User = Depends(RoleChecker(["admin", "operator"])),
 ) -> StandardResponse[ComplianceAssessmentResponse]:
     """Transition assessment status to COMPLIANT."""
-    record = GovernanceRiskComplianceService.get_assessment(id)
+    record = await GovernanceRiskComplianceService.get_assessment(id)
     if not record:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -254,7 +254,7 @@ async def compliant_assessment(
             detail="Cannot transition status of a closed GRC assessment",
         )
 
-    res = GovernanceRiskComplianceService.transition_status(id, ComplianceStatus.COMPLIANT)
+    res = await GovernanceRiskComplianceService.transition_status(id, ComplianceStatus.COMPLIANT)
     return StandardResponse(data=GovernanceRiskComplianceService.to_response(res))
 
 
@@ -265,7 +265,7 @@ async def non_compliant_assessment(
     current_user: User = Depends(RoleChecker(["admin", "operator"])),
 ) -> StandardResponse[ComplianceAssessmentResponse]:
     """Transition assessment status to NON_COMPLIANT."""
-    record = GovernanceRiskComplianceService.get_assessment(id)
+    record = await GovernanceRiskComplianceService.get_assessment(id)
     if not record:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -280,7 +280,7 @@ async def non_compliant_assessment(
             detail="Cannot transition status of a closed GRC assessment",
         )
 
-    res = GovernanceRiskComplianceService.transition_status(id, ComplianceStatus.NON_COMPLIANT)
+    res = await GovernanceRiskComplianceService.transition_status(id, ComplianceStatus.NON_COMPLIANT)
     return StandardResponse(data=GovernanceRiskComplianceService.to_response(res))
 
 
@@ -291,7 +291,7 @@ async def close_assessment(
     current_user: User = Depends(RoleChecker(["admin", "operator"])),
 ) -> StandardResponse[ComplianceAssessmentResponse]:
     """Transition assessment status to CLOSED."""
-    record = GovernanceRiskComplianceService.get_assessment(id)
+    record = await GovernanceRiskComplianceService.get_assessment(id)
     if not record:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -306,7 +306,7 @@ async def close_assessment(
             detail="Cannot transition status of a closed GRC assessment",
         )
 
-    res = GovernanceRiskComplianceService.transition_status(id, ComplianceStatus.CLOSED)
+    res = await GovernanceRiskComplianceService.transition_status(id, ComplianceStatus.CLOSED)
     return StandardResponse(data=GovernanceRiskComplianceService.to_response(res))
 
 
@@ -318,7 +318,7 @@ async def upload_evidence(
     current_user: User = Depends(RoleChecker(["admin", "operator"])),
 ) -> StandardResponse[ComplianceEvidenceResponse]:
     """Upload compliance evidence document/hash mapping."""
-    record = GovernanceRiskComplianceService.get_assessment(id)
+    record = await GovernanceRiskComplianceService.get_assessment(id)
     if not record:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,

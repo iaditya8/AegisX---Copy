@@ -37,7 +37,7 @@ class KnowledgeSnapshotService:
         from src.services.security_knowledge_service import SecurityKnowledgeService
         from src.domain.entities.security_knowledge import KnowledgeStatus
 
-        all_recs = SecurityKnowledgeService.get_all_knowledge()
+        all_recs = await SecurityKnowledgeService.get_all_knowledge()
         if scope_id:
             all_recs = [r for r in all_recs if r.scope_id == scope_id]
 
@@ -61,8 +61,8 @@ class KnowledgeSnapshotService:
             records_track[str(r.knowledge_id)] = {
                 "knowledge_id": str(r.knowledge_id),
                 "title": r.title,
-                "knowledge_type": r.knowledge_type.value,
-                "status": r.status.value,
+                "knowledge_type": r.knowledge_type.value if hasattr(r.knowledge_type, "value") else r.knowledge_type,
+                "status": r.status.value if hasattr(r.status, "value") else r.status,
                 "relevance_score": r.relevance_score,
                 "confidence_score": r.confidence_score,
             }

@@ -14,6 +14,14 @@ from sqlalchemy import (
 )
 from sqlalchemy.dialects.postgresql import INET, JSONB, UUID, ARRAY
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
+from sqlalchemy import Index
+
+from src.infrastructure.database.mixins import (
+    TenantOwnedMixin,
+    AuditMixin,
+    VersionedMixin,
+    SoftDeleteMixin,
+)
 
 
 class Base(DeclarativeBase):
@@ -815,148 +823,176 @@ class SOCAnalyticsHistory(Base):
 # GRC INTELLIGENCE DOMAIN
 # ==============================================================================
 
-class GRCComplianceAssessment(Base):
+class GRCAssessment(Base, TenantOwnedMixin, AuditMixin, VersionedMixin, SoftDeleteMixin):
     __tablename__ = "grc_assessments"
-    tenant_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False
-    )
 
-    assessment_id: Mapped[uuid.UUID] = mapped_column(
+    id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), primary_key=True, server_default=text("gen_random_uuid()")
     )
-    assessment_fingerprint: Mapped[str] = mapped_column(String, unique=True, nullable=False)
+    assessment_fingerprint: Mapped[str] = mapped_column(String, nullable=False)
     framework_type: Mapped[str] = mapped_column(String, nullable=False)
     name: Mapped[str] = mapped_column(String, nullable=False)
     description: Mapped[str] = mapped_column(String, nullable=False)
-    compliance_score: Mapped[float] = mapped_column(Numeric(5, 2), nullable=False)
-    framework_coverage: Mapped[float] = mapped_column(Numeric(5, 2), nullable=False)
-    control_coverage: Mapped[float] = mapped_column(Numeric(5, 2), nullable=False)
-    evidence_completeness: Mapped[float] = mapped_column(Numeric(5, 2), nullable=False)
-    audit_readiness: Mapped[float] = mapped_column(Numeric(5, 2), nullable=False)
+    compliance_score: Mapped[float] = mapped_column(Numeric, nullable=False)
+    framework_coverage: Mapped[float] = mapped_column(Numeric, nullable=False)
+    control_coverage: Mapped[float] = mapped_column(Numeric, nullable=False)
+    evidence_completeness: Mapped[float] = mapped_column(Numeric, nullable=False)
+    audit_readiness: Mapped[float] = mapped_column(Numeric, nullable=False)
     status: Mapped[str] = mapped_column(String, nullable=False)
     scope_id: Mapped[Optional[uuid.UUID]] = mapped_column(
         UUID(as_uuid=True), ForeignKey("scopes.id", ondelete="SET NULL"), nullable=True
     )
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=text("now()")
-    )
-    updated_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=text("now()")
+
+    @property
+    def assessment_id(self) -> uuid.UUID:
+        return self.id
+
+    __table_args__ = (
+        UniqueConstraint("tenant_id", "assessment_fingerprint", name="uq_grc_assessments_tenant_fingerprint"),
+        Index("ix_grc_assessments_tenant", "tenant_id"),
+        Index("ix_grc_assessments_tenant_status", "tenant_id", "status"),
+        Index("ix_grc_assessments_tenant_created", "tenant_id", "created_at"),
     )
 
 
-class GRCControl(Base):
+class GRCFrameworkControl(Base, TenantOwnedMixin, AuditMixin, VersionedMixin, SoftDeleteMixin):
     __tablename__ = "grc_framework_controls"
-    tenant_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False
-    )
 
-    control_id: Mapped[uuid.UUID] = mapped_column(
+    id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), primary_key=True, server_default=text("gen_random_uuid()")
-    )
-    assessment_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("grc_assessments.assessment_id", ondelete="CASCADE"), nullable=False
     )
     control_name: Mapped[str] = mapped_column(String, nullable=False)
     framework_type: Mapped[str] = mapped_column(String, nullable=False)
     requirement_id: Mapped[str] = mapped_column(String, nullable=False)
     status: Mapped[str] = mapped_column(String, nullable=False)
 
+    @property
+    def control_id(self) -> uuid.UUID:
+        return self.id
 
-class GRCEvidence(Base):
+    __table_args__ = (
+        Index("ix_grc_framework_controls_tenant", "tenant_id"),
+    )
+
+
+class GRCEvidence(Base, TenantOwnedMixin, AuditMixin, VersionedMixin, SoftDeleteMixin):
     __tablename__ = "grc_evidence"
-    tenant_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False
-    )
-
-    evidence_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), primary_key=True, server_default=text("gen_random_uuid()")
-    )
-    assessment_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("grc_assessments.assessment_id", ondelete="CASCADE"), nullable=False
-    )
-    file_name: Mapped[str] = mapped_column(String, nullable=False)
-    file_hash: Mapped[str] = mapped_column(String, unique=True, nullable=False)
-    uploaded_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=text("now()")
-    )
-
-
-class GRCGap(Base):
-    __tablename__ = "grc_gaps"
-    tenant_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False
-    )
-
-    gap_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), primary_key=True, server_default=text("gen_random_uuid()")
-    )
-    assessment_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("grc_assessments.assessment_id", ondelete="CASCADE"), nullable=False
-    )
-    gap_type: Mapped[str] = mapped_column(String, nullable=False)
-    description: Mapped[str] = mapped_column(String, nullable=False)
-    remediation_plan: Mapped[str] = mapped_column(String, nullable=False)
-
-
-class GRCComplianceHistory(Base):
-    __tablename__ = "grc_history"
-    tenant_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False
-    )
 
     id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), primary_key=True, server_default=text("gen_random_uuid()")
     )
     assessment_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("grc_assessments.assessment_id", ondelete="CASCADE"), nullable=False
+        UUID(as_uuid=True), ForeignKey("grc_assessments.id", ondelete="CASCADE"), nullable=False
+    )
+    file_name: Mapped[str] = mapped_column(String, nullable=False)
+    evidence_uri: Mapped[str] = mapped_column(String, nullable=False)
+    evidence_hash: Mapped[str] = mapped_column(String, nullable=False)
+    content_type: Mapped[str] = mapped_column(String, nullable=False)
+    size_bytes: Mapped[int] = mapped_column(BigInteger, nullable=False)
+
+    @property
+    def evidence_id(self) -> uuid.UUID:
+        return self.id
+
+    @property
+    def uploaded_at(self):
+        return self.created_at
+
+    __table_args__ = (
+        Index("ix_grc_evidence_tenant", "tenant_id"),
+    )
+
+
+class GRCGap(Base, TenantOwnedMixin, AuditMixin, VersionedMixin, SoftDeleteMixin):
+    __tablename__ = "grc_gaps"
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, server_default=text("gen_random_uuid()")
+    )
+    assessment_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("grc_assessments.id", ondelete="CASCADE"), nullable=False
+    )
+    gap_type: Mapped[str] = mapped_column(String, nullable=False)
+    description: Mapped[str] = mapped_column(String, nullable=False)
+    remediation_plan: Mapped[str] = mapped_column(String, nullable=False)
+
+    @property
+    def gap_id(self) -> uuid.UUID:
+        return self.id
+
+    __table_args__ = (
+        Index("ix_grc_gaps_tenant", "tenant_id"),
+    )
+
+
+class GRCHistory(Base, TenantOwnedMixin, AuditMixin, VersionedMixin, SoftDeleteMixin):
+    __tablename__ = "grc_history"
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, server_default=text("gen_random_uuid()")
+    )
+    assessment_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("grc_assessments.id", ondelete="CASCADE"), nullable=False
     )
     timestamp: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=text("now()")
+        DateTime(timezone=True), server_default=text("now()"), nullable=False
     )
     event_type: Mapped[str] = mapped_column(String, nullable=False)
-    details: Mapped[Dict[str, Any]] = mapped_column(JSONB, nullable=False)
+    details: Mapped[str] = mapped_column(String, nullable=False)
+
+    __table_args__ = (
+        Index("ix_grc_history_tenant", "tenant_id"),
+    )
 
 
 # ==============================================================================
 # SECURITY KNOWLEDGE DOMAIN
 # ==============================================================================
 
-class SecurityKnowledgeRecord(Base):
+class SecurityKnowledgeRecord(Base, TenantOwnedMixin, AuditMixin, VersionedMixin, SoftDeleteMixin):
     __tablename__ = "security_knowledge_records"
-    tenant_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False
-    )
 
-    knowledge_id: Mapped[uuid.UUID] = mapped_column(
+    id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), primary_key=True, server_default=text("gen_random_uuid()")
     )
-    knowledge_fingerprint: Mapped[str] = mapped_column(String, unique=True, nullable=False)
+    knowledge_fingerprint: Mapped[str] = mapped_column(String, nullable=False)
     knowledge_type: Mapped[str] = mapped_column(String, nullable=False)
     title: Mapped[str] = mapped_column(String, nullable=False)
-    content: Mapped[str] = mapped_column(String, nullable=False)
-    relevance_score: Mapped[float] = mapped_column(Numeric(5, 2), nullable=False)
-    confidence_score: Mapped[float] = mapped_column(Numeric(5, 2), nullable=False)
+    content_markdown: Mapped[str] = mapped_column(String, nullable=False)
+    content_summary: Mapped[str] = mapped_column(String, nullable=False)
+    content_embedding_id: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    relevance_score: Mapped[float] = mapped_column(Numeric, nullable=False)
+    confidence_score: Mapped[float] = mapped_column(Numeric, nullable=False)
     status: Mapped[str] = mapped_column(String, nullable=False)
     tags: Mapped[list[str]] = mapped_column(ARRAY(String), nullable=False)
     scope_id: Mapped[Optional[uuid.UUID]] = mapped_column(
         UUID(as_uuid=True), ForeignKey("scopes.id", ondelete="SET NULL"), nullable=True
     )
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=text("now()")
-    )
-    updated_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=text("now()")
+
+    @property
+    def knowledge_id(self) -> uuid.UUID:
+        return self.id
+
+    @property
+    def content(self) -> str:
+        return self.content_markdown
+
+    @content.setter
+    def content(self, value: str):
+        self.content_markdown = value
+
+    __table_args__ = (
+        UniqueConstraint("tenant_id", "knowledge_fingerprint", name="uq_security_knowledge_records_tenant_fingerprint"),
+        Index("ix_security_knowledge_records_tenant", "tenant_id"),
+        Index("ix_security_knowledge_records_tenant_status", "tenant_id", "status"),
+        Index("ix_security_knowledge_records_tenant_created", "tenant_id", "created_at"),
     )
 
 
-class SecurityKnowledgeRelationship(Base):
+class SecurityKnowledgeRelationship(Base, TenantOwnedMixin, AuditMixin, VersionedMixin, SoftDeleteMixin):
     __tablename__ = "security_knowledge_relationships"
-    tenant_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False
-    )
 
-    relationship_id: Mapped[uuid.UUID] = mapped_column(
+    id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), primary_key=True, server_default=text("gen_random_uuid()")
     )
     source_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False)
@@ -964,43 +1000,57 @@ class SecurityKnowledgeRelationship(Base):
     target_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False)
     target_type: Mapped[str] = mapped_column(String, nullable=False)
     relationship_type: Mapped[str] = mapped_column(String, nullable=False)
-    weight: Mapped[float] = mapped_column(Numeric(5, 2), nullable=False)
+    weight: Mapped[float] = mapped_column(Numeric, nullable=False)
+
+    @property
+    def relationship_id(self) -> uuid.UUID:
+        return self.id
+
+    __table_args__ = (
+        Index("ix_security_knowledge_relationships_tenant", "tenant_id"),
+    )
 
 
-class SecurityKnowledgeRecommendation(Base):
+class SecurityKnowledgeRecommendation(Base, TenantOwnedMixin, AuditMixin, VersionedMixin, SoftDeleteMixin):
     __tablename__ = "security_knowledge_recommendations"
-    tenant_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False
-    )
-
-    recommendation_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), primary_key=True, server_default=text("gen_random_uuid()")
-    )
-    knowledge_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("security_knowledge_records.knowledge_id", ondelete="CASCADE"), nullable=False
-    )
-    title: Mapped[str] = mapped_column(String, nullable=False)
-    description: Mapped[str] = mapped_column(String, nullable=False)
-    rank: Mapped[int] = mapped_column(Integer, nullable=False)
-
-
-class SecurityKnowledgeHistory(Base):
-    __tablename__ = "security_knowledge_history"
-    tenant_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False
-    )
 
     id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), primary_key=True, server_default=text("gen_random_uuid()")
     )
     knowledge_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("security_knowledge_records.knowledge_id", ondelete="CASCADE"), nullable=False
+        UUID(as_uuid=True), ForeignKey("security_knowledge_records.id", ondelete="CASCADE"), nullable=False
+    )
+    title: Mapped[str] = mapped_column(String, nullable=False)
+    description: Mapped[str] = mapped_column(String, nullable=False)
+    rank: Mapped[int] = mapped_column(Integer, nullable=False)
+
+    @property
+    def recommendation_id(self) -> uuid.UUID:
+        return self.id
+
+    __table_args__ = (
+        Index("ix_security_knowledge_recommendations_tenant", "tenant_id"),
+    )
+
+
+class SecurityKnowledgeHistory(Base, TenantOwnedMixin, AuditMixin, VersionedMixin, SoftDeleteMixin):
+    __tablename__ = "security_knowledge_history"
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, server_default=text("gen_random_uuid()")
+    )
+    knowledge_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("security_knowledge_records.id", ondelete="CASCADE"), nullable=False
     )
     timestamp: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=text("now()")
+        DateTime(timezone=True), server_default=text("now()"), nullable=False
     )
     event_type: Mapped[str] = mapped_column(String, nullable=False)
-    details: Mapped[Dict[str, Any]] = mapped_column(JSONB, nullable=False)
+    details: Mapped[str] = mapped_column(String, nullable=False)
+
+    __table_args__ = (
+        Index("ix_security_knowledge_history_tenant", "tenant_id"),
+    )
 
 
 # ==============================================================================
@@ -1125,3 +1175,92 @@ class ThreatIntelHistory(Base):
     )
     event_type: Mapped[str] = mapped_column(String, nullable=False)
     details: Mapped[Dict[str, Any]] = mapped_column(JSONB, nullable=False)
+
+
+class CyberRiskRecord(Base, TenantOwnedMixin, AuditMixin, VersionedMixin, SoftDeleteMixin):
+    __tablename__ = "cyber_risk_records"
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, server_default=text("gen_random_uuid()")
+    )
+    risk_fingerprint: Mapped[str] = mapped_column(String, nullable=False)
+    scenario_type: Mapped[str] = mapped_column(String, nullable=False)
+    title: Mapped[str] = mapped_column(String, nullable=False)
+    description: Mapped[str] = mapped_column(String, nullable=False)
+    exposure_value: Mapped[float] = mapped_column(Numeric, nullable=False)
+    single_loss_expectancy: Mapped[float] = mapped_column(Numeric, nullable=False)
+    annualized_loss_expectancy: Mapped[float] = mapped_column(Numeric, nullable=False)
+    inherent_risk_score: Mapped[float] = mapped_column(Numeric, nullable=False)
+    residual_risk_score: Mapped[float] = mapped_column(Numeric, nullable=False)
+    mitigation_effectiveness: Mapped[float] = mapped_column(Numeric, nullable=False)
+    status: Mapped[str] = mapped_column(String, nullable=False)
+    scope_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("scopes.id", ondelete="SET NULL"), nullable=True
+    )
+
+    @property
+    def risk_id(self) -> uuid.UUID:
+        return self.id
+
+    __table_args__ = (
+        UniqueConstraint("tenant_id", "risk_fingerprint", name="uq_cyber_risk_records_tenant_fingerprint"),
+        Index("ix_cyber_risk_records_tenant", "tenant_id"),
+        Index("ix_cyber_risk_records_tenant_status", "tenant_id", "status"),
+        Index("ix_cyber_risk_records_tenant_created", "tenant_id", "created_at"),
+    )
+
+
+class CyberRiskScenario(Base, TenantOwnedMixin, AuditMixin, VersionedMixin, SoftDeleteMixin):
+    __tablename__ = "cyber_risk_scenarios"
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, server_default=text("gen_random_uuid()")
+    )
+    scenario_type: Mapped[str] = mapped_column(String, nullable=False)
+    frequency_label: Mapped[str] = mapped_column(String, nullable=False)
+    impact_label: Mapped[str] = mapped_column(String, nullable=False)
+    annualized_rate_of_occurrence: Mapped[float] = mapped_column(Numeric, nullable=False)
+    exposure_factor: Mapped[float] = mapped_column(Numeric, nullable=False)
+    expected_annual_loss: Mapped[float] = mapped_column(Numeric, nullable=False)
+
+    __table_args__ = (
+        Index("ix_cyber_risk_scenarios_tenant", "tenant_id"),
+    )
+
+
+class CyberRiskForecast(Base, TenantOwnedMixin, AuditMixin, VersionedMixin, SoftDeleteMixin):
+    __tablename__ = "cyber_risk_forecasts"
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, server_default=text("gen_random_uuid()")
+    )
+    risk_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("cyber_risk_records.id", ondelete="CASCADE"), nullable=False
+    )
+    quarter: Mapped[str] = mapped_column(String, nullable=False)
+    projected_loss: Mapped[float] = mapped_column(Numeric, nullable=False)
+    exposure_value: Mapped[float] = mapped_column(Numeric, nullable=False)
+
+    __table_args__ = (
+        Index("ix_cyber_risk_forecasts_tenant", "tenant_id"),
+    )
+
+
+class CyberRiskHistory(Base, TenantOwnedMixin, AuditMixin, VersionedMixin, SoftDeleteMixin):
+    __tablename__ = "cyber_risk_history"
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, server_default=text("gen_random_uuid()")
+    )
+    risk_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("cyber_risk_records.id", ondelete="CASCADE"), nullable=False
+    )
+    timestamp: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=text("now()"), nullable=False
+    )
+    event_type: Mapped[str] = mapped_column(String, nullable=False)
+    details: Mapped[str] = mapped_column(String, nullable=False)
+
+    __table_args__ = (
+        Index("ix_cyber_risk_history_tenant", "tenant_id"),
+    )

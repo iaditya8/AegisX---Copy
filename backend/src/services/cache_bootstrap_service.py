@@ -21,8 +21,8 @@ class CacheBootstrapService:
         from src.services.unified_security_intelligence_fabric_service import UnifiedSecurityIntelligenceFabricService
 
         # 1. Clear existing entries from cache storage adapters
-        CyberResilienceService.clear_resilience()
-        SecurityOperationsAnalyticsService.clear_analytics()
+        await CyberResilienceService.clear_resilience()
+        await SecurityOperationsAnalyticsService.clear_analytics()
         CyberRiskQuantificationService.clear_risks()
         GovernanceRiskComplianceService.clear_assessments()
         SecurityKnowledgeService.clear_knowledge()
@@ -64,20 +64,20 @@ class CacheBootstrapService:
         from src.services.threat_intel_fusion_service import ThreatIntelFusionService
 
         # Run derived SOC analytics
-        AnalystPerformanceService.calculate()
-        OperationalKPIService.calculate()
-        OperationalKRIService.calculate()
+        await AnalystPerformanceService.calculate()
+        await OperationalKPIService.calculate()
+        await OperationalKRIService.calculate()
 
         # Run GRC scoring and mapping
         ComplianceScoringService.calculate()
         ComplianceGapService.calculate()
-        GovernanceRiskComplianceService.recalculate_assessments()
+        await GovernanceRiskComplianceService.recalculate_assessments()
 
         # Run knowledge relationships
         KnowledgeRelationshipService.calculate()
         KnowledgeRelevanceService.calculate()
         KnowledgeRecommendationService.calculate()
-        SecurityKnowledgeService.recalculate_knowledge()
+        await SecurityKnowledgeService.recalculate_knowledge()
 
         # Run Threat Intel fusion
         from src.domain.entities.threat_intel import ThreatIntelStatus
@@ -97,7 +97,7 @@ class CacheBootstrapService:
         # 5. Rebuild Graph Topology
         await SecurityIntelligenceGraphService.rebuild_graph_topology(db)
         from src.services.graph_correlation_service import GraphCorrelationService
-        GraphCorrelationService.recalculate_cross_domain_links()
+        await GraphCorrelationService.recalculate_cross_domain_links()
 
         # 6. Rebuild Decision Recommendations & tradeoff matrices
         await SecurityDecisionService.sync_decision_recommendations(db)

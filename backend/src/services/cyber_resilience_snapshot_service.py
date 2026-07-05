@@ -42,7 +42,7 @@ class CyberResilienceSnapshotService:
         cls, db: AsyncSession, scope_id: Optional[uuid.UUID] = None
     ) -> dict:
         """Dynamically rebuild snapshot stats from active resilience records."""
-        all_recs = CyberResilienceService.get_all_resilience()
+        all_recs = await CyberResilienceService.get_all_resilience()
         if scope_id:
             all_recs = [r for r in all_recs if r.scope_id == scope_id]
 
@@ -73,10 +73,9 @@ class CyberResilienceSnapshotService:
         )
 
         # Average objective compliance
-        compliance_sum = sum(
-            RecoveryObjectiveService.get_resilience_objective_compliance(r.resilience_id)
-            for r in all_recs
-        )
+        compliance_sum = 0.0
+        for r in all_recs:
+            compliance_sum += await RecoveryObjectiveService.get_resilience_objective_compliance(r.resilience_id)
         obj_compliance = round(compliance_sum / total_recs, 2) if total_recs > 0 else 100.0
 
         records_track = {}
@@ -84,7 +83,7 @@ class CyberResilienceSnapshotService:
             records_track[str(r.resilience_id)] = {
                 "resilience_id": str(r.resilience_id),
                 "title": r.title,
-                "status": r.status.value,
+                "status": r.status.value if hasattr(r.status, "value") else r.status,
                 "resilience_score": r.resilience_score,
                 "readiness_score": r.readiness_score,
                 "recovery_confidence_score": r.recovery_confidence_score,

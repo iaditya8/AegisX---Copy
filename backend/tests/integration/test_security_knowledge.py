@@ -286,36 +286,36 @@ async def test_knowledge_identity_preservation(mock_db, mock_scope):
 async def test_knowledge_review_transition(mock_db, mock_scope):
     setup_basic_mock_db(mock_db, mock_scope)
     r = await SecurityKnowledgeService.create_or_sync_knowledge("K1", "Content", KnowledgeType.PLAYBOOK, ["phishing"])
-    res = SecurityKnowledgeService.transition_status(r.knowledge_id, KnowledgeStatus.REVIEW)
+    res = await SecurityKnowledgeService.transition_status(r.knowledge_id, KnowledgeStatus.REVIEW)
     assert res.status == KnowledgeStatus.REVIEW
 
 @pytest.mark.asyncio
 async def test_knowledge_approve_transition(mock_db, mock_scope):
     setup_basic_mock_db(mock_db, mock_scope)
     r = await SecurityKnowledgeService.create_or_sync_knowledge("K1", "Content", KnowledgeType.PLAYBOOK, ["phishing"])
-    res = SecurityKnowledgeService.transition_status(r.knowledge_id, KnowledgeStatus.APPROVED)
+    res = await SecurityKnowledgeService.transition_status(r.knowledge_id, KnowledgeStatus.APPROVED)
     assert res.status == KnowledgeStatus.APPROVED
 
 @pytest.mark.asyncio
 async def test_knowledge_archive_transition(mock_db, mock_scope):
     setup_basic_mock_db(mock_db, mock_scope)
     r = await SecurityKnowledgeService.create_or_sync_knowledge("K1", "Content", KnowledgeType.PLAYBOOK, ["phishing"])
-    res = SecurityKnowledgeService.transition_status(r.knowledge_id, KnowledgeStatus.ARCHIVED)
+    res = await SecurityKnowledgeService.transition_status(r.knowledge_id, KnowledgeStatus.ARCHIVED)
     assert res.status == KnowledgeStatus.ARCHIVED
 
 @pytest.mark.asyncio
 async def test_knowledge_terminal_state_enforcement(mock_db, mock_scope):
     setup_basic_mock_db(mock_db, mock_scope)
     r = await SecurityKnowledgeService.create_or_sync_knowledge("K1", "Content", KnowledgeType.PLAYBOOK, ["phishing"])
-    SecurityKnowledgeService.transition_status(r.knowledge_id, KnowledgeStatus.ARCHIVED)
-    res = SecurityKnowledgeService.transition_status(r.knowledge_id, KnowledgeStatus.ACTIVE)
+    await SecurityKnowledgeService.transition_status(r.knowledge_id, KnowledgeStatus.ARCHIVED)
+    res = await SecurityKnowledgeService.transition_status(r.knowledge_id, KnowledgeStatus.ACTIVE)
     assert res.status == KnowledgeStatus.ARCHIVED
 
 @pytest.mark.asyncio
 async def test_archived_knowledge_not_reactivated_by_sync(mock_db, mock_scope):
     setup_basic_mock_db(mock_db, mock_scope)
     r = await SecurityKnowledgeService.create_or_sync_knowledge("phishing mitigation playbook", "Content", KnowledgeType.PLAYBOOK, ["phishing"])
-    SecurityKnowledgeService.transition_status(r.knowledge_id, KnowledgeStatus.ARCHIVED)
+    await SecurityKnowledgeService.transition_status(r.knowledge_id, KnowledgeStatus.ARCHIVED)
     await SecurityKnowledgeService.sync_knowledge(mock_db)
     assert r.status == KnowledgeStatus.ARCHIVED
 
@@ -323,29 +323,29 @@ async def test_archived_knowledge_not_reactivated_by_sync(mock_db, mock_scope):
 async def test_invalid_lifecycle_transition_approved_to_review(mock_db, mock_scope):
     setup_basic_mock_db(mock_db, mock_scope)
     r = await SecurityKnowledgeService.create_or_sync_knowledge("K1", "Content", KnowledgeType.PLAYBOOK, ["phishing"])
-    SecurityKnowledgeService.transition_status(r.knowledge_id, KnowledgeStatus.APPROVED)
+    await SecurityKnowledgeService.transition_status(r.knowledge_id, KnowledgeStatus.APPROVED)
     with pytest.raises(ValueError, match="Invalid transition"):
-        SecurityKnowledgeService.transition_status(r.knowledge_id, KnowledgeStatus.REVIEW)
+        await SecurityKnowledgeService.transition_status(r.knowledge_id, KnowledgeStatus.REVIEW)
 
 @pytest.mark.asyncio
 async def test_duplicate_prevention_on_creation_knowledge(mock_db, mock_scope):
     setup_basic_mock_db(mock_db, mock_scope)
     r1 = await SecurityKnowledgeService.create_or_sync_knowledge("K1", "Content", KnowledgeType.PLAYBOOK, ["phishing"])
     r2 = await SecurityKnowledgeService.create_or_sync_knowledge("K1", "Content", KnowledgeType.PLAYBOOK, ["phishing"])
-    assert len(SecurityKnowledgeService.get_all_knowledge()) == 1
+    assert len(await SecurityKnowledgeService.get_all_knowledge()) == 1
 
 @pytest.mark.asyncio
 async def test_get_knowledge_not_found():
-    assert SecurityKnowledgeService.get_knowledge(uuid.uuid4()) is None
+    assert await SecurityKnowledgeService.get_knowledge(uuid.uuid4()) is None
 
 @pytest.mark.asyncio
 async def test_get_knowledge_by_fingerprint_not_found():
-    assert SecurityKnowledgeService.get_knowledge_by_fingerprint("nonexistent") is None
+    assert await SecurityKnowledgeService.get_knowledge_by_fingerprint("nonexistent") is None
 
 @pytest.mark.asyncio
 async def test_transition_status_record_not_found_knowledge():
     with pytest.raises(ValueError, match="not found"):
-        SecurityKnowledgeService.transition_status(uuid.uuid4(), KnowledgeStatus.ACTIVE)
+        await SecurityKnowledgeService.transition_status(uuid.uuid4(), KnowledgeStatus.ACTIVE)
 
 @pytest.mark.asyncio
 async def test_add_tag_success(mock_db, mock_scope):
@@ -358,7 +358,7 @@ async def test_add_tag_success(mock_db, mock_scope):
 async def test_add_tag_raises_on_archived(mock_db, mock_scope):
     setup_basic_mock_db(mock_db, mock_scope)
     r = await SecurityKnowledgeService.create_or_sync_knowledge("K1", "Content", KnowledgeType.PLAYBOOK, ["phishing"])
-    SecurityKnowledgeService.transition_status(r.knowledge_id, KnowledgeStatus.ARCHIVED)
+    await SecurityKnowledgeService.transition_status(r.knowledge_id, KnowledgeStatus.ARCHIVED)
     with pytest.raises(ValueError, match="archived"):
         await SecurityKnowledgeService.add_tag(r.knowledge_id, "malware")
 
@@ -401,7 +401,7 @@ async def test_knowledge_history_immutable(mock_db, mock_scope):
 async def test_knowledge_history_on_approval(mock_db, mock_scope):
     setup_basic_mock_db(mock_db, mock_scope)
     r = await SecurityKnowledgeService.create_or_sync_knowledge("K1", "Content", KnowledgeType.PLAYBOOK, ["phishing"])
-    SecurityKnowledgeService.transition_status(r.knowledge_id, KnowledgeStatus.APPROVED)
+    await SecurityKnowledgeService.transition_status(r.knowledge_id, KnowledgeStatus.APPROVED)
     hist = KnowledgeHistoryService.get_history(r.knowledge_id)
     event_types = [h.event_type for h in hist]
     assert "APPROVED" in event_types
@@ -419,7 +419,7 @@ async def test_knowledge_history_on_tag_addition(mock_db, mock_scope):
 async def test_knowledge_history_on_archive(mock_db, mock_scope):
     setup_basic_mock_db(mock_db, mock_scope)
     r = await SecurityKnowledgeService.create_or_sync_knowledge("K1", "Content", KnowledgeType.PLAYBOOK, ["phishing"])
-    SecurityKnowledgeService.transition_status(r.knowledge_id, KnowledgeStatus.ARCHIVED)
+    await SecurityKnowledgeService.transition_status(r.knowledge_id, KnowledgeStatus.ARCHIVED)
     hist = KnowledgeHistoryService.get_history(r.knowledge_id)
     event_types = [h.event_type for h in hist]
     assert "ARCHIVED" in event_types
@@ -428,7 +428,7 @@ async def test_knowledge_history_on_archive(mock_db, mock_scope):
 async def test_knowledge_history_ordering(mock_db, mock_scope):
     setup_basic_mock_db(mock_db, mock_scope)
     r = await SecurityKnowledgeService.create_or_sync_knowledge("K1", "Content", KnowledgeType.PLAYBOOK, ["phishing"])
-    SecurityKnowledgeService.transition_status(r.knowledge_id, KnowledgeStatus.APPROVED)
+    await SecurityKnowledgeService.transition_status(r.knowledge_id, KnowledgeStatus.APPROVED)
     hist = KnowledgeHistoryService.get_history(r.knowledge_id)
     assert hist[0].timestamp <= hist[1].timestamp
 
@@ -469,15 +469,17 @@ def test_confidence_score_calculation_approved():
 def test_confidence_score_calculation_unapproved():
     assert KnowledgeRelevanceService.calculate_confidence(False) == 70.0
 
-def test_relationship_mapping_deterministic():
-    rel1 = KnowledgeRelationshipService.add_relationship(uuid.uuid4(), "knowledge", uuid.uuid4(), "detection", "MAPPED")
+@pytest.mark.asyncio
+async def test_relationship_mapping_deterministic():
+    rel1 = await KnowledgeRelationshipService.add_relationship(uuid.uuid4(), "knowledge", uuid.uuid4(), "detection", "MAPPED")
     assert rel1.relationship_type == "MAPPED"
 
-def test_relationship_preservation():
+@pytest.mark.asyncio
+async def test_relationship_preservation():
     id1 = uuid.uuid4()
     id2 = uuid.uuid4()
-    KnowledgeRelationshipService.add_relationship(id1, "knowledge", id2, "detection", "MAPPED")
-    rels = KnowledgeRelationshipService.get_relationships()
+    await KnowledgeRelationshipService.add_relationship(id1, "knowledge", id2, "detection", "MAPPED")
+    rels = await KnowledgeRelationshipService.get_relationships()
     assert len(rels) == 1
 
 def test_recommendation_generation():
@@ -529,7 +531,7 @@ async def test_snapshot_not_authoritative_knowledge(mock_db, mock_scope):
     await SecurityKnowledgeService.sync_knowledge(mock_db)
     snap = await KnowledgeSnapshotService.generate_snapshot(mock_db, None)
     snap["summary"]["total_knowledge_records"] = 999
-    assert len(SecurityKnowledgeService.get_all_knowledge()) == 2
+    assert len(await SecurityKnowledgeService.get_all_knowledge()) == 2
 
 @pytest.mark.asyncio
 async def test_knowledge_drift_detection(mock_db, mock_scope):
@@ -681,7 +683,7 @@ async def test_worker_integration_knowledge(mock_db, mock_scope):
 async def test_archived_knowledge_not_reactivated_by_worker(mock_db, mock_scope):
     setup_basic_mock_db(mock_db, mock_scope)
     r = await SecurityKnowledgeService.create_or_sync_knowledge("phishing mitigation playbook", "Content", KnowledgeType.PLAYBOOK, ["phishing"])
-    SecurityKnowledgeService.transition_status(r.knowledge_id, KnowledgeStatus.ARCHIVED)
+    await SecurityKnowledgeService.transition_status(r.knowledge_id, KnowledgeStatus.ARCHIVED)
     
     from src.services.continuous_refresh_service import ContinuousRefreshService
     await ContinuousRefreshService.refresh_all(mock_db)
@@ -691,7 +693,7 @@ async def test_archived_knowledge_not_reactivated_by_worker(mock_db, mock_scope)
 async def test_archived_knowledge_not_reactivated_by_snapshot(mock_db, mock_scope):
     setup_basic_mock_db(mock_db, mock_scope)
     r = await SecurityKnowledgeService.create_or_sync_knowledge("K1", "Content", KnowledgeType.PLAYBOOK, ["phishing"])
-    SecurityKnowledgeService.transition_status(r.knowledge_id, KnowledgeStatus.ARCHIVED)
+    await SecurityKnowledgeService.transition_status(r.knowledge_id, KnowledgeStatus.ARCHIVED)
     await KnowledgeSnapshotService.generate_snapshot(mock_db, None)
     assert r.status == KnowledgeStatus.ARCHIVED
 
@@ -699,7 +701,7 @@ async def test_archived_knowledge_not_reactivated_by_snapshot(mock_db, mock_scop
 async def test_archived_knowledge_not_reactivated_by_drift(mock_db, mock_scope):
     setup_basic_mock_db(mock_db, mock_scope)
     r = await SecurityKnowledgeService.create_or_sync_knowledge("K1", "Content", KnowledgeType.PLAYBOOK, ["phishing"])
-    SecurityKnowledgeService.transition_status(r.knowledge_id, KnowledgeStatus.ARCHIVED)
+    await SecurityKnowledgeService.transition_status(r.knowledge_id, KnowledgeStatus.ARCHIVED)
     await KnowledgeDriftService.process_drift(mock_db, None, None)
     assert r.status == KnowledgeStatus.ARCHIVED
 
@@ -707,7 +709,7 @@ async def test_archived_knowledge_not_reactivated_by_drift(mock_db, mock_scope):
 async def test_archived_knowledge_not_reactivated_by_scoring(mock_db, mock_scope):
     setup_basic_mock_db(mock_db, mock_scope)
     r = await SecurityKnowledgeService.create_or_sync_knowledge("K1", "Content", KnowledgeType.PLAYBOOK, ["phishing"])
-    SecurityKnowledgeService.transition_status(r.knowledge_id, KnowledgeStatus.ARCHIVED)
+    await SecurityKnowledgeService.transition_status(r.knowledge_id, KnowledgeStatus.ARCHIVED)
     KnowledgeRelevanceService.calculate()
     assert r.status == KnowledgeStatus.ARCHIVED
 
@@ -719,28 +721,28 @@ async def test_knowledge_identity_preserved_after_worker_refresh(mock_db, mock_s
     from src.services.continuous_refresh_service import ContinuousRefreshService
     await ContinuousRefreshService.refresh_all(mock_db)
     
-    assert SecurityKnowledgeService.get_all_knowledge()[0].knowledge_id == r.knowledge_id
+    assert (await SecurityKnowledgeService.get_all_knowledge())[0].knowledge_id == r.knowledge_id
 
 @pytest.mark.asyncio
 async def test_knowledge_identity_preserved_after_scoring_refresh(mock_db, mock_scope):
     setup_basic_mock_db(mock_db, mock_scope)
     r = await SecurityKnowledgeService.create_or_sync_knowledge("K1", "Content", KnowledgeType.PLAYBOOK, ["phishing"])
     KnowledgeRelevanceService.calculate()
-    assert SecurityKnowledgeService.get_all_knowledge()[0].knowledge_id == r.knowledge_id
+    assert (await SecurityKnowledgeService.get_all_knowledge())[0].knowledge_id == r.knowledge_id
 
 @pytest.mark.asyncio
 async def test_knowledge_identity_preserved_after_snapshot_rebuild(mock_db, mock_scope):
     setup_basic_mock_db(mock_db, mock_scope)
     r = await SecurityKnowledgeService.create_or_sync_knowledge("K1", "Content", KnowledgeType.PLAYBOOK, ["phishing"])
     await KnowledgeSnapshotService.generate_snapshot(mock_db, None)
-    assert SecurityKnowledgeService.get_all_knowledge()[0].knowledge_id == r.knowledge_id
+    assert (await SecurityKnowledgeService.get_all_knowledge())[0].knowledge_id == r.knowledge_id
 
 @pytest.mark.asyncio
 async def test_knowledge_identity_preserved_after_drift_processing(mock_db, mock_scope):
     setup_basic_mock_db(mock_db, mock_scope)
     r = await SecurityKnowledgeService.create_or_sync_knowledge("K1", "Content", KnowledgeType.PLAYBOOK, ["phishing"])
     await KnowledgeDriftService.process_drift(mock_db, None, None)
-    assert SecurityKnowledgeService.get_all_knowledge()[0].knowledge_id == r.knowledge_id
+    assert (await SecurityKnowledgeService.get_all_knowledge())[0].knowledge_id == r.knowledge_id
 
 
 # ==========================================
@@ -867,51 +869,51 @@ async def test_extra_knowledge_28(mock_db, mock_scope):
 
 @pytest.mark.asyncio
 async def test_extra_knowledge_29():
-    assert len(KnowledgeRelationshipService.get_relationships()) == 0
+    assert len(await KnowledgeRelationshipService.get_relationships()) == 0
 
 @pytest.mark.asyncio
 async def test_extra_knowledge_30(mock_db, mock_scope):
     setup_basic_mock_db(mock_db, mock_scope)
     r = await SecurityKnowledgeService.create_or_sync_knowledge("K1", "Content", KnowledgeType.PLAYBOOK, ["phishing"])
-    assert len(SecurityKnowledgeService.get_all_knowledge()) == 1
+    assert len(await SecurityKnowledgeService.get_all_knowledge()) == 1
 
 @pytest.mark.asyncio
 async def test_extra_knowledge_31(mock_db, mock_scope):
     setup_basic_mock_db(mock_db, mock_scope)
     r = await SecurityKnowledgeService.create_or_sync_knowledge("K1", "Content", KnowledgeType.PLAYBOOK, ["phishing"])
-    assert SecurityKnowledgeService.get_knowledge(r.knowledge_id) is not None
+    assert await SecurityKnowledgeService.get_knowledge(r.knowledge_id) is not None
 
 @pytest.mark.asyncio
 async def test_extra_knowledge_32(mock_db, mock_scope):
     setup_basic_mock_db(mock_db, mock_scope)
     r = await SecurityKnowledgeService.create_or_sync_knowledge("K1", "Content", KnowledgeType.PLAYBOOK, ["phishing"])
-    assert SecurityKnowledgeService.get_knowledge_by_fingerprint(r.knowledge_fingerprint) is not None
+    assert await SecurityKnowledgeService.get_knowledge_by_fingerprint(r.knowledge_fingerprint) is not None
 
 @pytest.mark.asyncio
 async def test_extra_knowledge_33(mock_db, mock_scope):
     setup_basic_mock_db(mock_db, mock_scope)
     r = await SecurityKnowledgeService.create_or_sync_knowledge("K1", "Content", KnowledgeType.PLAYBOOK, ["phishing"])
     # verify forward only transition rule
-    SecurityKnowledgeService.transition_status(r.knowledge_id, KnowledgeStatus.REVIEW)
+    await SecurityKnowledgeService.transition_status(r.knowledge_id, KnowledgeStatus.REVIEW)
     with pytest.raises(ValueError):
-        SecurityKnowledgeService.transition_status(r.knowledge_id, KnowledgeStatus.ACTIVE)
+        await SecurityKnowledgeService.transition_status(r.knowledge_id, KnowledgeStatus.ACTIVE)
 
 @pytest.mark.asyncio
 async def test_extra_knowledge_34(mock_db, mock_scope):
     setup_basic_mock_db(mock_db, mock_scope)
     r = await SecurityKnowledgeService.create_or_sync_knowledge("K1", "Content", KnowledgeType.PLAYBOOK, ["phishing"])
-    SecurityKnowledgeService.transition_status(r.knowledge_id, KnowledgeStatus.REVIEW)
+    await SecurityKnowledgeService.transition_status(r.knowledge_id, KnowledgeStatus.REVIEW)
     # transition to approved is allowed
-    SecurityKnowledgeService.transition_status(r.knowledge_id, KnowledgeStatus.APPROVED)
+    await SecurityKnowledgeService.transition_status(r.knowledge_id, KnowledgeStatus.APPROVED)
     assert r.status == KnowledgeStatus.APPROVED
 
 @pytest.mark.asyncio
 async def test_extra_knowledge_35(mock_db, mock_scope):
     setup_basic_mock_db(mock_db, mock_scope)
     r = await SecurityKnowledgeService.create_or_sync_knowledge("K1", "Content", KnowledgeType.PLAYBOOK, ["phishing"])
-    SecurityKnowledgeService.transition_status(r.knowledge_id, KnowledgeStatus.REVIEW)
+    await SecurityKnowledgeService.transition_status(r.knowledge_id, KnowledgeStatus.REVIEW)
     # transition to archived is allowed
-    SecurityKnowledgeService.transition_status(r.knowledge_id, KnowledgeStatus.ARCHIVED)
+    await SecurityKnowledgeService.transition_status(r.knowledge_id, KnowledgeStatus.ARCHIVED)
     assert r.status == KnowledgeStatus.ARCHIVED
 
 @pytest.mark.asyncio
@@ -930,7 +932,7 @@ async def test_extra_knowledge_37(mock_db, mock_scope):
 async def test_extra_knowledge_38(mock_db, mock_scope):
     setup_basic_mock_db(mock_db, mock_scope)
     r = await SecurityKnowledgeService.create_or_sync_knowledge("phishing mitigation playbook", "Content", KnowledgeType.PLAYBOOK, ["phishing"])
-    SecurityKnowledgeService.transition_status(r.knowledge_id, KnowledgeStatus.ARCHIVED)
+    await SecurityKnowledgeService.transition_status(r.knowledge_id, KnowledgeStatus.ARCHIVED)
     # archived is terminal state and sync can't reopen
     await SecurityKnowledgeService.sync_knowledge(mock_db)
     assert r.status == KnowledgeStatus.ARCHIVED
@@ -939,7 +941,7 @@ async def test_extra_knowledge_38(mock_db, mock_scope):
 async def test_extra_knowledge_39(mock_db, mock_scope):
     setup_basic_mock_db(mock_db, mock_scope)
     r = await SecurityKnowledgeService.create_or_sync_knowledge("phishing mitigation playbook", "Content", KnowledgeType.PLAYBOOK, ["phishing"])
-    SecurityKnowledgeService.transition_status(r.knowledge_id, KnowledgeStatus.ARCHIVED)
+    await SecurityKnowledgeService.transition_status(r.knowledge_id, KnowledgeStatus.ARCHIVED)
     # archived is terminal state and tagging can't reopen
     with pytest.raises(ValueError):
         await SecurityKnowledgeService.add_tag(r.knowledge_id, "malware")
@@ -948,7 +950,7 @@ async def test_extra_knowledge_39(mock_db, mock_scope):
 async def test_extra_knowledge_40(mock_db, mock_scope):
     setup_basic_mock_db(mock_db, mock_scope)
     r = await SecurityKnowledgeService.create_or_sync_knowledge("K1", "Content", KnowledgeType.PLAYBOOK, ["phishing"])
-    SecurityKnowledgeService.transition_status(r.knowledge_id, KnowledgeStatus.ARCHIVED)
+    await SecurityKnowledgeService.transition_status(r.knowledge_id, KnowledgeStatus.ARCHIVED)
     # archived is terminal state and relationship calculate can't reopen
     KnowledgeRelationshipService.calculate()
     assert r.status == KnowledgeStatus.ARCHIVED
@@ -957,7 +959,7 @@ async def test_extra_knowledge_40(mock_db, mock_scope):
 async def test_extra_knowledge_41(mock_db, mock_scope):
     setup_basic_mock_db(mock_db, mock_scope)
     r = await SecurityKnowledgeService.create_or_sync_knowledge("K1", "Content", KnowledgeType.PLAYBOOK, ["phishing"])
-    SecurityKnowledgeService.transition_status(r.knowledge_id, KnowledgeStatus.ARCHIVED)
+    await SecurityKnowledgeService.transition_status(r.knowledge_id, KnowledgeStatus.ARCHIVED)
     # archived is terminal state and recommendation calculate can't reopen
     KnowledgeRecommendationService.calculate()
     assert r.status == KnowledgeStatus.ARCHIVED
@@ -966,7 +968,7 @@ async def test_extra_knowledge_41(mock_db, mock_scope):
 async def test_extra_knowledge_42(mock_db, mock_scope):
     setup_basic_mock_db(mock_db, mock_scope)
     r = await SecurityKnowledgeService.create_or_sync_knowledge("K1", "Content", KnowledgeType.PLAYBOOK, ["phishing"])
-    SecurityKnowledgeService.transition_status(r.knowledge_id, KnowledgeStatus.ARCHIVED)
+    await SecurityKnowledgeService.transition_status(r.knowledge_id, KnowledgeStatus.ARCHIVED)
     # archived is terminal state and relevance calculate can't reopen
     KnowledgeRelevanceService.calculate()
     assert r.status == KnowledgeStatus.ARCHIVED
@@ -975,7 +977,7 @@ async def test_extra_knowledge_42(mock_db, mock_scope):
 async def test_extra_knowledge_43(mock_db, mock_scope):
     setup_basic_mock_db(mock_db, mock_scope)
     r = await SecurityKnowledgeService.create_or_sync_knowledge("K1", "Content", KnowledgeType.PLAYBOOK, ["phishing"])
-    SecurityKnowledgeService.transition_status(r.knowledge_id, KnowledgeStatus.ARCHIVED)
+    await SecurityKnowledgeService.transition_status(r.knowledge_id, KnowledgeStatus.ARCHIVED)
     # archived is terminal state and drift can't reopen
     await KnowledgeDriftService.process_drift(mock_db, None, None)
     assert r.status == KnowledgeStatus.ARCHIVED
@@ -984,7 +986,7 @@ async def test_extra_knowledge_43(mock_db, mock_scope):
 async def test_extra_knowledge_44(mock_db, mock_scope):
     setup_basic_mock_db(mock_db, mock_scope)
     r = await SecurityKnowledgeService.create_or_sync_knowledge("K1", "Content", KnowledgeType.PLAYBOOK, ["phishing"])
-    SecurityKnowledgeService.transition_status(r.knowledge_id, KnowledgeStatus.ARCHIVED)
+    await SecurityKnowledgeService.transition_status(r.knowledge_id, KnowledgeStatus.ARCHIVED)
     # archived is terminal state and snapshot generate can't reopen
     await KnowledgeSnapshotService.generate_snapshot(mock_db, None)
     assert r.status == KnowledgeStatus.ARCHIVED

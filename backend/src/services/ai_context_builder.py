@@ -1390,7 +1390,7 @@ class AIContextBuilder:
         from src.services.recovery_objective_service import RecoveryObjectiveService
 
         snapshot = CyberResilienceSnapshotService.get_snapshot(scope_id)
-        records = CyberResilienceService.get_all_resilience()
+        records = await CyberResilienceService.get_all_resilience()
         if scope_id:
             records = [r for r in records if r.scope_id == scope_id]
 
@@ -1440,7 +1440,7 @@ class AIContextBuilder:
         from src.services.analytics_history_service import AnalyticsHistoryService
 
         snapshot = SOCSnapshotService.get_snapshot(scope_id)
-        records = SecurityOperationsAnalyticsService.get_all_analytics()
+        records = await SecurityOperationsAnalyticsService.get_all_analytics()
         if scope_id:
             records = [r for r in records if r.scope_id == scope_id]
 
@@ -1496,7 +1496,7 @@ class AIContextBuilder:
         from src.services.risk_forecast_service import RiskForecastService
 
         snapshot = RiskQuantificationSnapshotService.get_snapshot(scope_id)
-        records = CyberRiskQuantificationService.get_all_risks()
+        records = await CyberRiskQuantificationService.get_all_risks()
         if scope_id:
             records = [r for r in records if r.scope_id == scope_id]
 
@@ -1551,7 +1551,7 @@ class AIContextBuilder:
         from src.services.control_mapping_registry import ControlMappingRegistry
 
         snapshot = ComplianceSnapshotService.get_snapshot(scope_id)
-        records = GovernanceRiskComplianceService.get_all_assessments()
+        records = await GovernanceRiskComplianceService.get_all_assessments()
         if scope_id:
             records = [r for r in records if r.scope_id == scope_id]
 
@@ -1559,13 +1559,14 @@ class AIContextBuilder:
         for r in records:
             rdata = GovernanceRiskComplianceService.to_response(r).model_dump()
             rdata["assessment_id"] = str(r.assessment_id)
+            history_recs = await ComplianceHistoryService.get_history(r.assessment_id)
             rdata["history"] = [
                 {
                     "timestamp": h.timestamp.isoformat(),
                     "event_type": h.event_type,
                     "details": h.details,
                 }
-                for h in ComplianceHistoryService.get_history(r.assessment_id)
+                for h in history_recs
             ]
             controls = ControlMappingRegistry.get_controls(r.framework_type)
             rdata["gaps"] = [
@@ -1607,7 +1608,7 @@ class AIContextBuilder:
         from src.services.knowledge_recommendation_service import KnowledgeRecommendationService
 
         snapshot = KnowledgeSnapshotService.get_snapshot(scope_id)
-        records = SecurityKnowledgeService.get_all_knowledge()
+        records = await SecurityKnowledgeService.get_all_knowledge()
         if scope_id:
             records = [r for r in records if r.scope_id == scope_id]
 
@@ -1615,24 +1616,27 @@ class AIContextBuilder:
         for r in records:
             rdata = SecurityKnowledgeService.to_response(r).model_dump()
             rdata["knowledge_id"] = str(r.knowledge_id)
+            history_recs = await KnowledgeHistoryService.get_history(r.knowledge_id)
             rdata["history"] = [
                 {
                     "timestamp": h.timestamp.isoformat(),
                     "event_type": h.event_type,
                     "details": h.details,
                 }
-                for h in KnowledgeHistoryService.get_history(r.knowledge_id)
+                for h in history_recs
             ]
+            recs = KnowledgeRecommendationService.get_recommendations(r.knowledge_id, r.title)
             rdata["recommendations"] = [
                 rec.model_dump()
-                for rec in KnowledgeRecommendationService.get_recommendations(r.knowledge_id, r.title)
+                for rec in recs
             ]
             records_list.append(rdata)
 
         # Get relationships
+        rels = await KnowledgeRelationshipService.get_relationships()
         relationships = [
             rel.model_dump()
-            for rel in KnowledgeRelationshipService.get_relationships()
+            for rel in rels
         ]
 
         return {

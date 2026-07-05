@@ -79,7 +79,7 @@ async def list_risks(
     current_user: User = Depends(RoleChecker(["admin", "operator", "reader"])),
 ) -> StandardResponse[List[CyberRiskResponse]]:
     """List all cyber risk records."""
-    records = CyberRiskQuantificationService.get_all_risks()
+    records = await CyberRiskQuantificationService.get_all_risks()
 
     if current_user.role != "admin":
         allowed_scopes = await get_allowed_scope_ids(db, current_user)
@@ -95,7 +95,7 @@ async def get_open_risks(
     current_user: User = Depends(RoleChecker(["admin", "operator", "reader"])),
 ) -> StandardResponse[List[CyberRiskResponse]]:
     """Get all open cyber risks (non-closed)."""
-    records = CyberRiskQuantificationService.get_all_risks()
+    records = await CyberRiskQuantificationService.get_all_risks()
     records = [r for r in records if r.status != RiskQuantificationStatus.CLOSED]
 
     if current_user.role != "admin":
@@ -112,7 +112,7 @@ async def get_critical_risks(
     current_user: User = Depends(RoleChecker(["admin", "operator", "reader"])),
 ) -> StandardResponse[List[CyberRiskResponse]]:
     """Filter to critical risk records (score >= 70.0)."""
-    records = CyberRiskQuantificationService.get_all_risks()
+    records = await CyberRiskQuantificationService.get_all_risks()
     records = [
         r
         for r in records
@@ -134,7 +134,7 @@ async def get_forecasts(
     current_user: User = Depends(RoleChecker(["admin", "operator", "reader"])),
 ) -> StandardResponse[List[RiskForecastResponse]]:
     """Get forecasts for a risk record."""
-    record = CyberRiskQuantificationService.get_risk(risk_id)
+    record = await CyberRiskQuantificationService.get_risk(risk_id)
     if not record:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -154,7 +154,7 @@ async def get_trends(
     current_user: User = Depends(RoleChecker(["admin", "operator", "reader"])),
 ) -> StandardResponse[List[float]]:
     """Get trends history for a risk record."""
-    record = CyberRiskQuantificationService.get_risk(risk_id)
+    record = await CyberRiskQuantificationService.get_risk(risk_id)
     if not record:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -201,7 +201,7 @@ async def get_single_risk(
     current_user: User = Depends(RoleChecker(["admin", "operator", "reader"])),
 ) -> StandardResponse[CyberRiskResponse]:
     """Get a single quantified risk record."""
-    record = CyberRiskQuantificationService.get_risk(id)
+    record = await CyberRiskQuantificationService.get_risk(id)
     if not record:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -243,7 +243,7 @@ async def accept_risk(
     current_user: User = Depends(RoleChecker(["admin", "operator"])),
 ) -> StandardResponse[CyberRiskResponse]:
     """Transition risk status to ACCEPTED."""
-    record = CyberRiskQuantificationService.get_risk(id)
+    record = await CyberRiskQuantificationService.get_risk(id)
     if not record:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -258,7 +258,7 @@ async def accept_risk(
             detail="Cannot transition status of a closed record",
         )
 
-    res = CyberRiskQuantificationService.transition_status(id, RiskQuantificationStatus.ACCEPTED)
+    res = await CyberRiskQuantificationService.transition_status(id, RiskQuantificationStatus.ACCEPTED)
     return StandardResponse(data=CyberRiskQuantificationService.to_response(res))
 
 
@@ -269,7 +269,7 @@ async def mitigate_risk(
     current_user: User = Depends(RoleChecker(["admin", "operator"])),
 ) -> StandardResponse[CyberRiskResponse]:
     """Transition risk status to MITIGATED."""
-    record = CyberRiskQuantificationService.get_risk(id)
+    record = await CyberRiskQuantificationService.get_risk(id)
     if not record:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -284,7 +284,7 @@ async def mitigate_risk(
             detail="Cannot transition status of a closed record",
         )
 
-    res = CyberRiskQuantificationService.transition_status(id, RiskQuantificationStatus.MITIGATED)
+    res = await CyberRiskQuantificationService.transition_status(id, RiskQuantificationStatus.MITIGATED)
     return StandardResponse(data=CyberRiskQuantificationService.to_response(res))
 
 
@@ -295,7 +295,7 @@ async def close_risk(
     current_user: User = Depends(RoleChecker(["admin", "operator"])),
 ) -> StandardResponse[CyberRiskResponse]:
     """Transition risk status to CLOSED."""
-    record = CyberRiskQuantificationService.get_risk(id)
+    record = await CyberRiskQuantificationService.get_risk(id)
     if not record:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -310,5 +310,5 @@ async def close_risk(
             detail="Cannot transition status of a closed record",
         )
 
-    res = CyberRiskQuantificationService.transition_status(id, RiskQuantificationStatus.CLOSED)
+    res = await CyberRiskQuantificationService.transition_status(id, RiskQuantificationStatus.CLOSED)
     return StandardResponse(data=CyberRiskQuantificationService.to_response(res))

@@ -46,7 +46,7 @@ class SOCSnapshotService:
         from src.services.security_operations_analytics_service import SecurityOperationsAnalyticsService
         from src.domain.entities.security_operations_analytics import AnalyticsStatus
 
-        all_recs = SecurityOperationsAnalyticsService.get_all_analytics()
+        all_recs = await SecurityOperationsAnalyticsService.get_all_analytics()
         if scope_id:
             all_recs = [r for r in all_recs if r.scope_id == scope_id]
 
@@ -57,7 +57,7 @@ class SOCSnapshotService:
         )
 
         # Analyst summary stats
-        analysts = AnalystPerformanceService.get_analysts()
+        analysts = await AnalystPerformanceService.get_analysts()
         avg_score = (
             round(sum(a.analyst_score for a in analysts) / len(analysts), 2)
             if analysts
@@ -70,8 +70,8 @@ class SOCSnapshotService:
         # Operational health score is combination of average analyst performance + queue efficiency
         health_score = round(avg_score * 0.5 + q_summary["processing_efficiency"] * 0.5, 2)
 
-        kpis = OperationalKPIService.get_kpis()
-        kris = OperationalKRIService.get_kris()
+        kpis = await OperationalKPIService.get_kpis()
+        kris = await OperationalKRIService.get_kris()
 
         analysts_track = {
             str(a.analyst_id): {

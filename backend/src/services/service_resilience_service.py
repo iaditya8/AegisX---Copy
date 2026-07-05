@@ -7,17 +7,17 @@ from src.services.cyber_resilience_service import CyberResilienceService
 
 class ServiceResilienceService:
     @classmethod
-    def get_resilience_by_scope(cls, scope_id: Optional[uuid.UUID] = None) -> List[Any]:
+    async def get_resilience_by_scope(cls, scope_id: Optional[uuid.UUID] = None) -> List[Any]:
         """Get all resilience records filtered by scope."""
-        records = CyberResilienceService.get_all_resilience()
+        records = await CyberResilienceService.get_all_resilience()
         if scope_id:
             records = [r for r in records if r.scope_id == scope_id]
         return records
 
     @classmethod
-    def get_critical_services(cls, scope_id: Optional[uuid.UUID] = None) -> List[Any]:
+    async def get_critical_services(cls, scope_id: Optional[uuid.UUID] = None) -> List[Any]:
         """Filter resilience records to MISSION_CRITICAL or HIGH criticality only."""
-        records = cls.get_resilience_by_scope(scope_id)
+        records = await cls.get_resilience_by_scope(scope_id)
         return [
             r
             for r in records
@@ -25,25 +25,26 @@ class ServiceResilienceService:
         ]
 
     @classmethod
-    def get_resilience_distribution(cls, scope_id: Optional[uuid.UUID] = None) -> Dict[str, int]:
+    async def get_resilience_distribution(cls, scope_id: Optional[uuid.UUID] = None) -> Dict[str, int]:
         """Get status distribution breakdown counts."""
-        records = cls.get_resilience_by_scope(scope_id)
+        records = await cls.get_resilience_by_scope(scope_id)
         dist = {s.value: 0 for s in ResilienceStatus}
         for r in records:
-            dist[r.status.value] = dist.get(r.status.value, 0) + 1
+            val = r.status.value if hasattr(r.status, "value") else r.status
+            dist[val] = dist.get(val, 0) + 1
         return dist
 
     @classmethod
-    def get_service_resilience_metrics(cls, scope_id: Optional[uuid.UUID] = None) -> List[Dict[str, Any]]:
+    async def get_service_resilience_metrics(cls, scope_id: Optional[uuid.UUID] = None) -> List[Dict[str, Any]]:
         """Compute resilience score metrics aggregated per service."""
-        records = cls.get_resilience_by_scope(scope_id)
+        records = await cls.get_resilience_by_scope(scope_id)
         services = {}
         for r in records:
             srv = r.service_name
             if srv not in services:
                 services[srv] = {
                     "service_name": srv,
-                    "criticality": r.service_criticality.value,
+                    "criticality": r.service_criticality.value if hasattr(r.service_criticality, "value") else r.service_criticality,
                     "resilience_scores": [],
                     "readiness_scores": [],
                     "confidence_scores": [],

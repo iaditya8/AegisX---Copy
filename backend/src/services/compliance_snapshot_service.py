@@ -40,7 +40,7 @@ class ComplianceSnapshotService:
         from src.services.governance_risk_compliance_service import GovernanceRiskComplianceService
         from src.domain.entities.governance_risk_compliance import ComplianceStatus
 
-        all_recs = GovernanceRiskComplianceService.get_all_assessments()
+        all_recs = await GovernanceRiskComplianceService.get_all_assessments()
         if scope_id:
             all_recs = [r for r in all_recs if r.scope_id == scope_id]
 
@@ -79,8 +79,8 @@ class ComplianceSnapshotService:
             records_track[str(r.assessment_id)] = {
                 "assessment_id": str(r.assessment_id),
                 "name": r.name,
-                "framework_type": r.framework_type.value,
-                "status": r.status.value,
+                "framework_type": r.framework_type.value if hasattr(r.framework_type, "value") else r.framework_type,
+                "status": r.status.value if hasattr(r.status, "value") else r.status,
                 "compliance_score": r.compliance_score,
                 "audit_readiness": r.audit_readiness,
             }

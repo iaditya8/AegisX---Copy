@@ -44,7 +44,7 @@ class RiskQuantificationSnapshotService:
         from src.services.cyber_risk_quantification_service import CyberRiskQuantificationService
         from src.domain.entities.cyber_risk_quantification import RiskQuantificationStatus
 
-        all_recs = CyberRiskQuantificationService.get_all_risks()
+        all_recs = await CyberRiskQuantificationService.get_all_risks()
         if scope_id:
             all_recs = [r for r in all_recs if r.scope_id == scope_id]
 
@@ -79,7 +79,7 @@ class RiskQuantificationSnapshotService:
             records_track[str(r.risk_id)] = {
                 "risk_id": str(r.risk_id),
                 "title": r.title,
-                "status": r.status.value,
+                "status": r.status.value if hasattr(r.status, "value") else r.status,
                 "exposure_value": r.exposure_value,
                 "annualized_loss_expectancy": r.annualized_loss_expectancy,
                 "residual_risk_score": r.residual_risk_score,

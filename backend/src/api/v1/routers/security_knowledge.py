@@ -79,7 +79,7 @@ async def list_knowledge(
     current_user: User = Depends(RoleChecker(["admin", "operator", "reader"])),
 ) -> StandardResponse[List[KnowledgeRecordResponse]]:
     """List all knowledge records."""
-    records = SecurityKnowledgeService.get_all_knowledge()
+    records = await SecurityKnowledgeService.get_all_knowledge()
 
     if current_user.role != "admin":
         allowed_scopes = await get_allowed_scope_ids(db, current_user)
@@ -95,7 +95,7 @@ async def get_active_knowledge(
     current_user: User = Depends(RoleChecker(["admin", "operator", "reader"])),
 ) -> StandardResponse[List[KnowledgeRecordResponse]]:
     """List active GRC knowledge base records (non-archived)."""
-    records = SecurityKnowledgeService.get_all_knowledge()
+    records = await SecurityKnowledgeService.get_all_knowledge()
     records = [r for r in records if r.status != KnowledgeStatus.ARCHIVED]
 
     if current_user.role != "admin":
@@ -111,7 +111,7 @@ async def get_relationships(
     current_user: User = Depends(RoleChecker(["admin", "operator", "reader"])),
 ) -> StandardResponse[List[KnowledgeRelationshipResponse]]:
     """Get all GRC knowledge relationships."""
-    data = KnowledgeRelationshipService.get_relationships()
+    data = await KnowledgeRelationshipService.get_relationships()
     return StandardResponse(data=data)
 
 
@@ -122,7 +122,7 @@ async def get_recommendations(
     current_user: User = Depends(RoleChecker(["admin", "operator", "reader"])),
 ) -> StandardResponse[List[KnowledgeRecommendationResponse]]:
     """Retrieve recommendations for a knowledge record."""
-    record = SecurityKnowledgeService.get_knowledge(knowledge_id)
+    record = await SecurityKnowledgeService.get_knowledge(knowledge_id)
     if not record:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -169,7 +169,7 @@ async def get_single_knowledge(
     current_user: User = Depends(RoleChecker(["admin", "operator", "reader"])),
 ) -> StandardResponse[KnowledgeRecordResponse]:
     """Get a single knowledge record."""
-    record = SecurityKnowledgeService.get_knowledge(id)
+    record = await SecurityKnowledgeService.get_knowledge(id)
     if not record:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -209,7 +209,7 @@ async def review_knowledge(
     current_user: User = Depends(RoleChecker(["admin", "operator"])),
 ) -> StandardResponse[KnowledgeRecordResponse]:
     """Transition knowledge status to REVIEW."""
-    record = SecurityKnowledgeService.get_knowledge(id)
+    record = await SecurityKnowledgeService.get_knowledge(id)
     if not record:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -224,7 +224,7 @@ async def review_knowledge(
             detail="Cannot transition status of an archived GRC knowledge record",
         )
 
-    res = SecurityKnowledgeService.transition_status(id, KnowledgeStatus.REVIEW)
+    res = await SecurityKnowledgeService.transition_status(id, KnowledgeStatus.REVIEW)
     return StandardResponse(data=SecurityKnowledgeService.to_response(res))
 
 
@@ -235,7 +235,7 @@ async def approve_knowledge(
     current_user: User = Depends(RoleChecker(["admin", "operator"])),
 ) -> StandardResponse[KnowledgeRecordResponse]:
     """Transition knowledge status to APPROVED."""
-    record = SecurityKnowledgeService.get_knowledge(id)
+    record = await SecurityKnowledgeService.get_knowledge(id)
     if not record:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -250,7 +250,7 @@ async def approve_knowledge(
             detail="Cannot transition status of an archived GRC knowledge record",
         )
 
-    res = SecurityKnowledgeService.transition_status(id, KnowledgeStatus.APPROVED)
+    res = await SecurityKnowledgeService.transition_status(id, KnowledgeStatus.APPROVED)
     return StandardResponse(data=SecurityKnowledgeService.to_response(res))
 
 
@@ -261,7 +261,7 @@ async def archive_knowledge(
     current_user: User = Depends(RoleChecker(["admin", "operator"])),
 ) -> StandardResponse[KnowledgeRecordResponse]:
     """Transition knowledge status to ARCHIVED."""
-    record = SecurityKnowledgeService.get_knowledge(id)
+    record = await SecurityKnowledgeService.get_knowledge(id)
     if not record:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -276,5 +276,5 @@ async def archive_knowledge(
             detail="Cannot transition status of an archived GRC knowledge record",
         )
 
-    res = SecurityKnowledgeService.transition_status(id, KnowledgeStatus.ARCHIVED)
+    res = await SecurityKnowledgeService.transition_status(id, KnowledgeStatus.ARCHIVED)
     return StandardResponse(data=SecurityKnowledgeService.to_response(res))

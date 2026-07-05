@@ -298,43 +298,43 @@ async def test_assessment_identity_preservation(mock_db, mock_scope):
 async def test_assessment_review_transition(mock_db, mock_scope):
     setup_basic_mock_db(mock_db, mock_scope)
     r = await GovernanceRiskComplianceService.create_or_sync_assessment("A1", "Desc", FrameworkType.ISO27001)
-    res = GovernanceRiskComplianceService.transition_status(r.assessment_id, ComplianceStatus.IN_REVIEW)
+    res = await GovernanceRiskComplianceService.transition_status(r.assessment_id, ComplianceStatus.IN_REVIEW)
     assert res.status == ComplianceStatus.IN_REVIEW
 
 @pytest.mark.asyncio
 async def test_assessment_compliant_transition(mock_db, mock_scope):
     setup_basic_mock_db(mock_db, mock_scope)
     r = await GovernanceRiskComplianceService.create_or_sync_assessment("A1", "Desc", FrameworkType.ISO27001)
-    res = GovernanceRiskComplianceService.transition_status(r.assessment_id, ComplianceStatus.COMPLIANT)
+    res = await GovernanceRiskComplianceService.transition_status(r.assessment_id, ComplianceStatus.COMPLIANT)
     assert res.status == ComplianceStatus.COMPLIANT
 
 @pytest.mark.asyncio
 async def test_assessment_non_compliant_transition(mock_db, mock_scope):
     setup_basic_mock_db(mock_db, mock_scope)
     r = await GovernanceRiskComplianceService.create_or_sync_assessment("A1", "Desc", FrameworkType.ISO27001)
-    res = GovernanceRiskComplianceService.transition_status(r.assessment_id, ComplianceStatus.NON_COMPLIANT)
+    res = await GovernanceRiskComplianceService.transition_status(r.assessment_id, ComplianceStatus.NON_COMPLIANT)
     assert res.status == ComplianceStatus.NON_COMPLIANT
 
 @pytest.mark.asyncio
 async def test_assessment_close_transition(mock_db, mock_scope):
     setup_basic_mock_db(mock_db, mock_scope)
     r = await GovernanceRiskComplianceService.create_or_sync_assessment("A1", "Desc", FrameworkType.ISO27001)
-    res = GovernanceRiskComplianceService.transition_status(r.assessment_id, ComplianceStatus.CLOSED)
+    res = await GovernanceRiskComplianceService.transition_status(r.assessment_id, ComplianceStatus.CLOSED)
     assert res.status == ComplianceStatus.CLOSED
 
 @pytest.mark.asyncio
 async def test_assessment_terminal_state_enforcement(mock_db, mock_scope):
     setup_basic_mock_db(mock_db, mock_scope)
     r = await GovernanceRiskComplianceService.create_or_sync_assessment("A1", "Desc", FrameworkType.ISO27001)
-    GovernanceRiskComplianceService.transition_status(r.assessment_id, ComplianceStatus.CLOSED)
-    res = GovernanceRiskComplianceService.transition_status(r.assessment_id, ComplianceStatus.ACTIVE)
+    await GovernanceRiskComplianceService.transition_status(r.assessment_id, ComplianceStatus.CLOSED)
+    res = await GovernanceRiskComplianceService.transition_status(r.assessment_id, ComplianceStatus.ACTIVE)
     assert res.status == ComplianceStatus.CLOSED
 
 @pytest.mark.asyncio
 async def test_closed_assessment_not_reactivated_by_sync(mock_db, mock_scope):
     setup_basic_mock_db(mock_db, mock_scope)
     r = await GovernanceRiskComplianceService.create_or_sync_assessment("ISO27001 Security Assessment", "Desc", FrameworkType.ISO27001)
-    GovernanceRiskComplianceService.transition_status(r.assessment_id, ComplianceStatus.CLOSED)
+    await GovernanceRiskComplianceService.transition_status(r.assessment_id, ComplianceStatus.CLOSED)
     await GovernanceRiskComplianceService.sync_assessments(mock_db)
     assert r.status == ComplianceStatus.CLOSED
 
@@ -342,29 +342,29 @@ async def test_closed_assessment_not_reactivated_by_sync(mock_db, mock_scope):
 async def test_invalid_lifecycle_transition_compliant_to_review(mock_db, mock_scope):
     setup_basic_mock_db(mock_db, mock_scope)
     r = await GovernanceRiskComplianceService.create_or_sync_assessment("A1", "Desc", FrameworkType.ISO27001)
-    GovernanceRiskComplianceService.transition_status(r.assessment_id, ComplianceStatus.COMPLIANT)
+    await GovernanceRiskComplianceService.transition_status(r.assessment_id, ComplianceStatus.COMPLIANT)
     with pytest.raises(ValueError, match="Invalid transition"):
-        GovernanceRiskComplianceService.transition_status(r.assessment_id, ComplianceStatus.IN_REVIEW)
+        await GovernanceRiskComplianceService.transition_status(r.assessment_id, ComplianceStatus.IN_REVIEW)
 
 @pytest.mark.asyncio
 async def test_duplicate_prevention_on_creation_grc(mock_db, mock_scope):
     setup_basic_mock_db(mock_db, mock_scope)
     r1 = await GovernanceRiskComplianceService.create_or_sync_assessment("A1", "Desc", FrameworkType.ISO27001)
     r2 = await GovernanceRiskComplianceService.create_or_sync_assessment("A1", "Desc", FrameworkType.ISO27001)
-    assert len(GovernanceRiskComplianceService.get_all_assessments()) == 1
+    assert len(await GovernanceRiskComplianceService.get_all_assessments()) == 1
 
 @pytest.mark.asyncio
 async def test_get_assessment_not_found():
-    assert GovernanceRiskComplianceService.get_assessment(uuid.uuid4()) is None
+    assert await GovernanceRiskComplianceService.get_assessment(uuid.uuid4()) is None
 
 @pytest.mark.asyncio
 async def test_get_assessment_by_fingerprint_not_found():
-    assert GovernanceRiskComplianceService.get_assessment_by_fingerprint("nonexistent") is None
+    assert await GovernanceRiskComplianceService.get_assessment_by_fingerprint("nonexistent") is None
 
 @pytest.mark.asyncio
 async def test_transition_status_record_not_found():
     with pytest.raises(ValueError, match="not found"):
-        GovernanceRiskComplianceService.transition_status(uuid.uuid4(), ComplianceStatus.ACTIVE)
+        await GovernanceRiskComplianceService.transition_status(uuid.uuid4(), ComplianceStatus.ACTIVE)
 
 @pytest.mark.asyncio
 async def test_add_evidence_success(mock_db, mock_scope):
@@ -378,7 +378,7 @@ async def test_add_evidence_success(mock_db, mock_scope):
 async def test_add_evidence_raises_on_closed(mock_db, mock_scope):
     setup_basic_mock_db(mock_db, mock_scope)
     r = await GovernanceRiskComplianceService.create_or_sync_assessment("A1", "Desc", FrameworkType.ISO27001)
-    GovernanceRiskComplianceService.transition_status(r.assessment_id, ComplianceStatus.CLOSED)
+    await GovernanceRiskComplianceService.transition_status(r.assessment_id, ComplianceStatus.CLOSED)
     with pytest.raises(ValueError, match="closed"):
         await GovernanceRiskComplianceService.add_evidence(r.assessment_id, "evidence.pdf", "hash123")
 
@@ -427,7 +427,7 @@ async def test_compliance_history_immutable(mock_db, mock_scope):
 async def test_compliance_history_on_acceptance(mock_db, mock_scope):
     setup_basic_mock_db(mock_db, mock_scope)
     r = await GovernanceRiskComplianceService.create_or_sync_assessment("A1", "Desc", FrameworkType.ISO27001)
-    GovernanceRiskComplianceService.transition_status(r.assessment_id, ComplianceStatus.COMPLIANT)
+    await GovernanceRiskComplianceService.transition_status(r.assessment_id, ComplianceStatus.COMPLIANT)
     hist = ComplianceHistoryService.get_history(r.assessment_id)
     event_types = [h.event_type for h in hist]
     assert "COMPLIANT" in event_types
@@ -445,7 +445,7 @@ async def test_compliance_history_on_evidence_upload(mock_db, mock_scope):
 async def test_compliance_history_on_closure(mock_db, mock_scope):
     setup_basic_mock_db(mock_db, mock_scope)
     r = await GovernanceRiskComplianceService.create_or_sync_assessment("A1", "Desc", FrameworkType.ISO27001)
-    GovernanceRiskComplianceService.transition_status(r.assessment_id, ComplianceStatus.CLOSED)
+    await GovernanceRiskComplianceService.transition_status(r.assessment_id, ComplianceStatus.CLOSED)
     hist = ComplianceHistoryService.get_history(r.assessment_id)
     event_types = [h.event_type for h in hist]
     assert "CLOSED" in event_types
@@ -454,7 +454,7 @@ async def test_compliance_history_on_closure(mock_db, mock_scope):
 async def test_compliance_history_ordering(mock_db, mock_scope):
     setup_basic_mock_db(mock_db, mock_scope)
     r = await GovernanceRiskComplianceService.create_or_sync_assessment("A1", "Desc", FrameworkType.ISO27001)
-    GovernanceRiskComplianceService.transition_status(r.assessment_id, ComplianceStatus.COMPLIANT)
+    await GovernanceRiskComplianceService.transition_status(r.assessment_id, ComplianceStatus.COMPLIANT)
     hist = ComplianceHistoryService.get_history(r.assessment_id)
     assert hist[0].timestamp <= hist[1].timestamp
 
@@ -560,7 +560,7 @@ async def test_snapshot_not_authoritative_grc(mock_db, mock_scope):
     await GovernanceRiskComplianceService.sync_assessments(mock_db)
     snap = await ComplianceSnapshotService.generate_snapshot(mock_db, None)
     snap["summary"]["total_assessments"] = 999
-    assert len(GovernanceRiskComplianceService.get_all_assessments()) == 2
+    assert len(await GovernanceRiskComplianceService.get_all_assessments()) == 2
 
 @pytest.mark.asyncio
 async def test_compliance_drift_detection(mock_db, mock_scope):
@@ -728,7 +728,7 @@ async def test_worker_integration_compliance(mock_db, mock_scope):
 async def test_closed_assessment_not_reactivated_by_worker(mock_db, mock_scope):
     setup_basic_mock_db(mock_db, mock_scope)
     r = await GovernanceRiskComplianceService.create_or_sync_assessment("ISO27001 Security Assessment", "Desc", FrameworkType.ISO27001)
-    GovernanceRiskComplianceService.transition_status(r.assessment_id, ComplianceStatus.CLOSED)
+    await GovernanceRiskComplianceService.transition_status(r.assessment_id, ComplianceStatus.CLOSED)
     
     from src.services.continuous_refresh_service import ContinuousRefreshService
     await ContinuousRefreshService.refresh_all(mock_db)
@@ -738,7 +738,7 @@ async def test_closed_assessment_not_reactivated_by_worker(mock_db, mock_scope):
 async def test_closed_assessment_not_reactivated_by_snapshot(mock_db, mock_scope):
     setup_basic_mock_db(mock_db, mock_scope)
     r = await GovernanceRiskComplianceService.create_or_sync_assessment("A1", "Desc", FrameworkType.ISO27001)
-    GovernanceRiskComplianceService.transition_status(r.assessment_id, ComplianceStatus.CLOSED)
+    await GovernanceRiskComplianceService.transition_status(r.assessment_id, ComplianceStatus.CLOSED)
     await ComplianceSnapshotService.generate_snapshot(mock_db, None)
     assert r.status == ComplianceStatus.CLOSED
 
@@ -746,7 +746,7 @@ async def test_closed_assessment_not_reactivated_by_snapshot(mock_db, mock_scope
 async def test_closed_assessment_not_reactivated_by_drift(mock_db, mock_scope):
     setup_basic_mock_db(mock_db, mock_scope)
     r = await GovernanceRiskComplianceService.create_or_sync_assessment("A1", "Desc", FrameworkType.ISO27001)
-    GovernanceRiskComplianceService.transition_status(r.assessment_id, ComplianceStatus.CLOSED)
+    await GovernanceRiskComplianceService.transition_status(r.assessment_id, ComplianceStatus.CLOSED)
     await GRCComplianceDriftService.process_drift(mock_db, None, None)
     assert r.status == ComplianceStatus.CLOSED
 
@@ -754,7 +754,7 @@ async def test_closed_assessment_not_reactivated_by_drift(mock_db, mock_scope):
 async def test_closed_assessment_not_reactivated_by_remapping(mock_db, mock_scope):
     setup_basic_mock_db(mock_db, mock_scope)
     r = await GovernanceRiskComplianceService.create_or_sync_assessment("A1", "Desc", FrameworkType.ISO27001)
-    GovernanceRiskComplianceService.transition_status(r.assessment_id, ComplianceStatus.CLOSED)
+    await GovernanceRiskComplianceService.transition_status(r.assessment_id, ComplianceStatus.CLOSED)
     FrameworkMappingService.calculate()
     assert r.status == ComplianceStatus.CLOSED
 
@@ -766,28 +766,28 @@ async def test_assessment_identity_preserved_after_worker_refresh(mock_db, mock_
     from src.services.continuous_refresh_service import ContinuousRefreshService
     await ContinuousRefreshService.refresh_all(mock_db)
     
-    assert GovernanceRiskComplianceService.get_all_assessments()[0].assessment_id == r.assessment_id
+    assert (await GovernanceRiskComplianceService.get_all_assessments())[0].assessment_id == r.assessment_id
 
 @pytest.mark.asyncio
 async def test_assessment_identity_preserved_after_scoring_refresh(mock_db, mock_scope):
     setup_basic_mock_db(mock_db, mock_scope)
     r = await GovernanceRiskComplianceService.create_or_sync_assessment("A1", "Desc", FrameworkType.ISO27001)
     ComplianceScoringService.calculate()
-    assert GovernanceRiskComplianceService.get_all_assessments()[0].assessment_id == r.assessment_id
+    assert (await GovernanceRiskComplianceService.get_all_assessments())[0].assessment_id == r.assessment_id
 
 @pytest.mark.asyncio
 async def test_assessment_identity_preserved_after_snapshot_rebuild(mock_db, mock_scope):
     setup_basic_mock_db(mock_db, mock_scope)
     r = await GovernanceRiskComplianceService.create_or_sync_assessment("A1", "Desc", FrameworkType.ISO27001)
     await ComplianceSnapshotService.generate_snapshot(mock_db, None)
-    assert GovernanceRiskComplianceService.get_all_assessments()[0].assessment_id == r.assessment_id
+    assert (await GovernanceRiskComplianceService.get_all_assessments())[0].assessment_id == r.assessment_id
 
 @pytest.mark.asyncio
 async def test_assessment_identity_preserved_after_drift_processing(mock_db, mock_scope):
     setup_basic_mock_db(mock_db, mock_scope)
     r = await GovernanceRiskComplianceService.create_or_sync_assessment("A1", "Desc", FrameworkType.ISO27001)
     await GRCComplianceDriftService.process_drift(mock_db, None, None)
-    assert GovernanceRiskComplianceService.get_all_assessments()[0].assessment_id == r.assessment_id
+    assert (await GovernanceRiskComplianceService.get_all_assessments())[0].assessment_id == r.assessment_id
 
 
 # ==========================================
@@ -931,53 +931,53 @@ async def test_extra_grc_26(mock_db, mock_scope):
 @pytest.mark.asyncio
 async def test_extra_grc_27(mock_db, mock_scope):
     setup_basic_mock_db(mock_db, mock_scope)
-    assert len(GovernanceRiskComplianceService.get_all_assessments()) == 0
+    assert len(await GovernanceRiskComplianceService.get_all_assessments()) == 0
 
 @pytest.mark.asyncio
 async def test_extra_grc_28(mock_db, mock_scope):
     setup_basic_mock_db(mock_db, mock_scope)
     r = await GovernanceRiskComplianceService.create_or_sync_assessment("A1", "Desc", FrameworkType.ISO27001)
-    assert GovernanceRiskComplianceService.get_assessment(r.assessment_id) is not None
+    assert await GovernanceRiskComplianceService.get_assessment(r.assessment_id) is not None
 
 @pytest.mark.asyncio
 async def test_extra_grc_29(mock_db, mock_scope):
     setup_basic_mock_db(mock_db, mock_scope)
     r = await GovernanceRiskComplianceService.create_or_sync_assessment("A1", "Desc", FrameworkType.ISO27001)
-    assert GovernanceRiskComplianceService.get_assessment_by_fingerprint(r.assessment_fingerprint) is not None
+    assert await GovernanceRiskComplianceService.get_assessment_by_fingerprint(r.assessment_fingerprint) is not None
 
 @pytest.mark.asyncio
 async def test_extra_grc_30(mock_db, mock_scope):
     setup_basic_mock_db(mock_db, mock_scope)
     r = await GovernanceRiskComplianceService.create_or_sync_assessment("A1", "Desc", FrameworkType.ISO27001)
     # verify forward only transition rule
-    GovernanceRiskComplianceService.transition_status(r.assessment_id, ComplianceStatus.IN_REVIEW)
+    await GovernanceRiskComplianceService.transition_status(r.assessment_id, ComplianceStatus.IN_REVIEW)
     with pytest.raises(ValueError):
-        GovernanceRiskComplianceService.transition_status(r.assessment_id, ComplianceStatus.ACTIVE)
+        await GovernanceRiskComplianceService.transition_status(r.assessment_id, ComplianceStatus.ACTIVE)
 
 @pytest.mark.asyncio
 async def test_extra_grc_31(mock_db, mock_scope):
     setup_basic_mock_db(mock_db, mock_scope)
     r = await GovernanceRiskComplianceService.create_or_sync_assessment("A1", "Desc", FrameworkType.ISO27001)
-    GovernanceRiskComplianceService.transition_status(r.assessment_id, ComplianceStatus.IN_REVIEW)
+    await GovernanceRiskComplianceService.transition_status(r.assessment_id, ComplianceStatus.IN_REVIEW)
     # transition to compliant is allowed
-    GovernanceRiskComplianceService.transition_status(r.assessment_id, ComplianceStatus.COMPLIANT)
+    await GovernanceRiskComplianceService.transition_status(r.assessment_id, ComplianceStatus.COMPLIANT)
     assert r.status == ComplianceStatus.COMPLIANT
 
 @pytest.mark.asyncio
 async def test_extra_grc_32(mock_db, mock_scope):
     setup_basic_mock_db(mock_db, mock_scope)
     r = await GovernanceRiskComplianceService.create_or_sync_assessment("A1", "Desc", FrameworkType.ISO27001)
-    GovernanceRiskComplianceService.transition_status(r.assessment_id, ComplianceStatus.IN_REVIEW)
+    await GovernanceRiskComplianceService.transition_status(r.assessment_id, ComplianceStatus.IN_REVIEW)
     # transition to non-compliant is allowed
-    GovernanceRiskComplianceService.transition_status(r.assessment_id, ComplianceStatus.NON_COMPLIANT)
+    await GovernanceRiskComplianceService.transition_status(r.assessment_id, ComplianceStatus.NON_COMPLIANT)
     assert r.status == ComplianceStatus.NON_COMPLIANT
 
 @pytest.mark.asyncio
 async def test_extra_grc_33(mock_db, mock_scope):
     setup_basic_mock_db(mock_db, mock_scope)
     r = await GovernanceRiskComplianceService.create_or_sync_assessment("A1", "Desc", FrameworkType.ISO27001)
-    GovernanceRiskComplianceService.transition_status(r.assessment_id, ComplianceStatus.IN_REVIEW)
-    GovernanceRiskComplianceService.transition_status(r.assessment_id, ComplianceStatus.CLOSED)
+    await GovernanceRiskComplianceService.transition_status(r.assessment_id, ComplianceStatus.IN_REVIEW)
+    await GovernanceRiskComplianceService.transition_status(r.assessment_id, ComplianceStatus.CLOSED)
     assert r.status == ComplianceStatus.CLOSED
 
 @pytest.mark.asyncio

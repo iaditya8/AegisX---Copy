@@ -323,7 +323,7 @@ async def test_duplicate_prevention_on_creation_analytics(mock_db, mock_scope):
 
 @pytest.mark.asyncio
 async def test_get_analytics_not_found():
-    assert SecurityOperationsAnalyticsService.get_analytics(uuid.uuid4()) is None
+    assert SecurityOperationsAnalyticsService.get_analytics(uuid.uuid4()) == None
 
 @pytest.mark.asyncio
 async def test_sync_does_not_reactivate_archived(mock_db, mock_scope):
@@ -368,7 +368,7 @@ async def test_get_all_analytics_empty():
 
 @pytest.mark.asyncio
 async def test_get_analytics_by_fingerprint_not_found():
-    assert SecurityOperationsAnalyticsService.get_analytics_by_fingerprint("nonexistent") is None
+    assert SecurityOperationsAnalyticsService.get_analytics_by_fingerprint("nonexistent") == None
 
 @pytest.mark.asyncio
 async def test_to_response_mapping(mock_db, mock_scope):

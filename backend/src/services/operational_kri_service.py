@@ -106,11 +106,6 @@ class OperationalKRIService:
 
             record = SOCOperationalKRI(
                 kri_id=uuid.uuid4(),
-                kpi_name=kri_name,  # Note: mapping kri_name to the database field kri_name. Wait, did we name it kri_name in DB? Yes. Let's make sure.
-                # Wait, in models.py and rev_005 migration:
-                # sa.Column("kri_id", postgresql.UUID(as_uuid=True)...)
-                # sa.Column("kri_name", sa.String(), nullable=False)
-                # yes, it is kri_name!
                 kri_name=kri_name,
                 current_value=current_value,
                 threshold_value=threshold_value,
