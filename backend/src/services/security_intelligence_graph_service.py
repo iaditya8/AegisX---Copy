@@ -22,8 +22,17 @@ from src.services.graph_history_service import GraphHistoryService
 from src.infrastructure.cache.cache_dict import CacheDict
 
 
+from src.infrastructure.database.unit_of_work import UnitOfWork
+from src.infrastructure.database.models import (
+    SecurityIntelligenceNode,
+    SecurityIntelligenceEdge,
+    IntelligenceEvent,
+)
+from src.core.tenant import get_current_tenant_id
+
+
 class SecurityIntelligenceGraphService:
-    # In-memory graph storage
+    # L2 caches
     _nodes = CacheDict("graph_nodes")
     _edges = CacheDict("graph_edges")
     _node_fingerprint_lookup = CacheDict("graph_node_fingerprints")
@@ -31,7 +40,7 @@ class SecurityIntelligenceGraphService:
 
     @classmethod
     def clear_graph(cls) -> None:
-        """Clear all nodes, edges, lookup maps, and histories."""
+        """Clear L2 cache and history."""
         cls._nodes.clear()
         cls._edges.clear()
         cls._node_fingerprint_lookup.clear()
@@ -51,140 +60,264 @@ class SecurityIntelligenceGraphService:
 
     @classmethod
     def get_node(cls, node_id: uuid.UUID) -> Optional[GraphNodeResponse]:
-        """Retrieve a node by ID."""
-        return cls._nodes.get(node_id)
+        """Retrieve a node by ID (L2 cache check)."""
+        tenant_id = get_current_tenant_id() or uuid.UUID("00000000-0000-0000-0000-000000000000")
+        cached = cls._nodes.get(node_id)
+        if cached and cached.tenant_id == tenant_id:
+            return cached
+        return None
 
     @classmethod
     def get_edge(cls, edge_id: uuid.UUID) -> Optional[GraphEdgeResponse]:
-        """Retrieve an edge by ID."""
-        return cls._edges.get(edge_id)
+        """Retrieve an edge by ID (L2 cache check)."""
+        tenant_id = get_current_tenant_id() or uuid.UUID("00000000-0000-0000-0000-000000000000")
+        cached = cls._edges.get(edge_id)
+        if cached and cached.tenant_id == tenant_id:
+            return cached
+        return None
 
     @classmethod
     def get_all_nodes(cls) -> List[GraphNodeResponse]:
-        """Retrieve all nodes in the graph."""
-        return list(cls._nodes.values())
+        """Retrieve all nodes in the graph (L2 cache tenant filtered)."""
+        tenant_id = get_current_tenant_id() or uuid.UUID("00000000-0000-0000-0000-000000000000")
+        return [r for r in cls._nodes.values() if r.tenant_id == tenant_id]
 
     @classmethod
     def get_all_edges(cls) -> List[GraphEdgeResponse]:
-        """Retrieve all edges in the graph."""
-        return list(cls._edges.values())
+        """Retrieve all edges in the graph (L2 cache tenant filtered)."""
+        tenant_id = get_current_tenant_id() or uuid.UUID("00000000-0000-0000-0000-000000000000")
+        return [r for r in cls._edges.values() if r.tenant_id == tenant_id]
 
     @classmethod
-    def create_or_sync_node(
-        cls, node_type: NodeType, entity_id: uuid.UUID, scope_id: Optional[uuid.UUID] = None
+    def _db_node_to_response(cls, node: SecurityIntelligenceNode) -> GraphNodeResponse:
+        return GraphNodeResponse(
+            node_id=node.node_id,
+            node_fingerprint=node.node_fingerprint,
+            node_type=NodeType(node.node_type),
+            entity_id=node.entity_id,
+            status=GraphComponentStatus(node.status),
+            scope_id=node.scope_id,
+            tenant_id=node.tenant_id,
+        )
+
+    @classmethod
+    def _db_edge_to_response(cls, edge: SecurityIntelligenceEdge) -> GraphEdgeResponse:
+        return GraphEdgeResponse(
+            edge_id=edge.edge_id,
+            edge_fingerprint=edge.edge_fingerprint,
+            source_id=edge.source_id,
+            target_id=edge.target_id,
+            edge_type=EdgeType(edge.edge_type),
+            weight=edge.weight,
+            status=GraphComponentStatus(edge.status),
+            scope_id=edge.scope_id,
+            tenant_id=edge.tenant_id,
+        )
+
+    @classmethod
+    async def create_or_sync_node(
+        cls, node_type: NodeType, entity_id: uuid.UUID, scope_id: Optional[uuid.UUID] = None, uow: Optional[UnitOfWork] = None
     ) -> GraphNodeResponse:
         """Create or synchronize a graph node, preserving identity and terminal states."""
         node_type_str = node_type.value if hasattr(node_type, "value") else node_type
         if not GraphNodeTypeRegistry.validate(node_type_str):
             raise ValueError(f"Invalid Node Type: {node_type}")
 
-        node_type_enum = NodeType(node_type_str)
-
+        tenant_id = get_current_tenant_id() or uuid.UUID("00000000-0000-0000-0000-000000000000")
         fingerprint = GraphFingerprintService.generate_node_fingerprint(node_type_str, entity_id)
-        existing_id = cls._node_fingerprint_lookup.get(fingerprint)
 
-        if existing_id:
-            node = cls._nodes[existing_id]
-            if node.status == GraphComponentStatus.DEPRECATED:
-                # Terminal State Protection
-                return node
-            return node
+        async def _sync(uow_inst: UnitOfWork) -> SecurityIntelligenceNode:
+            existing = await uow_inst.graph_repo.get_node_by_fingerprint(fingerprint)
+            if existing:
+                return existing
 
-        node_id = uuid.uuid4()
-        node = GraphNodeResponse(
-            node_id=node_id,
-            node_fingerprint=fingerprint,
-            node_type=node_type_enum,
-            entity_id=entity_id,
-            status=GraphComponentStatus.ACTIVE,
-            scope_id=scope_id,
-        )
-        cls._nodes[node_id] = node
-        cls._node_fingerprint_lookup[fingerprint] = node_id
+            node_id = uuid.uuid4()
+            db_node = SecurityIntelligenceNode(
+                node_id=node_id,
+                node_fingerprint=fingerprint,
+                node_type=node_type_str,
+                entity_id=entity_id,
+                status=GraphComponentStatus.ACTIVE.value,
+                scope_id=scope_id,
+                tenant_id=tenant_id,
+                version=1
+            )
+            await uow_inst.graph_repo.save_node(db_node)
+            await uow_inst.session.flush()
 
-        GraphHistoryService.record_event(
-            node_id, "NODE_ADDED", f"Graph node added of type {node_type_str} for entity {entity_id}"
-        )
-        return node
+            await GraphHistoryService.record_event(
+                node_id, "NODE_ADDED", f"Graph node added of type {node_type_str} for entity {entity_id}", uow=uow_inst
+            )
+
+            event = IntelligenceEvent(
+                tenant_id=tenant_id,
+                domain="graph",
+                entity_id=node_id,
+                event_type="graph.node.added",
+                payload={"node_id": str(node_id), "node_type": node_type_str, "entity_id": str(entity_id)},
+                status="pending"
+            )
+            uow_inst.session.add(event)
+            return db_node
+
+        if uow:
+            db_node = await _sync(uow)
+        else:
+            async with UnitOfWork() as new_uow:
+                db_node = await _sync(new_uow)
+                await new_uow.commit()
+
+        # Warm L2 cache
+        res = cls._db_node_to_response(db_node)
+        cls._nodes[db_node.node_id] = res
+        cls._node_fingerprint_lookup[db_node.node_fingerprint] = db_node.node_id
+
+        return res
 
     @classmethod
-    def create_or_sync_edge(
+    async def create_or_sync_edge(
         cls,
         source_id: uuid.UUID,
         target_id: uuid.UUID,
         edge_type: EdgeType,
         weight: float,
         scope_id: Optional[uuid.UUID] = None,
+        uow: Optional[UnitOfWork] = None,
     ) -> GraphEdgeResponse:
         """Create or synchronize an edge in the security intelligence graph."""
         edge_type_str = edge_type.value if hasattr(edge_type, "value") else edge_type
         if not GraphEdgeTypeRegistry.validate(edge_type_str):
             raise ValueError(f"Invalid Edge Type: {edge_type}")
 
-        edge_type_enum = EdgeType(edge_type_str)
-
+        tenant_id = get_current_tenant_id() or uuid.UUID("00000000-0000-0000-0000-000000000000")
         fingerprint = GraphFingerprintService.generate_edge_fingerprint(source_id, edge_type_str, target_id)
-        existing_id = cls._edge_fingerprint_lookup.get(fingerprint)
 
-        if existing_id:
-            edge = cls._edges[existing_id]
-            if edge.status == GraphComponentStatus.DEPRECATED:
-                # Terminal State Protection
-                return edge
-            if edge.weight != weight:
-                old_weight = edge.weight
-                edge.weight = weight
-                GraphHistoryService.record_event(
-                    existing_id, "EDGE_WEIGHT_UPDATED", f"Edge weight updated from {old_weight} to {weight}"
-                )
-            return edge
+        async def _sync(uow_inst: UnitOfWork) -> SecurityIntelligenceEdge:
+            existing = await uow_inst.graph_repo.get_edge_by_fingerprint(fingerprint)
+            if existing:
+                if existing.status == GraphComponentStatus.DEPRECATED.value:
+                    return existing
+                if existing.weight != weight:
+                    old_weight = existing.weight
+                    existing.weight = weight
+                    existing.updated_at = datetime.now(timezone.utc)
+                    await GraphHistoryService.record_event(
+                        existing.edge_id, "EDGE_WEIGHT_UPDATED", f"Edge weight updated from {old_weight} to {weight}", uow=uow_inst
+                    )
+                return existing
 
-        edge_id = uuid.uuid4()
-        edge = GraphEdgeResponse(
-            edge_id=edge_id,
-            edge_fingerprint=fingerprint,
-            source_id=source_id,
-            target_id=target_id,
-            edge_type=edge_type_enum,
-            weight=weight,
-            status=GraphComponentStatus.ACTIVE,
-            scope_id=scope_id,
-        )
-        cls._edges[edge_id] = edge
-        cls._edge_fingerprint_lookup[fingerprint] = edge_id
+            edge_id = uuid.uuid4()
+            db_edge = SecurityIntelligenceEdge(
+                edge_id=edge_id,
+                edge_fingerprint=fingerprint,
+                source_id=source_id,
+                target_id=target_id,
+                edge_type=edge_type_str,
+                weight=weight,
+                status=GraphComponentStatus.ACTIVE.value,
+                scope_id=scope_id,
+                tenant_id=tenant_id,
+                version=1
+            )
+            await uow_inst.graph_repo.save_edge(db_edge)
+            await uow_inst.session.flush()
 
-        GraphHistoryService.record_event(
-            edge_id, "EDGE_ADDED", f"Graph edge added of type {edge_type_str} from {source_id} to {target_id}"
-        )
-        return edge
+            await GraphHistoryService.record_event(
+                edge_id, "EDGE_ADDED", f"Graph edge added of type {edge_type_str} from {source_id} to {target_id}", uow=uow_inst
+            )
+
+            event = IntelligenceEvent(
+                tenant_id=tenant_id,
+                domain="graph",
+                entity_id=edge_id,
+                event_type="graph.edge.added",
+                payload={"edge_id": str(edge_id), "source_id": str(source_id), "target_id": str(target_id), "edge_type": edge_type_str},
+                status="pending"
+            )
+            uow_inst.session.add(event)
+            return db_edge
+
+        if uow:
+            db_edge = await _sync(uow)
+        else:
+            async with UnitOfWork() as new_uow:
+                db_edge = await _sync(new_uow)
+                await new_uow.commit()
+
+        # Warm L2 cache
+        res = cls._db_edge_to_response(db_edge)
+        cls._edges[db_edge.edge_id] = res
+        cls._edge_fingerprint_lookup[db_edge.edge_fingerprint] = db_edge.edge_id
+
+        return res
 
     @classmethod
-    def deprecate_node(cls, node_id: uuid.UUID) -> GraphNodeResponse:
+    async def deprecate_node(cls, node_id: uuid.UUID) -> GraphNodeResponse:
         """Transition a node to DEPRECATED (terminal state)."""
-        node = cls.get_node(node_id)
-        if not node:
-            raise ValueError(f"Node {node_id} not found")
+        tenant_id = get_current_tenant_id() or uuid.UUID("00000000-0000-0000-0000-000000000000")
+        async with UnitOfWork() as uow:
+            node = await uow.graph_repo.get_node(node_id)
+            if not node:
+                raise ValueError(f"Node {node_id} not found")
 
-        if node.status != GraphComponentStatus.DEPRECATED:
-            node.status = GraphComponentStatus.DEPRECATED
-            GraphHistoryService.record_event(
-                node_id, "DEPRECATED", "Node transitioned to terminal state DEPRECATED"
-            )
-        return node
+            if node.status != GraphComponentStatus.DEPRECATED.value:
+                node.status = GraphComponentStatus.DEPRECATED.value
+                node.updated_at = datetime.now(timezone.utc)
+                await GraphHistoryService.record_event(
+                    node_id, "DEPRECATED", "Node transitioned to terminal state DEPRECATED", uow=uow
+                )
+
+                event = IntelligenceEvent(
+                    tenant_id=tenant_id,
+                    domain="graph",
+                    entity_id=node_id,
+                    event_type="graph.node.deprecated",
+                    payload={"node_id": str(node_id)},
+                    status="pending"
+                )
+                uow.session.add(event)
+                await uow.commit()
+
+            # Warm L2 cache
+            res = cls._db_node_to_response(node)
+            cls._nodes[node.node_id] = res
+            cls._node_fingerprint_lookup[node.node_fingerprint] = node.node_id
+
+            return res
 
     @classmethod
-    def deprecate_edge(cls, edge_id: uuid.UUID) -> GraphEdgeResponse:
+    async def deprecate_edge(cls, edge_id: uuid.UUID) -> GraphEdgeResponse:
         """Transition an edge to DEPRECATED (terminal state)."""
-        edge = cls.get_edge(edge_id)
-        if not edge:
-            raise ValueError(f"Edge {edge_id} not found")
+        tenant_id = get_current_tenant_id() or uuid.UUID("00000000-0000-0000-0000-000000000000")
+        async with UnitOfWork() as uow:
+            edge = await uow.graph_repo.get_edge(edge_id)
+            if not edge:
+                raise ValueError(f"Edge {edge_id} not found")
 
-        if edge.status != GraphComponentStatus.DEPRECATED:
-            edge.status = GraphComponentStatus.DEPRECATED
-            GraphHistoryService.record_event(
-                edge_id, "DEPRECATED", "Edge transitioned to terminal state DEPRECATED"
-            )
-        return edge
+            if edge.status != GraphComponentStatus.DEPRECATED.value:
+                edge.status = GraphComponentStatus.DEPRECATED.value
+                edge.updated_at = datetime.now(timezone.utc)
+                await GraphHistoryService.record_event(
+                    edge_id, "DEPRECATED", "Edge transitioned to terminal state DEPRECATED", uow=uow
+                )
+
+                event = IntelligenceEvent(
+                    tenant_id=tenant_id,
+                    domain="graph",
+                    entity_id=edge_id,
+                    event_type="graph.edge.deprecated",
+                    payload={"edge_id": str(edge_id)},
+                    status="pending"
+                )
+                uow.session.add(event)
+                await uow.commit()
+
+            # Warm L2 cache
+            res = cls._db_edge_to_response(edge)
+            cls._edges[edge.edge_id] = res
+            cls._edge_fingerprint_lookup[edge.edge_fingerprint] = edge.edge_id
+
+            return res
 
     @classmethod
     async def rebuild_graph_topology(cls, db: AsyncSession) -> None:
@@ -194,37 +327,37 @@ class SecurityIntelligenceGraphService:
         res_assets = await db.execute(q_assets)
         assets = res_assets.scalars().all()
         for a in assets:
-            cls.create_or_sync_node(NodeType.ASSET, a.id, a.scope_id)
+            await cls.create_or_sync_node(NodeType.ASSET, a.id, a.scope_id)
 
         # 2. Risks from CyberRiskQuantificationService
         from src.services.cyber_risk_quantification_service import CyberRiskQuantificationService
         for r in await CyberRiskQuantificationService.get_all_risks():
-            cls.create_or_sync_node(NodeType.RISK, r.risk_id, r.scope_id)
+            await cls.create_or_sync_node(NodeType.RISK, r.risk_id, r.scope_id)
 
         # 3. GRC Compliance Assessments from GovernanceRiskComplianceService
         from src.services.governance_risk_compliance_service import GovernanceRiskComplianceService
         for c in await GovernanceRiskComplianceService.get_all_assessments():
-            cls.create_or_sync_node(NodeType.COMPLIANCE, c.assessment_id, c.scope_id)
+            await cls.create_or_sync_node(NodeType.COMPLIANCE, c.assessment_id, c.scope_id)
 
         # 4. Postures from SecurityPostureService
         from src.services.security_posture_service import SecurityPostureService
         for p in SecurityPostureService.get_all_postures():
-            cls.create_or_sync_node(NodeType.POSTURE, p.posture_id, p.scope_id)
+            await cls.create_or_sync_node(NodeType.POSTURE, p.posture_id, p.scope_id)
 
         # 5. Resilience records
         from src.services.cyber_resilience_service import CyberResilienceService
         for res in await CyberResilienceService.get_all_resilience():
-            cls.create_or_sync_node(NodeType.RESILIENCE, res.resilience_id, res.scope_id)
+            await cls.create_or_sync_node(NodeType.RESILIENCE, res.resilience_id, res.scope_id)
 
         # 6. GRC Knowledge items
         from src.services.security_knowledge_service import SecurityKnowledgeService
         for k in await SecurityKnowledgeService.get_all_knowledge():
-            cls.create_or_sync_node(NodeType.KNOWLEDGE, k.knowledge_id, k.scope_id)
+            await cls.create_or_sync_node(NodeType.KNOWLEDGE, k.knowledge_id, k.scope_id)
 
         # 7. Threat intelligence records
         from src.services.threat_intelligence_service import ThreatIntelligenceService
         for t in ThreatIntelligenceService.get_all_threats():
-            cls.create_or_sync_node(NodeType.THREAT_INTEL, t.threat_intel_id, t.scope_id)
+            await cls.create_or_sync_node(NodeType.THREAT_INTEL, t.threat_intel_id, t.scope_id)
 
         # 8. Incidents
         from src.services.incident_service import IncidentService
@@ -237,7 +370,7 @@ class SecurityIntelligenceGraphService:
                         scope_id = cls._get_uuid(db_asset.scope_id)
                 except Exception:
                     pass
-            cls.create_or_sync_node(NodeType.INCIDENT, inc.incident_id, scope_id)
+            await cls.create_or_sync_node(NodeType.INCIDENT, inc.incident_id, scope_id)
 
         # 9. Cases
         from src.services.case_service import CaseService
@@ -250,7 +383,7 @@ class SecurityIntelligenceGraphService:
                         scope_id = cls._get_uuid(db_asset.scope_id)
                 except Exception:
                     pass
-            cls.create_or_sync_node(NodeType.CASE, cs.case_id, scope_id)
+            await cls.create_or_sync_node(NodeType.CASE, cs.case_id, scope_id)
 
         # 10. Investigations
         from src.services.investigation_service import InvestigationService
@@ -265,7 +398,7 @@ class SecurityIntelligenceGraphService:
                 except Exception:
                     pass
             for entry in entries:
-                cls.create_or_sync_node(NodeType.INVESTIGATION, entry.entry_id, scope_id)
+                await cls.create_or_sync_node(NodeType.INVESTIGATION, entry.entry_id, scope_id)
 
     @classmethod
     def calculate_centrality(cls) -> Dict[uuid.UUID, float]:
@@ -293,7 +426,6 @@ class SecurityIntelligenceGraphService:
         nodes = cls.get_all_nodes()
         edges = cls.get_all_edges()
 
-        # Gather adjacency map
         adj: Dict[uuid.UUID, List[Tuple[uuid.UUID, uuid.UUID, str, float]]] = {n.node_id: [] for n in nodes}
         active_nodes = {n.node_id for n in nodes if n.status != GraphComponentStatus.DEPRECATED}
 
@@ -303,7 +435,6 @@ class SecurityIntelligenceGraphService:
             if e.source_id in active_nodes and e.target_id in active_nodes:
                 adj[e.source_id].append((e.target_id, e.edge_id, e.edge_type.value, e.weight))
 
-        # Dijkstra
         import heapq
         queue = [(0.0, source_id, [])]
         visited = set()

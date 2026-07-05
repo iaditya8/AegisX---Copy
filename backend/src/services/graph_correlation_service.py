@@ -42,7 +42,7 @@ class GraphCorrelationService:
                 inc_node = cls._find_node_by_entity(nodes_by_type.get(NodeType.INCIDENT, []), iid)
                 if inc_node:
                     w = GraphRelationshipWeightRegistry.get_weight(EdgeType.CONTAINED_IN)
-                    SecurityIntelligenceGraphService.create_or_sync_edge(
+                    await SecurityIntelligenceGraphService.create_or_sync_edge(
                         inc_node.node_id, case_node.node_id, EdgeType.CONTAINED_IN, w, case_node.scope_id
                     )
 
@@ -54,7 +54,7 @@ class GraphCorrelationService:
             a_node = cls._find_node_by_entity(nodes_by_type.get(NodeType.ASSET, []), p.asset_id)
             if p_node and a_node:
                 w = GraphRelationshipWeightRegistry.get_weight(EdgeType.AFFECTS)
-                SecurityIntelligenceGraphService.create_or_sync_edge(
+                await SecurityIntelligenceGraphService.create_or_sync_edge(
                     p_node.node_id, a_node.node_id, EdgeType.AFFECTS, w, p.scope_id
                 )
 
@@ -68,7 +68,7 @@ class GraphCorrelationService:
                 inv_node = cls._find_node_by_entity(nodes_by_type.get(NodeType.INVESTIGATION, []), entry.entry_id)
                 if inv_node:
                     w = GraphRelationshipWeightRegistry.get_weight(EdgeType.CONTAINED_IN)
-                    SecurityIntelligenceGraphService.create_or_sync_edge(
+                    await SecurityIntelligenceGraphService.create_or_sync_edge(
                         inv_node.node_id, inc_node.node_id, EdgeType.CONTAINED_IN, w, inc_node.scope_id
                     )
 
@@ -88,7 +88,7 @@ class GraphCorrelationService:
                 shared_tags = set(t.tags) & set(k.tags)
                 if shared_tags:
                     w = GraphRelationshipWeightRegistry.get_weight(EdgeType.MITIGATES)
-                    SecurityIntelligenceGraphService.create_or_sync_edge(
+                    await SecurityIntelligenceGraphService.create_or_sync_edge(
                         k_node.node_id, t_node.node_id, EdgeType.MITIGATES, w, t.scope_id
                     )
 

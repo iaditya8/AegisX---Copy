@@ -1,16 +1,16 @@
 # Graph Report - AegisX - Copy  (2026-07-05)
 
 ## Corpus Check
-- 697 files · ~411,246 words
+- 700 files · ~335,426 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 9965 nodes · 22146 edges · 1713 communities (1401 shown, 312 thin omitted)
-- Extraction: 87% EXTRACTED · 13% INFERRED · 0% AMBIGUOUS · INFERRED: 2900 edges (avg confidence: 0.58)
+- 9994 nodes · 22305 edges · 1718 communities (1405 shown, 313 thin omitted)
+- Extraction: 87% EXTRACTED · 13% INFERRED · 0% AMBIGUOUS · INFERRED: 2960 edges (avg confidence: 0.58)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `223336ab`
+- Built from commit: `54273923`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -432,6 +432,8 @@
 - [[_COMMUNITY_4. Worker Audit (Phase 3)|4. Worker Audit (Phase 3)]]
 - [[_COMMUNITY_graphify|graphify.md]]
 - [[_COMMUNITY_graphify|graphify.md]]
+- [[_COMMUNITY_Community 446|Community 446]]
+- [[_COMMUNITY_Community 448|Community 448]]
 - [[_COMMUNITY_AIProvider|AIProvider]]
 - [[_COMMUNITY_AI prompt builder embeds physical constraints|AI prompt builder embeds physical constraints]]
 - [[_COMMUNITY_Deep-copied on read to prevent mutation|Deep-copied on read to prevent mutation]]
@@ -449,7 +451,9 @@
 - [[_COMMUNITY_4. Integrations|4. Integrations]]
 - [[_COMMUNITY_initial migration with auth fields  Revision ID rev_001_core_and_auth Revises|initial migration with auth fields  Revision ID: rev_001_core_and_auth Revises:]]
 - [[_COMMUNITY_findings sprint 8 updates  Revision ID rev_002_findings_sprint8 Revises rev_00|findings sprint 8 updates  Revision ID: rev_002_findings_sprint8 Revises: rev_00]]
+- [[_COMMUNITY_Community 469|Community 469]]
 - [[_COMMUNITY_AnalystRecord|AnalystRecord]]
+- [[_COMMUNITY_Community 659|Community 659]]
 - [[_COMMUNITY_Clear all GRC history logs.|Clear all GRC history logs.]]
 - [[_COMMUNITY_Get all history logs for a GRC assessment.|Get all history logs for a GRC assessment.]]
 - [[_COMMUNITY_Record an immutable history log for a GRC assessment.|Record an immutable history log for a GRC assessment.]]
@@ -693,50 +697,50 @@
 1. `User` - 602 edges
 2. `AIContextBuilder` - 146 edges
 3. `_execute_workflow_async()` - 133 edges
-4. `setup_basic_mock_db()` - 92 edges
-5. `setup_basic_mock_db()` - 88 edges
-6. `setup_basic_mock_db()` - 84 edges
-7. `Asset` - 83 edges
-8. `UnitOfWork` - 82 edges
+4. `UnitOfWork` - 101 edges
+5. `setup_basic_mock_db()` - 92 edges
+6. `setup_basic_mock_db()` - 88 edges
+7. `setup_basic_mock_db()` - 84 edges
+8. `Asset` - 83 edges
 9. `setup_basic_mock_db()` - 82 edges
 10. `setup_basic_mock_db()` - 74 edges
 
 ## Surprising Connections (you probably didn't know these)
 - `test_model_control_response_parsing()` --calls--> `ControlResponse`  [INFERRED]
   backend/tests/integration/test_control_validation.py → backend/src/domain/entities/control_validation.py
-- `test_create_workflow_service()` --calls--> `create_workflow()`  [INFERRED]
-  backend/tests/integration/test_workflows.py → backend/src/services/workflow_service.py
-- `test_cancel_scan_run_service()` --calls--> `cancel_scan_run()`  [INFERRED]
-  backend/tests/integration/test_workflows.py → backend/src/services/workflow_service.py
 - `create_user_cli()` --calls--> `User`  [INFERRED]
   backend/create_user.py → backend/src/infrastructure/database/models.py
-- `get_current_user()` --calls--> `set_current_tenant_id()`  [INFERRED]
-  backend/src/api/v1/dependencies/auth.py → backend/src/core/tenant.py
+- `get_current_user()` --calls--> `decode_token()`  [INFERRED]
+  backend/src/api/v1/dependencies/auth.py → backend/src/core/security.py
+- `get_current_user()` --calls--> `hash_api_key()`  [INFERRED]
+  backend/src/api/v1/dependencies/auth.py → backend/src/core/security.py
+- `get_current_user()` --calls--> `get_user_by_id()`  [INFERRED]
+  backend/src/api/v1/dependencies/auth.py → backend/src/services/user_service.py
 
 ## Import Cycles
 - None detected.
 
-## Communities (1713 total, 312 thin omitted)
+## Communities (1718 total, 313 thin omitted)
 
 ### Community 0 - "Finding Reconciliation & Analysis"
-Cohesion: 0.06
-Nodes (63): CreateResilienceRequest, CreateEdgeRequest, CreateNodeRequest, CreateKnowledgeRequest, CreateAnalyticsRequest, AnalyticsHistoryService, AuditReadinessService, Deprecated placeholder calculation method. (+55 more)
+Cohesion: 0.08
+Nodes (62): CyberRiskHistory, RiskHistoryEntry, CreateResilienceRequest, CreateRiskRequest, CreateAssessmentRequest, UploadEvidenceRequest, CreateKnowledgeRequest, CreateAnalyticsRequest (+54 more)
 
 ### Community 1 - "Incident Management & Investigation"
-Cohesion: 0.03
-Nodes (82): CoverageStatus, DetectionCoverageResponse, DetectionHistoryEntry, DetectionResponse, DetectionSeverity, DetectionStatus, clean_stores(), get_auth_header() (+74 more)
+Cohesion: 0.04
+Nodes (67): clean_stores(), get_auth_header(), mock_admin(), mock_operator(), mock_reader(), mock_scope(), mock_scope_2(), Verify detection fingerprint remains stable regardless of technique ordering or (+59 more)
 
 ### Community 2 - "Authentication & User Management"
-Cohesion: 0.04
-Nodes (55): Any, Store a payload in the cache associated with an asset ID., AIContextBuilder, Aggregate context for a specific case., Aggregate Exposure Management summary, active exposures, attack surface categori, Aggregate security posture summary, active postures, status counts, and trends., Aggregate global security posture summary across all scopes., Aggregate control validation summary, coverage, active controls, and status coun (+47 more)
+Cohesion: 0.06
+Nodes (44): Any, AIContextBuilder, Aggregate context for a specific case., Aggregate Exposure Management summary, active exposures, attack surface categori, Aggregate security posture summary, active postures, status counts, and trends., Aggregate global security posture summary across all scopes., Aggregate control validation summary, coverage, active controls, and status coun, Aggregate global control validation summary across all scopes. (+36 more)
 
 ### Community 3 - "Authentication & User Management"
 Cohesion: 0.04
-Nodes (62): OwnerAssignmentModel, RemediationException, RemediationHistoryEntry, RemediationHistoryType, RemediationStatus, clean_stores(), Verify that cache clears trigger dynamic rebuilding of snapshots., test_governance_snapshot_rebuild_consistency() (+54 more)
+Nodes (65): clean_stores(), get_auth_header(), Verify that a risk acceptance is created with ACTIVE status and updates remediat, Verify expiration transitions RiskAcceptance to EXPIRED and resets remediation s, Verify revocation moves status to REVOKED and resets remediation status., Verify asset governance transitions through COMPLIANT, NON_COMPLIANT, and ACCEPT, Verify finding governance status based on open/accepted risk states., Verify non-compliant assets and findings are detected successfully. (+57 more)
 
 ### Community 4 - "Authentication & User Management"
-Cohesion: 0.03
-Nodes (100): User, check_asset_ownership(), check_finding_ownership(), Enforce scope ownership check for non-admin operators on finding., Enforce scope ownership check for non-admin operators., check_detection_ownership(), check_scope_ownership(), create_detection() (+92 more)
+Cohesion: 0.05
+Nodes (56): CoverageStatus, DetectionCoverageResponse, DetectionHistoryEntry, DetectionResponse, DetectionSeverity, DetectionStatus, Verify registry resolves and maps severities correctly., Verify fingerprint only changes when name or techniques change, remaining stable (+48 more)
 
 ### Community 5 - "Alert Operations & Severity"
 Cohesion: 0.05
@@ -744,63 +748,63 @@ Nodes (41): 10. Summary, 1.1 Technology Stack, 1.2 High-Level Architecture, 1.3 
 
 ### Community 6 - "Authentication & User Management"
 Cohesion: 0.04
-Nodes (84): AsyncClient, create_access_token(), Create a signed JWT access token., Test token refresh fails with an invalid signature token., Test login failure for a username that doesn't exist., test_login_nonexistent_user(), test_refresh_token_invalid(), get_auth_header() (+76 more)
+Nodes (100): AsyncClient, User, mock_admin(), mock_operator(), Test token refresh fails with an invalid signature token., Test that the refresh token payload explicitly contains type=refresh., Test login success with correct username and password., Test login failure with an incorrect password. (+92 more)
 
 ### Community 7 - "Authentication & User Management"
-Cohesion: 0.06
-Nodes (76): mock_scope(), mock_scope(), mock_scope_a(), mock_scope(), mock_scope_2(), mock_scope(), mock_scope_2(), get_auth_header() (+68 more)
+Cohesion: 0.12
+Nodes (41): get_auth_header(), mock_admin(), mock_operator(), mock_reader(), setup_basic_mock_db(), test_ai_context_exposure_injection(), test_api_accept_exposure(), test_api_close_exposure() (+33 more)
 
 ### Community 8 - "Authentication & User Management"
-Cohesion: 0.06
-Nodes (73): get_auth_header(), mock_admin(), mock_operator(), mock_reader(), setup_basic_mock_db(), setup_test_db(), test_ai_context_posture_injection(), test_api_accept_posture() (+65 more)
+Cohesion: 0.09
+Nodes (55): get_auth_header(), mock_admin(), setup_basic_mock_db(), setup_test_db(), test_ai_context_posture_injection(), test_api_accept_posture(), test_api_close_posture(), test_api_create_posture() (+47 more)
 
 ### Community 9 - "Authentication & User Management"
-Cohesion: 0.04
-Nodes (75): AsyncSession, get_db(), FastAPI dependency to retrieve an async database session., activate_plan(), approve_plan(), check_scope_ownership(), close_plan(), create_plan() (+67 more)
+Cohesion: 0.10
+Nodes (28): check_asset_ownership(), emit_report_event(), export_asset_csv(), export_asset_json(), export_executive_csv(), export_executive_json(), get_asset_report(), get_dashboard_summary() (+20 more)
 
 ### Community 10 - "Authentication & User Management"
-Cohesion: 0.04
-Nodes (72): get_auth_header(), mock_admin_user(), mock_asset_a(), mock_operator_user(), mock_reader_user(), mock_scope_a(), Utility to setup db.execute mock returns for reporting queries., Test Dashboard summary aggregation logic. (+64 more)
+Cohesion: 0.05
+Nodes (62): get_auth_header(), mock_admin_user(), mock_asset_a(), mock_operator_user(), mock_reader_user(), Utility to setup db.execute mock returns for reporting queries., Test Dashboard summary aggregation logic., Test Dashboard trend time-series calculation. (+54 more)
 
 ### Community 11 - "Authentication & User Management"
-Cohesion: 0.04
-Nodes (67): get_auth_header(), mock_admin_user(), mock_operator_user(), Requirement 1: Asset correlation generation. Verify general flow works., Requirement 2: Port aggregation. Verify open ports are sorted., Requirement 3: Service aggregation. Verify service names are sorted., Requirement 4: Tech aggregation. Verify tech stack aggregates products., Requirement 5: Product aggregation. Verify products aggregates products. (+59 more)
+Cohesion: 0.07
+Nodes (44): get_auth_header(), mock_admin_user(), mock_asset_a(), mock_operator_user(), Requirement 1: Asset correlation generation. Verify general flow works., Requirement 2: Port aggregation. Verify open ports are sorted., Requirement 3: Service aggregation. Verify service names are sorted., Requirement 4: Tech aggregation. Verify tech stack aggregates products. (+36 more)
 
 ### Community 12 - "Authentication & User Management"
 Cohesion: 0.04
-Nodes (61): Verify fusion updates active threats but skips ARCHIVED ones (Finding 2)., test_threat_fusion_persistence_and_terminal_state(), Verify that multiple sync calls with same parameters do not create duplicate rec, Verify transition from ACTIVE to IN_TRIAGE status., Verify that fusing status transitions to FUSED., Verify archiving threat intelligence transitions status to ARCHIVED., Verify that ARCHIVED is a terminal state and cannot transition back., Verify synchronization cannot reactivate ARCHIVED records. (+53 more)
+Nodes (63): get_current_tenant_id(), Verify fusion updates active threats but skips ARCHIVED ones (Finding 2)., test_threat_fusion_persistence_and_terminal_state(), Verify transition from ACTIVE to IN_TRIAGE status., Verify that fusing status transitions to FUSED., Verify archiving threat intelligence transitions status to ARCHIVED., Verify that ARCHIVED is a terminal state and cannot transition back., Verify synchronization cannot reactivate ARCHIVED records. (+55 more)
 
 ### Community 13 - "Alert Operations & Severity"
-Cohesion: 0.04
-Nodes (45): PostureHistoryEntry, test_posture_history_clear(), test_posture_history_deepcopied(), test_posture_history_empty(), test_posture_history_preserved(), test_posture_history_record(), test_posture_registry_categories(), test_posture_registry_valid_check() (+37 more)
+Cohesion: 0.10
+Nodes (16): test_severity_highest(), test_severity_resolve(), PostureFingerprintService, RiskIntelligenceService, RiskPrioritizationService, Determine the highest severity from a sequence of severities., Safely resolve posture severity from enum or string, defaulting to LOW., RiskSeverityRegistry (+8 more)
 
 ### Community 14 - "Authentication & User Management"
-Cohesion: 0.04
-Nodes (33): get_current_tenant_id(), SecurityKnowledgeHistory, UnitOfWork, KnowledgeHistoryEntry, KnowledgeRelationshipResponse, AnalystPerformanceResponse, AnalyticsHistoryEntry, OperationalKPIResponse (+25 more)
+Cohesion: 0.06
+Nodes (22): UnitOfWork, AnalystPerformanceResponse, OperationalKPIResponse, OperationalKRIResponse, get_kpis(), get_kris(), get_rankings(), list_analysts() (+14 more)
 
 ### Community 15 - "Authentication & User Management"
-Cohesion: 0.09
-Nodes (61): get_auth_header(), mock_admin(), mock_operator(), mock_reader(), setup_basic_mock_db(), test_api_create_program_rbac_reader_forbidden(), test_api_create_program_success(), test_api_create_program_with_invalid_scope_ownership() (+53 more)
+Cohesion: 0.10
+Nodes (60): get_auth_header(), setup_basic_mock_db(), test_api_create_program_rbac_reader_forbidden(), test_api_create_program_success(), test_api_create_program_with_invalid_scope_ownership(), test_api_get_program_details_not_found(), test_api_get_program_details_success(), test_api_get_summary_snapshot_admin_success() (+52 more)
 
 ### Community 16 - "Authentication & User Management"
-Cohesion: 0.05
-Nodes (41): ExposureFindingResponse, ExposureHistoryEntry, ExposureSeverity, ExposureStatus, ExposureType, test_exposure_fingerprint_generation(), test_exposure_fingerprint_stability(), test_exposure_severity_resolved() (+33 more)
+Cohesion: 0.08
+Nodes (28): ExposureFindingResponse, ExposureSeverity, ExposureStatus, ExposureType, test_exposure_fingerprint_generation(), test_exposure_fingerprint_stability(), test_exposure_severity_resolved(), test_exposure_severity_valid() (+20 more)
 
 ### Community 17 - "Authentication & User Management"
-Cohesion: 0.04
-Nodes (60): Asset, AssetUpdate, InvestigationGuidanceResponse, mock_asset(), get_auth_header(), mock_admin(), mock_asset_a(), mock_asset_b() (+52 more)
+Cohesion: 0.05
+Nodes (54): Asset, create_access_token(), Create a signed JWT access token., get_auth_header(), Verify GET /api/v1/alerts lists user scope-filtered alerts successfully., Verify operators are forbidden from viewing or mutating alerts outside scope., Verify POST actions transition alerts correctly through the state machine., test_alerts_api_list() (+46 more)
 
 ### Community 18 - "Authentication & User Management"
-Cohesion: 0.12
-Nodes (31): RecoveryObjectiveType, ResilienceSeverity, ResilienceStatus, ServiceCriticality, RiskQuantificationStatus, RiskScenarioResponse, RiskScenarioType, RiskSeverity (+23 more)
+Cohesion: 0.06
+Nodes (62): MilestoneType, PlanPriority, PlanStatus, ControlSeverity, ControlStatus, ControlType, ValidationStatus, RecoveryObjectiveType (+54 more)
 
 ### Community 19 - "Workflow & Scan Execution"
-Cohesion: 0.06
-Nodes (61): RiskAcceptanceResponse, AnalyticsResponse, accept_risk(), check_asset_ownership(), get_asset_governance_status(), get_finding_governance_status(), get_governance_summary(), list_accepted_risks() (+53 more)
+Cohesion: 0.13
+Nodes (26): AnalyticsResponse, test_get_analytics_not_found(), test_to_response_mapping(), archive_analytics(), check_scope_ownership(), create_analytics(), get_active(), get_allowed_scope_ids() (+18 more)
 
 ### Community 20 - "Workflow & Scan Execution"
-Cohesion: 0.05
-Nodes (45): IOCHistoryEntry, Verify registry validates IP addresses correctly., Verify registry validates emails correctly., Verify registry validates MD5 hashes correctly., Verify domains are lowercased and stripped., Verify hashes are lowercased., Verify history logging adds entries., Verify history entries cannot be modified or reordered. (+37 more)
+Cohesion: 0.07
+Nodes (28): IOCHistoryEntry, test_ioc_hunt_generation(), clean_stores(), Verify history logging adds entries., Verify history entries cannot be modified or reordered., Verify subsequent changes append to history., Verify clearing history works., test_ioc_history_clear() (+20 more)
 
 ### Community 21 - "Authentication & User Management"
 Cohesion: 0.04
@@ -812,31 +816,31 @@ Nodes (44): AegisX — Non-Technical Stakeholder Report, Architectural Hardening
 
 ### Community 23 - "Authentication & User Management"
 Cohesion: 0.04
-Nodes (57): get_auth_header(), mock_admin(), mock_operator(), mock_reader(), mock_scope(), mock_scope_2(), Verify that history entries are correctly recorded for transitions., Verify history entries are immutable on retrieval. (+49 more)
+Nodes (72): get_auth_header(), Verify threat intelligence context injection in AI context builder., Verify GRC threat intelligence scope validation checks., Verify scope isolation rules prevent cross-access., Verify registry validates IP addresses correctly., Verify registry validates domains correctly., Verify registry validates URLs correctly., Verify registry validates emails correctly. (+64 more)
 
 ### Community 24 - "Authentication & User Management"
-Cohesion: 0.04
-Nodes (3): datetime, Calculate decimal days remaining until due_date., Return the SLA status: BREACHED, APPROACHING, or WITHIN_SLA.
+Cohesion: 0.02
+Nodes (12): execute_workflow_task(), Run an async function synchronously in a safe separate thread.      This avoids, run_async_task(), set_current_tenant_id(), datetime, get_current_user(), Retrieve the currently authenticated user from API key or JWT Bearer token., clean_host() (+4 more)
 
 ### Community 25 - "Finding Reconciliation & Analysis"
-Cohesion: 0.07
-Nodes (52): get_auth_header(), setup_basic_mock_db(), test_add_tag_raises_invalid_tag(), test_add_tag_raises_on_archived(), test_add_tag_success(), test_api_create_knowledge_forbidden_for_reader(), test_api_create_knowledge_success(), test_api_get_active_knowledge() (+44 more)
+Cohesion: 0.08
+Nodes (55): Verify that knowledge relevance, confidence, and severity shifts emit specific h, test_knowledge_recalculation_events(), setup_basic_mock_db(), test_add_tag_raises_invalid_tag(), test_add_tag_raises_on_archived(), test_add_tag_success(), test_archived_knowledge_not_reactivated_by_drift(), test_archived_knowledge_not_reactivated_by_scoring() (+47 more)
 
 ### Community 27 - "Authentication & User Management"
 Cohesion: 0.06
-Nodes (50): WorkflowResponse, check_scan_run_ownership(), get_scan_run_details(), Verify that a non-admin user owns either the parent workflow or scope., Retrieve details for a specific ScanRun. Ownership checks applied., Cancel a pending or running ScanRun execution., request_run_cancellation(), check_workflow_ownership() (+42 more)
+Nodes (53): ScanRunResponse, WorkflowResponse, test_cancel_scan_run_service(), test_create_workflow_service(), check_scan_run_ownership(), get_scan_run_details(), Verify that a non-admin user owns either the parent workflow or scope., Retrieve details for a specific ScanRun. Ownership checks applied. (+45 more)
 
 ### Community 28 - "Incident Management & Investigation"
 Cohesion: 0.22
 Nodes (8): 1. Unit Testing (Pytest), 2. Integration Testing, 3. Plugin Testing, 4. End-to-End (E2E) Testing (Future Phase), Continuous Integration (CI) Pipeline, Security & Static Analysis, Testing Layers, Testing Strategy
 
 ### Community 29 - "Authentication & User Management"
-Cohesion: 0.09
-Nodes (38): SecurityProgramResponse, check_scope_ownership(), create_program(), CreateProgramRequest, get_allowed_scope_ids(), get_program_details(), InitiativeRequest, list_active_programs() (+30 more)
+Cohesion: 0.08
+Nodes (41): SecurityProgramResponse, Standard success API response wrapper., StandardResponse, check_scope_ownership(), create_program(), CreateProgramRequest, get_allowed_scope_ids(), get_program_details() (+33 more)
 
 ### Community 30 - "Authentication & User Management"
-Cohesion: 0.05
-Nodes (31): _execute_workflow_async(), execute_workflow_task(), Run an async function synchronously in a safe separate thread.      This avoids, run_async_task(), Requirement 28: Worker resilience. Verify snapshot errors do not crash., test_worker_resilience(), Test that dashboard cache invalidates properly., test_dashboard_cache_invalidation() (+23 more)
+Cohesion: 0.03
+Nodes (92): EdgeType, GraphAnalysisResponse, GraphEdgeResponse, GraphHistoryEntry, GraphNodeResponse, GraphSnapshotResponse, NodeType, clean_stores() (+84 more)
 
 ### Community 31 - "Authentication & User Management"
 Cohesion: 0.09
@@ -847,12 +851,12 @@ Cohesion: 0.09
 Nodes (21): Automated Tests, Implementation Plan — Sprint 17: Incident Management & Investigation Workflows, Manual Verification, [MODIFY] [ai_context_builder.py](file:///c:/Users/Aditya/Desktop/AegisX%20-%20Copy/backend/src/services/ai_context_builder.py), [MODIFY] [ai_prompt_builder.py](file:///c:/Users/Aditya/Desktop/AegisX%20-%20Copy/backend/src/services/ai_prompt_builder.py), [MODIFY] [main.py](file:///c:/Users/Aditya/Desktop/AegisX%20-%20Copy/backend/src/main.py), [MODIFY] [worker.py](file:///c:/Users/Aditya/Desktop/AegisX%20-%20Copy/backend/src/infrastructure/celery/worker.py), [NEW] [incident_escalation_service.py](file:///c:/Users/Aditya/Desktop/AegisX%20-%20Copy/backend/src/services/incident_escalation_service.py) (+13 more)
 
 ### Community 34 - "Authentication & User Management"
-Cohesion: 0.06
-Nodes (47): get_auth_header(), mock_admin(), mock_operator(), Verify registry map severity logic correctly., Verify that sync_alerts reconciles alerts into unified incidents., Verify synchronization deduplication leaves existing incidents intact., Verify designed state machine transitions for incidents., Verify list incidents endpoints filter by allowed scopes. (+39 more)
+Cohesion: 0.04
+Nodes (93): IncidentHistoryEntry, IncidentResponse, IncidentSeverity, IncidentStatus, InvestigationEntry, get_auth_header(), mock_admin(), mock_asset() (+85 more)
 
 ### Community 35 - "Incident Management & Investigation"
-Cohesion: 0.13
-Nodes (27): AssetsContent(), RouteGuard(), RouteGuardProps, CopilotDrawer(), FindingTable(), FindingsContent(), useAskCopilot(), useCopilotHistoryList() (+19 more)
+Cohesion: 0.15
+Nodes (22): CopilotDrawer(), useAskCopilot(), useCopilotHistoryList(), useCreateWorkflow(), useStartWorkflow(), useWorkflows(), worker, handlers (+14 more)
 
 ### Community 36 - "Authentication & User Management"
 Cohesion: 0.12
@@ -867,80 +871,80 @@ Cohesion: 0.12
 Nodes (16): Architecture Decision Records (ADR), Cross-cutting (applies to all phases), Development sequence & parallelism, Feature classification (quick reference), Milestone acceptance template (apply per-Mx.y), Phase 0.5 — Architecture Freeze, Phase 0 — Foundation, Phase 1 — MVP (+8 more)
 
 ### Community 39 - "Sprint 24 Walkthrough: Secu..."
-Cohesion: 0.05
-Nodes (48): get_auth_header(), mock_admin(), mock_operator(), Verify operators without matching asset scopes are blocked from mutating operati, Verify registry handles invalid string severities gracefully., Verify custody timeline can be cleared., Verify correlation correctly maps case-specific and incident-specific evidence., Verify registry maps incident severities to case severity correctly based on max (+40 more)
+Cohesion: 0.07
+Nodes (33): get_auth_header(), mock_admin(), mock_asset(), mock_operator(), mock_scope(), Verify registry handles invalid string severities gracefully., Verify registry maps incident severities to case severity correctly based on max, Verify case summary and timeline contexts inject into AI prompt context builders (+25 more)
 
 ### Community 41 - "Reconnaissance Plugins"
 Cohesion: 0.08
-Nodes (33): ThreatFusionResponse, ThreatIndicatorResponse, ThreatIndicatorType, ThreatIntelActorResponse, ThreatIntelHistoryEntry, ThreatIntelRecordResponse, ThreatIntelSnapshotResponse, ThreatIntelStatus (+25 more)
+Nodes (41): ThreatFusionResponse, ThreatIndicatorType, ThreatIntelActorResponse, ThreatIntelHistoryEntry, ThreatIntelRecordResponse, ThreatIntelSnapshotResponse, ThreatIntelStatus, ThreatSeverity (+33 more)
 
 ### Community 42 - "Authentication & User Management"
-Cohesion: 0.09
-Nodes (35): CaseResponse, ChainOfCustodyAction, ChainOfCustodyEntry, EvidenceResponse, EvidenceStatus, Verify evidence store can be cleared., Verify that evidence integrity checks successfully match hashes or detect tamper, Verify that failed integrity verification emits the workflow event to trigger al (+27 more)
+Cohesion: 0.12
+Nodes (29): CaseHistoryEntry, CaseResponse, ChainOfCustodyAction, ChainOfCustodyEntry, EvidenceResponse, EvidenceStatus, Verify custody timeline can be cleared., Verify that evidence integrity checks successfully match hashes or detect tamper (+21 more)
 
 ### Community 43 - "Finding Reconciliation & Analysis"
-Cohesion: 0.07
-Nodes (27): PriorityRankingResponse, RecommendationResponse, SupportingFactor, Requirements 22, 23: Correlation/risk refresh after scan workflow., test_correlation_and_risk_refresh_after_scan(), Consolidate asset details, exposure, risk, ports, services,         technologies, Retrieve the cached asset risk snapshot., Generate a complete asset risk snapshot by combining correlation,         critic (+19 more)
+Cohesion: 0.04
+Nodes (54): InvestigationGuidanceResponse, PriorityRankingResponse, RecommendationResponse, SupportingFactor, Requirements 22, 23: Correlation/risk refresh after scan workflow., test_correlation_and_risk_refresh_after_scan(), check_asset_ownership(), check_finding_ownership() (+46 more)
 
 ### Community 44 - "Authentication & User Management"
-Cohesion: 0.05
-Nodes (41): mock_admin(), mock_operator(), mock_reader(), test_add_evidence_raises_not_found(), test_audit_readiness_calculation(), test_compliance_fingerprint_case_insensitivity(), test_compliance_fingerprint_changes_on_framework(), test_compliance_fingerprint_changes_on_name() (+33 more)
+Cohesion: 0.20
+Nodes (8): test_compliance_fingerprint_case_insensitivity(), test_compliance_fingerprint_changes_on_framework(), test_compliance_fingerprint_changes_on_name(), test_compliance_fingerprint_changes_on_scope(), test_compliance_fingerprint_generation(), test_compliance_fingerprint_stability(), ComplianceFingerprintService, Generate stable GRC report fingerprint using SHA-256.
 
 ### Community 45 - "Authentication & User Management"
-Cohesion: 0.06
-Nodes (20): GRCFrameworkControl, GRCHistory, ComplianceEvidenceResponse, ComplianceGapResponse, ComplianceHistoryEntry, FrameworkControlResponse, FrameworkType, GRCEvidence (+12 more)
+Cohesion: 0.09
+Nodes (11): GRCHistory, FrameworkControlResponse, GRCEvidence, GRCGap, GRCRepository, Calculate GRC audit readiness metrics deterministically., ControlMappingRegistry, Initialize standard pre-seeded framework controls. (+3 more)
 
 ### Community 47 - "Authentication & User Management"
-Cohesion: 0.07
-Nodes (27): AlertSeverity, AlertStatus, AlertType, clean_stores(), Verify registry maps AlertTypes to correct AlertSeverities., Verify alert snapshot generates dynamically from raw cache items when cache clea, test_alert_severity_registry(), test_alert_snapshot_rebuild_consistency() (+19 more)
+Cohesion: 0.04
+Nodes (60): AlertSeverity, AlertStatus, AlertType, MonitoringEvent, clean_stores(), mock_asset(), Verify registry maps AlertTypes to correct AlertSeverities., Verify alerts are correctly created from Continuous Monitoring drift events. (+52 more)
 
 ### Community 48 - "Authentication & User Management"
 Cohesion: 0.07
-Nodes (45): archive_threat(), check_scope_ownership(), create_ioc(), create_threat(), expire_ioc(), fuse_threat(), get_allowed_scope_ids(), get_ioc() (+37 more)
+Nodes (44): Verify that multiple sync calls with same parameters do not create duplicate rec, test_threat_intel_duplicate_prevention(), archive_threat(), check_scope_ownership(), create_ioc(), create_threat(), expire_ioc(), fuse_threat() (+36 more)
 
 ### Community 49 - "Reporting & Dashboard Services"
-Cohesion: 0.11
-Nodes (43): setup_basic_mock_db(), test_api_transition_close(), test_api_transition_complete(), test_api_transition_validate(), test_create_resilience(), test_history_clear(), test_history_deep_copy_isolation(), test_history_empty_for_invalid_id() (+35 more)
+Cohesion: 0.10
+Nodes (55): get_auth_header(), setup_basic_mock_db(), test_api_create_resilience_forbidden_for_reader(), test_api_create_resilience_success(), test_api_get_active_resilience(), test_api_get_completed_resilience(), test_api_get_critical_services_ownership_check(), test_api_get_drift_admin_success() (+47 more)
 
 ### Community 50 - "Reconnaissance Plugins"
 Cohesion: 0.10
-Nodes (40): get_auth_header(), mock_admin(), mock_operator(), mock_reader(), mock_scope(), mock_scope_2(), setup_basic_mock_db(), test_api_create_report_reader_forbidden() (+32 more)
+Nodes (43): get_auth_header(), mock_admin(), mock_operator(), mock_reader(), setup_basic_mock_db(), test_api_create_report_reader_forbidden(), test_api_create_report_success(), test_api_create_report_with_invalid_scope_ownership() (+35 more)
 
 ### Community 51 - "Authentication & User Management"
 Cohesion: 0.07
-Nodes (36): mock_admin(), mock_operator(), mock_reader(), test_confidence_score_calculation_approved(), test_confidence_score_calculation_unapproved(), test_extra_knowledge_1(), test_extra_knowledge_10(), test_extra_knowledge_11() (+28 more)
+Nodes (45): get_auth_header(), test_api_create_knowledge_forbidden_for_reader(), test_api_create_knowledge_success(), test_api_get_active_knowledge(), test_api_get_recommendations(), test_api_get_relationships(), test_api_list_knowledge_admin(), test_api_list_knowledge_operator() (+37 more)
 
 ### Community 52 - "Authentication & User Management"
 Cohesion: 0.25
 Nodes (7): Sprint 1, Sprint 2, Sprint 3, Sprint 4, Sprint 5, Sprint 6, Sprint Review Log
 
 ### Community 54 - "Workflow & Scan Execution"
-Cohesion: 0.10
-Nodes (40): add_incident_note(), assign_incident(), check_incident_ownership(), close_incident(), contain_incident(), escalate_incident_management(), escalate_incident_owner(), escalate_incident_team() (+32 more)
+Cohesion: 0.07
+Nodes (55): AsyncSession, add_incident_note(), assign_incident(), check_incident_ownership(), close_incident(), contain_incident(), escalate_incident_management(), escalate_incident_owner() (+47 more)
 
 ### Community 55 - "Authentication & User Management"
-Cohesion: 0.12
-Nodes (37): setup_basic_mock_db(), test_closed_risk_not_reactivated_by_drift(), test_closed_risk_not_reactivated_by_forecast(), test_closed_risk_not_reactivated_by_snapshot(), test_closed_risk_not_reactivated_by_worker(), test_create_risk(), test_extra_21(), test_extra_22() (+29 more)
+Cohesion: 0.09
+Nodes (48): get_auth_header(), setup_basic_mock_db(), test_api_create_risk_forbidden_for_reader(), test_api_create_risk_success(), test_api_get_critical_risks(), test_api_get_forecasts(), test_api_get_open_risks(), test_api_get_trends() (+40 more)
 
 ### Community 56 - "Finding Reconciliation & Analysis"
-Cohesion: 0.07
-Nodes (35): mock_admin(), mock_operator(), mock_reader(), mock_scope(), mock_scope_2(), test_analyst_ranking_stability(), test_analytics_fingerprint_case_insensitivity(), test_analytics_fingerprint_changes_on_name() (+27 more)
+Cohesion: 0.11
+Nodes (15): test_calculate_kpi_at_risk(), test_calculate_kpi_off_target(), test_calculate_kpi_on_target(), test_calculate_kpi_rate_at_risk(), test_calculate_kpi_rate_off_target(), test_calculate_kpi_rate_on_target(), test_kpi_registry_count(), test_kpi_registry_list() (+7 more)
 
 ### Community 57 - "Reconnaissance Plugins"
-Cohesion: 0.11
-Nodes (24): DashboardContent(), GraphCanvasProps, GraphEdge, GraphNode, GraphExplorerContent(), useFindings(), useApprovePlan(), useCommitDecision() (+16 more)
+Cohesion: 0.08
+Nodes (31): DashboardContent(), AssetsContent(), RouteGuard(), RouteGuardProps, FindingTable(), FindingsContent(), GraphCanvasProps, GraphEdge (+23 more)
 
 ### Community 58 - "Incident Management & Investigation"
-Cohesion: 0.11
-Nodes (33): get_auth_header(), mock_admin(), mock_operator(), mock_reader(), mock_scope(), mock_scope_2(), setup_basic_mock_db(), test_api_activate_hunt() (+25 more)
+Cohesion: 0.15
+Nodes (22): get_auth_header(), mock_admin(), mock_operator(), mock_reader(), mock_scope(), mock_scope_2(), setup_basic_mock_db(), test_api_activate_hunt() (+14 more)
 
 ### Community 59 - "Reconnaissance Plugins"
-Cohesion: 0.10
-Nodes (33): get_auth_header(), mock_admin(), mock_operator(), mock_reader(), mock_scope(), mock_scope_2(), setup_basic_mock_db(), test_ai_context_purple_team_injection() (+25 more)
+Cohesion: 0.06
+Nodes (59): PurpleTeamFindingResponse, get_auth_header(), mock_admin(), mock_operator(), mock_reader(), mock_scope(), mock_scope_2(), setup_basic_mock_db() (+51 more)
 
 ### Community 63 - "Workflow & Scan Execution"
 Cohesion: 0.10
-Nodes (37): activate_case(), archive_evidence_endpoint(), assign_case(), check_case_ownership(), close_case(), collect_evidence(), get_allowed_asset_ids(), get_case() (+29 more)
+Nodes (38): activate_case(), archive_evidence_endpoint(), assign_case(), check_case_ownership(), close_case(), collect_evidence(), get_allowed_asset_ids(), get_case() (+30 more)
 
 ### Community 64 - "Reconnaissance Plugins"
 Cohesion: 0.25
@@ -951,12 +955,12 @@ Cohesion: 0.25
 Nodes (7): Agent Rules, Rule 1, Rule 2, Rule 3, Rule 4, Rule 5, Rule 6
 
 ### Community 67 - "Authentication & User Management"
-Cohesion: 0.06
-Nodes (35): Finding, mock_finding(), get_auth_header(), mock_admin(), mock_asset(), mock_finding(), mock_operator(), mock_reader() (+27 more)
+Cohesion: 0.11
+Nodes (22): Finding, mock_finding(), get_auth_header(), mock_admin(), mock_asset(), mock_finding(), mock_operator(), mock_reader() (+14 more)
 
 ### Community 68 - "Authentication & User Management"
-Cohesion: 0.10
-Nodes (29): get_auth_header(), mock_admin(), mock_db(), mock_operator(), mock_reader(), mock_scope(), mock_scope_2(), setup_basic_mock_db() (+21 more)
+Cohesion: 0.08
+Nodes (45): get_auth_header(), mock_admin(), mock_db(), mock_operator(), mock_reader(), mock_scope(), mock_scope_2(), setup_basic_mock_db() (+37 more)
 
 ### Community 69 - "Asset Risk & Exposure Exposure"
 Cohesion: 0.29
@@ -975,12 +979,12 @@ Cohesion: 0.33
 Nodes (5): 1. Asset Criticality, 2. Risk Score, 3. Relationship: Independence of Dimensions, Examples, Risk and Criticality Architecture
 
 ### Community 75 - "Finding Reconciliation & Analysis"
-Cohesion: 0.10
-Nodes (24): CaseSeverity, CaseStatus, Verify that case snapshot rebuilds global statistics correctly., Verify fingerprint remains stable across sorting of input list elements., Verify that case fingerprint remains unchanged after adding evidence or transiti, Verify CLOSED state is terminal for cases and blocks transitions or edits., Verify that case snapshot rebuilds statistics dynamically from in-memory cases., test_case_closed_terminal_enforcement() (+16 more)
+Cohesion: 0.11
+Nodes (19): CaseSeverity, CaseStatus, Verify fingerprint remains stable across sorting of input list elements., Verify that case fingerprint remains unchanged after adding evidence or transiti, Verify CLOSED state is terminal for cases and blocks transitions or edits., test_case_closed_terminal_enforcement(), test_case_fingerprint_stability(), test_case_fingerprint_stability_after_evidence_collection() (+11 more)
 
 ### Community 77 - "AI Copilot & Guardrails"
-Cohesion: 0.04
-Nodes (104): BaseModel, Asset, Finding, Scope, Workflow, WorkflowEvent, RBAC dependency to enforce permitted roles on endpoints., RoleChecker (+96 more)
+Cohesion: 0.09
+Nodes (41): Workflow, WorkflowEvent, RBAC dependency to enforce permitted roles on endpoints., RoleChecker, MockAIProvider, Verify sliding-window rate limit checks block users who exceed thresholds., test_rate_limit_enforced(), ask_copilot() (+33 more)
 
 ### Community 78 - "Workflow & Scan Execution"
 Cohesion: 0.40
@@ -999,8 +1003,8 @@ Cohesion: 0.50
 Nodes (3): Deploy on Vercel, Getting Started, Learn More
 
 ### Community 82 - "Authentication & User Management"
-Cohesion: 0.11
-Nodes (32): ExposureResponse, accept_exposure(), check_asset_ownership(), check_exposure_drift(), check_scope_ownership(), close_exposure(), create_exposure(), get_allowed_scope_ids() (+24 more)
+Cohesion: 0.09
+Nodes (35): ExposureResponse, accept_exposure(), check_asset_ownership(), check_exposure_drift(), check_scope_ownership(), close_exposure(), create_exposure(), get_allowed_scope_ids() (+27 more)
 
 ### Community 83 - "Asset Risk & Exposure Exposure"
 Cohesion: 0.50
@@ -1016,83 +1020,83 @@ Nodes (41): 1. Domain Entities & Schemas, 1. Domain Entities & Schemas, 1. Domai
 
 ### Community 87 - "Finding Reconciliation & Analysis"
 Cohesion: 0.09
-Nodes (19): test_control_terminal_state_enforcement(), ControlCorrelationService, Clear all control correlations., Correlate control against Detections, Purple Team exercises, Hunts, Exposures, a, ControlCoverageService, ControlFingerprintService, ControlTypeRegistry, ControlRecord (+11 more)
+Nodes (17): test_control_type_registry_registered(), test_control_type_registry_resolve(), test_effectiveness_registry_levels(), ControlFingerprintService, ControlSeverityRegistry, ControlTypeRegistry, Resolve string/enum to ControlType, defaulting to MONITORING., Retrieve all registered control types. (+9 more)
 
 ### Community 88 - "Governance & Compliance Drift"
 Cohesion: 0.50
 Nodes (3): Excluded, Included, MVP Scope
 
 ### Community 89 - "Authentication & User Management"
-Cohesion: 0.08
-Nodes (19): Test safety redaction replacing credential keys/values with [REDACTED]., test_safety_guardrails_redact_secrets(), test_ai_finding_prompt_constraints(), Compute SHA-256 hash of a string., Log request metadata inside the audit logs table., Retrieve a cached payload if it exists and is under 1 hour old., Recursively scan context structures to redact credentials and secrets., Validate structure and sanitize asset context. (+11 more)
+Cohesion: 0.05
+Nodes (33): Test safety redaction replacing credential keys/values with [REDACTED]., Validate that non-conforming structures trigger validation errors., Confirm the provider registry resolves defaults properly., Confirm versioned context cache keys isolate cached values., test_cache_version_isolation(), test_invalid_ai_response_rejected(), test_provider_registry_returns_openai_provider(), test_safety_guardrails_redact_secrets() (+25 more)
 
 ### Community 91 - "Finding Reconciliation & Analysis"
-Cohesion: 0.07
-Nodes (27): test_ai_context_cyber_resilience_injection(), test_critical_services_returns_empty_when_no_records(), test_distribution_returns_zero_counts_default(), test_duplicate_prevention_on_creation(), test_generate_snapshot(), test_get_critical_services_count(), test_get_resilience_by_scope_isolation(), test_get_resilience_distribution_stats() (+19 more)
+Cohesion: 0.08
+Nodes (24): test_ai_context_cyber_resilience_injection(), test_duplicate_prevention_on_creation(), test_generate_snapshot(), test_get_service_resilience_metrics_aggregation(), test_history_survives_snapshot_rebuild(), test_resilience_drift_detected(), test_resilience_drift_readiness_decrease(), test_resilience_drift_readiness_increase() (+16 more)
 
 ### Community 93 - "@testing-library/react"
-Cohesion: 0.08
-Nodes (22): mock_naabu_output(), mock_nmap_xml(), mock_nmap_xml_updated(), Verifies that when a port is closed/filtered, the transition generates an audit, Verifies that changing a service's version generates the appropriate history and, Verifies that the generated snapshot contains aggregated ports, services, techno, seeded_db(), test_asset_intelligence_snapshot_generation() (+14 more)
+Cohesion: 0.09
+Nodes (19): mock_naabu_output(), mock_nmap_xml(), mock_nmap_xml_updated(), Verifies that when a port is closed/filtered, the transition generates an audit, Verifies that changing a service's version generates the appropriate history and, Verifies that the generated snapshot contains aggregated ports, services, techno, seeded_db(), test_asset_intelligence_snapshot_generation() (+11 more)
 
 ### Community 94 - "Reconnaissance Plugins"
-Cohesion: 0.11
-Nodes (32): ComplianceAssessmentResponse, check_scope_ownership(), close_assessment(), compliant_assessment(), create_assessment(), get_active_assessments(), get_allowed_scope_ids(), get_drift() (+24 more)
+Cohesion: 0.09
+Nodes (35): ComplianceAssessmentResponse, ComplianceEvidenceResponse, GRCAssessment, test_compliance_assessment_to_response(), test_extra_grc_28(), test_extra_grc_29(), test_get_assessment_by_fingerprint_not_found(), check_scope_ownership() (+27 more)
 
 ### Community 95 - "Workflow & Scan Execution"
-Cohesion: 0.11
-Nodes (15): CompletedProcess, test_tool_executor_failure_code(), test_tool_executor_success(), test_tool_executor_timeout(), ToolExecutionConfig, ToolExecutor, PluginExecutionError, Raised when plugin execution encounters a runtime exception or timeout. (+7 more)
+Cohesion: 0.18
+Nodes (10): CompletedProcess, test_tool_executor_failure_code(), test_tool_executor_success(), test_tool_executor_timeout(), ToolExecutionConfig, PluginExecutionError, Raised when plugin execution encounters a runtime exception or timeout., Execute naabu on given targets. (+2 more)
 
 ### Community 96 - "Authentication & User Management"
-Cohesion: 0.08
-Nodes (24): Verify existing classifications and extension point are intact., test_exposure_extension_point(), AssetCriticality, AssetCriticalityService, Service to calculate asset criticality score and level., AssetExposureService, ExposureClassification, Service to classify assets into ExposureClassification levels. (+16 more)
+Cohesion: 0.06
+Nodes (54): Asset, AssetPort, AssetService, AuditLog, Finding, seeded_db(), AssetCriticality, AssetCriticalityService (+46 more)
 
 ### Community 98 - "Alert Operations & Severity"
-Cohesion: 0.09
-Nodes (30): get_auth_header(), mock_admin(), mock_operator(), mock_reader(), test_api_create_risk_forbidden_for_reader(), test_api_create_risk_success(), test_api_get_critical_risks(), test_api_get_forecasts() (+22 more)
+Cohesion: 0.06
+Nodes (37): test_extra_1(), test_extra_10(), test_extra_11(), test_extra_12(), test_extra_13(), test_extra_14(), test_extra_2(), test_extra_29() (+29 more)
 
 ### Community 99 - "Workflow & Scan Execution"
-Cohesion: 0.11
-Nodes (32): test_analytics_history_deep_copy_isolation(), test_analytics_history_empty_for_invalid_id(), test_analytics_history_entry_frozen(), test_analytics_history_entry_properties(), test_analytics_history_immutable(), test_analytics_history_on_archive(), test_analytics_history_on_completion(), test_analytics_history_on_review() (+24 more)
+Cohesion: 0.09
+Nodes (35): AnalyticsHistoryEntry, test_analytics_history_deep_copy_isolation(), test_analytics_history_empty_for_invalid_id(), test_analytics_history_entry_frozen(), test_analytics_history_entry_properties(), test_analytics_history_immutable(), test_analytics_history_on_archive(), test_analytics_history_on_completion() (+27 more)
 
 ### Community 100 - "Asset Risk & Exposure Exposure"
-Cohesion: 0.12
-Nodes (31): CyberResilienceResponse, activate_resilience(), check_scope_ownership(), close_resilience(), complete_resilience(), create_resilience(), get_active(), get_allowed_scope_ids() (+23 more)
+Cohesion: 0.11
+Nodes (32): CyberResilienceResponse, test_get_resilience_not_found(), activate_resilience(), check_scope_ownership(), close_resilience(), complete_resilience(), create_resilience(), get_active() (+24 more)
 
 ### Community 101 - "Authentication & User Management"
-Cohesion: 0.12
-Nodes (30): PurpleTeamExerciseResponse, activate_exercise(), check_drift(), check_scope_ownership(), close_exercise(), complete_exercise(), create_exercise(), get_allowed_scope_ids() (+22 more)
+Cohesion: 0.11
+Nodes (38): PurpleTeamExerciseResponse, activate_exercise(), check_drift(), check_scope_ownership(), close_exercise(), complete_exercise(), create_exercise(), get_allowed_scope_ids() (+30 more)
 
 ### Community 102 - "Finding Reconciliation & Analysis"
-Cohesion: 0.13
-Nodes (22): useCreateScope(), useDeleteScope(), useScopes(), useUpdateScope(), mapScope(), mapScopes(), ScopesContent(), ScopeForm() (+14 more)
+Cohesion: 0.10
+Nodes (29): AssetTable(), AssetTableProps, AssetTabsProps, useCreateScope(), useDeleteScope(), useScopes(), useUpdateScope(), mapAsset() (+21 more)
 
 ### Community 103 - "Authentication & User Management"
-Cohesion: 0.10
-Nodes (29): get_auth_header(), mock_admin(), mock_operator(), mock_reader(), test_api_create_resilience_forbidden_for_reader(), test_api_create_resilience_success(), test_api_get_active_resilience(), test_api_get_completed_resilience() (+21 more)
+Cohesion: 0.20
+Nodes (8): test_resilience_fingerprint_case_insensitivity(), test_resilience_fingerprint_changes_on_criticality(), test_resilience_fingerprint_changes_on_service(), test_resilience_fingerprint_changes_on_title(), test_resilience_fingerprint_generation(), test_resilience_fingerprint_stability(), Generate stable report fingerprint using SHA-256(title:service_name:service_crit, ResilienceFingerprintService
 
 ### Community 104 - "Workflow & Scan Execution"
-Cohesion: 0.10
-Nodes (22): mock_admin(), mock_operator(), Verify added, modified, and removed assets are detected as drift., Verify finding drift transitions (ADDED, RESOLVED, REDISCOVERED)., Verify risk changes trigger alerts when crossing 15.0 delta or 75.0 boundary., Verify posture transitions are logged (COMPLIANCE_FAILED, COMPLIANCE_RESTORED)., setup_basic_mock_db(), test_asset_drift_detection() (+14 more)
+Cohesion: 0.13
+Nodes (13): test_celery_worker_error_handling(), test_celery_worker_execution_success(), test_worker_integration(), BaselineStateService, Retrieve baseline for a specific asset. Rebuilds if not cached., Cache baseline details for a specific finding., Retrieve baseline for a specific finding. Rebuilds if not cached., Cache risk baseline for a specific asset. (+5 more)
 
 ### Community 105 - "Governance & Compliance Drift"
-Cohesion: 0.10
-Nodes (31): AssetResponse, ScopeResponse, test_create_scope_service(), check_scope_ownership(), create_new_scope(), delete_existing_scope(), get_scope_details(), list_scope_assets() (+23 more)
+Cohesion: 0.08
+Nodes (35): ScopeBase, ScopeCreate, ScopeResponse, ScopeUpdate, test_create_scope_service(), test_delete_scope_service(), test_update_scope_service(), check_scope_ownership() (+27 more)
 
 ### Community 106 - "Alert Operations & Severity"
-Cohesion: 0.12
-Nodes (30): CyberRiskResponse, accept_risk(), check_scope_ownership(), close_risk(), create_risk(), get_allowed_scope_ids(), get_critical_risks(), get_drift() (+22 more)
+Cohesion: 0.11
+Nodes (32): CyberRiskResponse, test_get_risk_not_found_risk(), test_quantified_risk_record_to_response(), accept_risk(), check_scope_ownership(), close_risk(), create_risk(), get_allowed_scope_ids() (+24 more)
 
 ### Community 107 - "Authentication & User Management"
-Cohesion: 0.20
-Nodes (23): IncidentHistoryEntry, IncidentResponse, IncidentSeverity, IncidentStatus, InvestigationEntry, AddNoteRequest, AssignIncidentRequest, ContainInvestigationRequest (+15 more)
+Cohesion: 0.05
+Nodes (40): mock_scope(), mock_scope_a(), mock_scope_b(), mock_scope_a(), mock_scope(), mock_scope_2(), mock_scope(), mock_scope_2() (+32 more)
 
 ### Community 108 - "Incident Management & Investigation"
 Cohesion: 0.06
 Nodes (32): Alert Fingerprint Stability Requirements, Alert Snapshot Consistency Requirement, Alert Synchronization Rule, Alert Terminal State Enforcement, API Gateway, Automated Tests, Core Services, Domain Models (+24 more)
 
 ### Community 109 - "Finding Reconciliation & Analysis"
-Cohesion: 0.03
-Nodes (131): AsyncMock, MonitoringEvent, get_auth_header(), mock_admin(), mock_operator(), mock_remediation(), Verify alerts are correctly created from Continuous Monitoring drift events., Verify that multiple alert generation runs do not duplicate existing alerts. (+123 more)
+Cohesion: 0.04
+Nodes (93): AsyncMock, Verify that older alerts breach severity aging limits and auto-escalate., Verify the Celery worker calls alert generation and escalation checks dynamicall, test_alert_escalation_service(), test_celery_task_alert_integration(), Verify that build_asset_context contains GRC compliance, GRC knowledge, GRC thre, test_ai_context_completeness(), mock_db() (+85 more)
 
 ### Community 110 - "PostgreSQL Schema (recommen..."
 Cohesion: 0.06
@@ -1103,84 +1107,84 @@ Cohesion: 0.06
 Nodes (32): API Gateway, Architectural Rules & Hardening, Automated Tests, Core Services, Domain Models, Integrations, Manual Verification, [MODIFY] [ai_context_builder.py](file:///c:/Users/Aditya/AegisX/backend/src/services/ai_context_builder.py) (+24 more)
 
 ### Community 112 - "Authentication & User Management"
-Cohesion: 0.11
-Nodes (29): ControlResponse, check_scope_ownership(), create_control(), get_allowed_scope_ids(), get_control_details(), get_summary_snapshot(), list_active_controls(), list_control_coverage() (+21 more)
+Cohesion: 0.10
+Nodes (32): ControlResponse, check_scope_ownership(), create_control(), CreateControlRequest, get_allowed_scope_ids(), get_control_details(), get_summary_snapshot(), list_active_controls() (+24 more)
 
 ### Community 113 - "Governance & Compliance Drift"
-Cohesion: 0.09
-Nodes (29): Verify that GRC score recalculation is deterministic and does not modify termina, test_grc_recalculation_deterministic(), test_add_evidence_raises_on_closed(), test_add_evidence_success(), test_assessment_close_transition(), test_assessment_compliant_transition(), test_assessment_fingerprint_stability_sync(), test_assessment_identity_preservation() (+21 more)
+Cohesion: 0.10
+Nodes (53): Verify that GRC score recalculation is deterministic and does not modify termina, test_grc_recalculation_deterministic(), get_auth_header(), setup_basic_mock_db(), test_add_evidence_raises_not_found(), test_add_evidence_raises_on_closed(), test_add_evidence_success(), test_api_create_assessment_forbidden_for_reader() (+45 more)
 
 ### Community 114 - "Workflow & Scan Execution"
-Cohesion: 0.08
-Nodes (24): test_ai_context_soc_injection(), test_duplicate_prevention_on_creation_analytics(), test_generate_soc_snapshot(), test_get_all_analytics_empty(), test_history_survives_soc_snapshot_rebuild(), test_queue_metrics_deterministic(), test_snapshot_identity_preserved_after_rebuild(), test_soc_drift_detected_degraded() (+16 more)
+Cohesion: 0.09
+Nodes (22): test_ai_context_soc_injection(), test_duplicate_prevention_on_creation_analytics(), test_generate_soc_snapshot(), test_get_all_analytics_empty(), test_history_survives_soc_snapshot_rebuild(), test_snapshot_identity_preserved_after_rebuild(), test_soc_drift_detected_degraded(), test_soc_drift_detected_improved() (+14 more)
 
 ### Community 115 - "Workflow & Scan Execution"
-Cohesion: 0.12
-Nodes (28): KnowledgeRecordResponse, approve_knowledge(), archive_knowledge(), check_scope_ownership(), create_knowledge(), get_active_knowledge(), get_allowed_scope_ids(), get_drift() (+20 more)
+Cohesion: 0.11
+Nodes (30): KnowledgeRecommendationResponse, KnowledgeRecordResponse, test_extra_knowledge_31(), test_get_knowledge_not_found(), test_recommendation_generation(), test_security_knowledge_to_response(), approve_knowledge(), archive_knowledge() (+22 more)
 
 ### Community 116 - "Finding Reconciliation & Analysis"
 Cohesion: 0.09
-Nodes (25): GRCAssessment, test_ai_context_compliance_injection(), test_assessment_auto_creation(), test_assessment_identity_preserved_after_drift_processing(), test_assessment_identity_preserved_after_snapshot_rebuild(), test_assessment_identity_preserved_after_worker_refresh(), test_closed_assessment_not_reactivated_by_drift(), test_closed_assessment_not_reactivated_by_snapshot() (+17 more)
+Nodes (23): clean_stores(), test_ai_context_compliance_injection(), test_assessment_auto_creation(), test_assessment_identity_preserved_after_drift_processing(), test_assessment_identity_preserved_after_scoring_refresh(), test_assessment_identity_preserved_after_snapshot_rebuild(), test_assessment_identity_preserved_after_worker_refresh(), test_compliance_drift_detection() (+15 more)
 
 ### Community 118 - "Walkthrough: Sprint 21 – Th..."
-Cohesion: 0.12
-Nodes (24): MonitoringEventResponse, MonitoringSnapshotResponse, get_asset_events(), get_finding_events(), get_summary(), has_asset_permission(), list_asset_drift(), list_events() (+16 more)
+Cohesion: 0.16
+Nodes (21): MonitoringEventResponse, MonitoringSnapshotResponse, get_asset_events(), get_finding_events(), get_summary(), has_asset_permission(), list_asset_drift(), list_events() (+13 more)
 
 ### Community 119 - "Sprint 22 Walkthrough: Purp..."
-Cohesion: 0.13
-Nodes (28): SecurityPostureResponse, accept_posture_risk(), check_asset_ownership(), check_posture_drift(), check_scope_ownership(), close_posture_record(), create_posture(), get_allowed_scope_ids() (+20 more)
+Cohesion: 0.11
+Nodes (31): SecurityPostureResponse, accept_posture_risk(), check_asset_ownership(), check_posture_drift(), check_scope_ownership(), close_posture_record(), create_posture(), CreatePostureRequest (+23 more)
 
 ### Community 120 - "Finding Reconciliation & Analysis"
-Cohesion: 0.10
-Nodes (26): Verify sync on same fingerprint preserves detection_id, fingerprint, history, an, Verify deprecate transitions state to DEPRECATED (terminal status)., Verify sync run producing the same fingerprint does not reactivate a DEPRECATED, test_detection_deprecate_transition(), test_detection_identity_preserved_after_deprecation(), test_detection_sync_preserves_identity(), setup_test_db(), test_actor_coverage_calculation() (+18 more)
+Cohesion: 0.07
+Nodes (35): AssetHistory, AssetRelationship, AssetBase, AssetCreate, AssetHistoryResponse, AssetRelationshipCreate, AssetRelationshipResponse, AssetResponse (+27 more)
 
 ### Community 121 - "Async HTTP client fixture w..."
-Cohesion: 0.11
-Nodes (19): test_exercise_activate_transition(), test_exercise_close_transition(), test_exercise_complete_transition(), test_exercise_invalid_transitions(), test_exercise_review_transition(), test_exercise_terminal_state_enforcement(), test_exercise_type_registered(), ExerciseTypeRegistry (+11 more)
+Cohesion: 0.12
+Nodes (15): test_exercise_activate_transition(), test_exercise_close_transition(), test_exercise_complete_transition(), test_exercise_invalid_transitions(), test_exercise_review_transition(), test_exercise_terminal_state_enforcement(), test_history_record_event(), PurpleTeamFingerprintService (+7 more)
 
 ### Community 122 - "Finding Reconciliation & Analysis"
 Cohesion: 0.09
-Nodes (25): test_ai_context_knowledge_injection(), test_archived_knowledge_not_reactivated_by_snapshot(), test_archived_knowledge_not_reactivated_by_sync(), test_duplicate_prevention_on_creation_knowledge(), test_extra_knowledge_30(), test_extra_knowledge_38(), test_extra_knowledge_44(), test_extra_knowledge_47() (+17 more)
+Nodes (26): clean_stores(), test_ai_context_knowledge_injection(), test_duplicate_prevention_on_creation_knowledge(), test_extra_knowledge_30(), test_extra_knowledge_47(), test_extra_knowledge_48(), test_extra_knowledge_49(), test_extra_knowledge_50() (+18 more)
 
 ### Community 123 - "Test the readiness check (/..."
 Cohesion: 0.14
 Nodes (20): PageProps, TERMINAL_STATES, useCancelScanRun(), useScanRunDetails(), useWorkflowEvents(), ScanRunTrackingContent(), mapScanRun(), mapWorkflow() (+12 more)
 
 ### Community 124 - "Workflow & Scan Execution"
-Cohesion: 0.09
-Nodes (25): Verify syncing identical elements preserves ids and history., Verify that redundant sync calls do not add duplicate items., Verify transition to SUSPENDED status., Verify transition to TERMINATED status., Verify background worker refresh does not reactivate terminated nodes., Verify history appends events but never overwrites previous history., Verify history entries are deep copies., Verify history log entries are sorted chronologically. (+17 more)
+Cohesion: 0.12
+Nodes (16): Verify transition to TERMINATED status., Verify background worker refresh does not reactivate terminated nodes., Verify history appends events but never overwrites previous history., Verify history log entries are sorted chronologically., Verify that worker refresh preserves fabric identity and history., Verify that snapshot rebuild preserves fabric identity., Verify syncing identical elements preserves ids and history., test_fabric_history_order_preserved() (+8 more)
 
 ### Community 125 - "Reporting & Dashboard Services"
 Cohesion: 0.07
 Nodes (29): 2. Sprint-by-Sprint Findings (Sprints 1–37), Sprint 11: AI-Assisted Exposure Management Platform (AI Security Copilot), Sprint 12: Alert Severity and Escalation Routing, Sprint 13: Incident Management & Investigation, Sprint 14: Case Management, Evidence, and Custody, Sprint 15: Detection Rules & Technique Mapping, Sprint 16: Threat Intelligence & IOC Correlation, Sprint 17: Threat Hunting & Hypothesis Validation (+21 more)
 
 ### Community 126 - "Remediation & SLA Monitoring"
-Cohesion: 0.15
-Nodes (18): AssetTabs(), AssetTabsProps, PageProps, useAssetDetails(), useAssetHistory(), useAssetRelationships(), useAssetReport(), AssetDetailContent() (+10 more)
+Cohesion: 0.10
+Nodes (26): Verify that redundant sync calls do not add duplicate items to decision list., test_decision_duplicate_prevention(), archive_decision(), check_scope_ownership(), commit_decision(), create_decision(), DecisionCreateRequest, get_allowed_scope_ids() (+18 more)
 
 ### Community 127 - "Sprint 19 Walkthrough: Dete..."
-Cohesion: 0.15
-Nodes (27): AlertResponse, acknowledge_alert(), assign_alert_owner(), check_alert_ownership(), get_alert_by_id(), get_allowed_asset_ids(), list_alerts(), list_critical_alerts() (+19 more)
+Cohesion: 0.13
+Nodes (30): AlertResponse, acknowledge_alert(), assign_alert_owner(), AssignAlertRequest, check_alert_ownership(), get_alert_by_id(), get_allowed_asset_ids(), list_alerts() (+22 more)
 
 ### Community 128 - "Asset Risk & Exposure Exposure"
 Cohesion: 0.12
-Nodes (24): ExecutiveHistoryEntry, test_api_transition_report_status_archived_rejection(), test_archived_report_not_reactivated_by_drift(), test_archived_report_not_reactivated_by_scorecard_refresh(), test_archived_report_not_reactivated_by_snapshot(), test_archived_report_not_reactivated_by_sync(), test_archived_report_not_reactivated_by_trend_refresh(), test_archived_report_not_reactivated_by_worker() (+16 more)
+Nodes (24): ExecutiveHistoryEntry, test_archived_report_not_reactivated_by_drift(), test_archived_report_not_reactivated_by_scorecard_refresh(), test_archived_report_not_reactivated_by_snapshot(), test_archived_report_not_reactivated_by_sync(), test_archived_report_not_reactivated_by_trend_refresh(), test_archived_report_not_reactivated_by_worker(), test_report_archive_transition() (+16 more)
 
 ### Community 129 - "Sprint 25 Walkthrough: Cont..."
-Cohesion: 0.07
-Nodes (26): PluginManifest, mock_admin(), mock_plugin_a(), mock_user_a(), Test validation of required fields on the manifest schema., Test validation of SemVer version strings., Test dynamic import of base modules and verify class existence., Validation checks verify manifest and methods, but must NEVER invoke run(). (+18 more)
+Cohesion: 0.10
+Nodes (22): PluginManifest, get_auth_header(), mock_admin(), mock_user_a(), Test validation of required fields on the manifest schema., Test validation of SemVer version strings., Test plugin validation and transitions: approve, disable, deprecate., Test full workflow step executing an approved plugin inside the Celery task. (+14 more)
 
 ### Community 130 - "Finding Reconciliation & Analysis"
-Cohesion: 0.17
-Nodes (26): RemediationResponse, accept_remediation_risk(), assign_remediation_owner(), AssignOwnerRequest, check_asset_ownership(), check_remediation_ownership(), complete_remediation(), defer_remediation() (+18 more)
+Cohesion: 0.06
+Nodes (50): OwnerAssignmentModel, RemediationException, RemediationHistoryEntry, RemediationHistoryType, RemediationResponse, RemediationStatus, mock_remediation(), accept_remediation_risk() (+42 more)
 
 ### Community 131 - "Workflow & Scan Execution"
 Cohesion: 0.10
-Nodes (21): test_ai_context_risk_injection(), test_duplicate_prevention_on_creation_risk(), test_extra_30(), test_generate_snapshot_risk(), test_risk_auto_creation(), test_risk_drift_detection(), test_risk_identity_preserved_after_drift_processing(), test_risk_identity_preserved_after_forecast_refresh() (+13 more)
+Nodes (22): test_ai_context_risk_injection(), test_closed_risk_not_reactivated_by_drift(), test_closed_risk_not_reactivated_by_snapshot(), test_duplicate_prevention_on_creation_risk(), test_extra_30(), test_generate_snapshot_risk(), test_risk_auto_creation(), test_risk_drift_detection() (+14 more)
 
 ### Community 132 - "Authentication & User Management"
 Cohesion: 0.09
-Nodes (26): get_auth_header(), Verify SHA-256 fingerprints are deterministic and stable., Verify sync doesn't reactivate terminated nodes., Verify propagation updates ignore terminated nodes., Verify propagation sequencing calculations are deterministic., Verify confidence modifiers and decays map consistently., Verify decay parameters decay confidence scores correctly., Verify that build_asset_context includes fabric_summary and fabric_nodes. (+18 more)
+Nodes (35): get_auth_header(), Verify sync doesn't reactivate terminated nodes., Verify propagation updates ignore terminated nodes., Verify history entries are deep copies., Verify propagation sequencing calculations are deterministic., Verify confidence modifiers and decays map consistently., Verify decay parameters decay confidence scores correctly., Verify structural drift logic detects node and score shifts. (+27 more)
 
 ### Community 133 - "Agent Rules"
 Cohesion: 0.07
@@ -1191,16 +1195,16 @@ Cohesion: 0.10
 Nodes (11): ABC, BasePlugin, Validate settings, configuration parameters, and inputs.         Must not execut, Check system environment and verify tools availability.         Must not execute, Run the plugin's main execution task with the payload and return results., Perform self-checks, initialize connections/dependencies.         Must not execu, AIProvider, Return the name of the AI provider (e.g., 'openai'). (+3 more)
 
 ### Community 136 - "Governance & Compliance Drift"
-Cohesion: 0.14
-Nodes (22): activate_hunt(), check_scope_ownership(), close_hunt(), complete_hunt(), create_or_sync_hunt(), escalate_hunt(), get_hunt(), get_hunt_metrics() (+14 more)
+Cohesion: 0.11
+Nodes (26): test_hunt_escalate_transition(), test_hunt_review_transition(), activate_hunt(), check_scope_ownership(), close_hunt(), complete_hunt(), create_or_sync_hunt(), escalate_hunt() (+18 more)
 
 ### Community 137 - "Run migrations in 'offline'..."
-Cohesion: 0.13
-Nodes (16): PageProps, useAcknowledgeFinding(), useFindingDetails(), useFindingEvidence(), useResolveFinding(), useSuppressFinding(), useDashboardSummary(), useDashboardTrends() (+8 more)
+Cohesion: 0.12
+Nodes (17): AssetTabs(), PageProps, useAssetDetails(), useAssetHistory(), useAssetRelationships(), useAssetReport(), useDashboardSummary(), useDashboardTrends() (+9 more)
 
 ### Community 138 - "Workflow & Scan Execution"
-Cohesion: 0.10
-Nodes (23): Verify transition to RECOMMENDED status., Verify transition to COMMITTED status., Verify transition to ARCHIVED status., Verify background worker refresh does not reactivate archived decisions., Verify decision recommendations append history but never overwrite previous hist, Verify history entries returned are deep copies and cannot be modified by caller, Verify history log entries are sorted chronologically and retain exact sequences, Verify that worker refresh preserves decision identity and history. (+15 more)
+Cohesion: 0.50
+Nodes (3): Verify background worker refresh does not reactivate archived decisions., test_archived_decision_not_reactivated_by_worker(), Query GRC assessments and other active domains to sync decision recommendations.
 
 ### Community 139 - "Confirm the provider regist..."
 Cohesion: 0.17
@@ -1212,67 +1216,67 @@ Nodes (26): API Gateway, Automated Tests, Core Services, Domain Models, Integrat
 
 ### Community 141 - "Governance & Compliance Drift"
 Cohesion: 0.13
-Nodes (17): clean_stores(), clean_stores(), clean_stores(), clean_stores(), clean_stores(), Verify that recalculate_cross_domain_links runs deterministically., test_cross_domain_correlation_deterministic(), clean_stores() (+9 more)
+Nodes (10): clean_stores(), Verify evidence store can be cleared., Verify cases store can be cleared., test_case_service_clear(), test_evidence_clear(), Clear all logged history., Clear all in-memory case records and references., Clear all in-memory custody entries. (+2 more)
 
 ### Community 142 - "Frontend Application Pages"
 Cohesion: 0.11
-Nodes (14): test_executive_reporting_registry_validation(), ExecutiveHistoryService, ExecutiveReportFingerprintService, ExecutiveReportingRegistry, Retrieve all supported executive report types., Validate if a report type is supported., ExecutiveReportingService, ExecutiveReportRecord (+6 more)
+Nodes (14): test_executive_reporting_registry_validation(), test_scorecard_registry_validation(), test_scorecard_status_thresholds(), ExecutiveHistoryService, ExecutiveReportFingerprintService, ExecutiveReportingRegistry, Retrieve all supported executive report types., Validate if a report type is supported. (+6 more)
 
 ### Community 143 - "Community 143"
-Cohesion: 0.09
-Nodes (19): Verify history log entries are immutable and append correctly., Verify CLOSED state is terminal and blocks all mutations., Verify assign_incident logs assignment history., Verify manual escalation to a team works and logs history., Verify manual escalation to management works and logs history., Verify auto-escalation check tasks trigger on SLA breaches., test_closed_incident_enforcement(), test_incident_assignment() (+11 more)
+Cohesion: 0.10
+Nodes (19): create_user_cli(), create_refresh_token(), decode_token(), generate_api_key(), hash_api_key(), hash_password(), Hash a password using bcrypt., Verify a plain text password against a bcrypt hash. (+11 more)
 
 ### Community 144 - "Authentication & User Management"
-Cohesion: 0.10
-Nodes (24): get_auth_header(), Verify tradeoff updates ignore archived decisions., Verify tradeoff calculation logic is fully deterministic., Verify operational impact score estimation mapping., Verify risk reduction calculation utilizes factors and baseline correctly., Verify decision API requests enforce scope checks for non-admin users., Verify that tradeoff scoring preserves decision identity and history., Verify tradeoff score calculations are deterministic for identical inputs. (+16 more)
+Cohesion: 0.07
+Nodes (48): get_auth_header(), Verify transition to RECOMMENDED status., Verify transition to COMMITTED status., Verify transition to ARCHIVED status., Verify tradeoff updates ignore archived decisions., Verify decision recommendations append history but never overwrite previous hist, Verify history entries returned are deep copies and cannot be modified by caller, Verify history log entries are sorted chronologically and retain exact sequences (+40 more)
 
 ### Community 145 - "Reconnaissance Plugins"
-Cohesion: 0.06
-Nodes (48): FindingEvidence, mock_nuclei_raw_json(), test_audit_generation(), test_capability_mismatch_rejection(), test_event_generation(), test_evidence_immutability(), test_evidence_persistence(), test_evidence_retention() (+40 more)
+Cohesion: 0.16
+Nodes (24): mock_nuclei_raw_json(), test_audit_generation(), test_event_generation(), test_evidence_persistence(), test_evidence_retention(), test_finding_creation(), test_finding_deduplication(), test_finding_disappears_from_subsequent_scan() (+16 more)
 
 ### Community 146 - "Asset Risk & Exposure Exposure"
 Cohesion: 0.10
-Nodes (18): LoginPage(), apiClient, failedQueue, logoutUser(), Decision, decisionService, GraphEdge, GraphNode (+10 more)
+Nodes (17): LoginPage(), apiClient, failedQueue, logoutUser(), Decision, decisionService, GraphEdge, GraphNode (+9 more)
 
 ### Community 147 - "Incident Management & Investigation"
 Cohesion: 0.08
 Nodes (25): Automated Tests, Core Domain Models, Cross-Sprint Compatibility Requirement, Integration Layers, Investigation and History Services, [MODIFY] [copilot_services], [MODIFY] [worker.py & Existing Services] - Event-Driven Updates, [NEW] [investigation_assistance_service.py](file:///C:/Users/Aditya/AegisX/backend/src/services/investigation_assistance_service.py) (+17 more)
 
 ### Community 148 - "Reconnaissance Plugins"
-Cohesion: 0.16
-Nodes (16): HuntResponse, HuntSeverity, HuntStatus, HuntType, test_hunt_escalate_transition(), test_hunt_type_registered(), test_hunt_type_valid(), CreateHuntRequest (+8 more)
+Cohesion: 0.17
+Nodes (15): HuntResponse, HuntSeverity, HuntStatus, HuntType, test_hunt_type_registered(), test_hunt_type_valid(), CreateHuntRequest, AttackHuntService (+7 more)
 
 ### Community 149 - "Community 149"
 Cohesion: 0.12
-Nodes (21): GraphNodeResponse, Verify syncing identical components preserves the original node IDs and history., Verify components transition to DEPRECATED terminal state and emit history., Verify that a deprecated component rejects updates or status transitions., Verify snapshot rebuild logic respects terminal deprecated states., Verify drift updates ignore deprecated components and preserve terminal status., Verify graph components append history but never overwrite previous history., Verify history entries returned are deep copies and cannot be modified by caller (+13 more)
+Nodes (22): GraphPathResponse, check_scope_ownership(), create_edge(), create_node(), deprecate_component(), get_allowed_scope_ids(), get_drift(), get_path() (+14 more)
 
 ### Community 150 - "Workflow & Scan Execution"
-Cohesion: 0.13
-Nodes (19): test_ioc_hunt_generation(), Verify correlating IOC against a mock Asset., Verify correlating IOC against a mock Finding., Verify correlating IOC against a mock Alert., Verify correlating IOC against a mock Incident., Verify correlating IOC against a mock Case., Verify that running correlation again preserves existing correlation properties., setup_test_db() (+11 more)
+Cohesion: 0.10
+Nodes (16): Test JSON export formatting for Executive Report., Test JSON export formatting for Asset Report., Test CSV export and header integrity for Executive Report., Test CSV export structure validation for Asset Report., Test wrap JSON exports with metadata and CSV exports with comments., test_export_asset_csv(), test_export_asset_json(), test_export_executive_csv() (+8 more)
 
 ### Community 151 - "Community 151"
-Cohesion: 0.14
-Nodes (15): AssetTable(), AssetTableProps, FindingTableProps, mapFinding(), mapFindingEvidences(), mapFindings(), CyberRisk, RiskForecast (+7 more)
+Cohesion: 0.11
+Nodes (22): FindingTableProps, PageProps, useAcknowledgeFinding(), useFindingDetails(), useFindingEvidence(), useResolveFinding(), useSuppressFinding(), FindingDetailContent() (+14 more)
 
 ### Community 152 - "Community 152"
-Cohesion: 0.12
-Nodes (17): HuntHypothesisResponse, test_attack_hunt_generation(), test_attack_hunt_generation_correlation_findings(), test_attack_hunt_generation_partial_coverage(), test_hunt_creation(), test_hunt_to_response(), test_hypothesis_creation(), test_hypothesis_preservation_on_sync() (+9 more)
+Cohesion: 0.17
+Nodes (11): HuntHypothesisResponse, test_hunt_to_response(), test_hypothesis_creation(), test_hypothesis_preservation_on_sync(), test_ioc_hunt_generation_hypothesis_and_findings(), test_ioc_hunt_generation_no_correlation(), HuntHypothesisService, Get all hypotheses for a hunt. (+3 more)
 
 ### Community 153 - "Community 153"
 Cohesion: 0.16
 Nodes (18): ExecutiveContent(), useCreateExecutiveReport(), useExecutiveHeatmap(), useExecutiveReports(), useExecutiveScorecard(), useTransitionReportStatus(), useCheckPostureDrift(), usePostureSummary() (+10 more)
 
 ### Community 154 - "Core Principles"
-Cohesion: 0.14
-Nodes (22): ExecutiveReportResponse, check_scope_ownership(), create_report(), get_allowed_scope_ids(), get_heatmap(), get_report_details(), get_scorecard(), get_summary_snapshot() (+14 more)
+Cohesion: 0.15
+Nodes (20): ExecutiveReportResponse, check_scope_ownership(), create_report(), get_allowed_scope_ids(), get_heatmap(), get_report_details(), get_summary_snapshot(), get_trends() (+12 more)
 
 ### Community 155 - "Community 155"
-Cohesion: 0.14
-Nodes (23): get_auth_header(), setup_basic_mock_db(), test_api_create_assessment_forbidden_for_reader(), test_api_create_assessment_success(), test_api_get_active_assessments(), test_api_get_frameworks_endpoint(), test_api_get_gaps(), test_api_list_assessments_admin() (+15 more)
+Cohesion: 0.22
+Nodes (8): test_extra_grc_1(), test_extra_grc_2(), test_extra_grc_3(), test_extra_grc_4(), test_extra_grc_5(), test_extra_grc_6(), test_framework_registry_validate(), Validate if a framework type is supported.
 
 ### Community 156 - "Deploy on Vercel"
-Cohesion: 0.11
-Nodes (22): get_auth_header(), Verify that redundant sync calls do not add duplicate items to node/edge lists., Verify sync doesn't reactivate deprecated edges., Verify shortest path finding is consistent and returns correct nodes/weights., Verify that degree centrality is computed accurately and deterministically., Verify snapshot generation computes total nodes, edges, density, and average wei, Verify snapshot rebuilds if cache exists but keys are corrupted/missing., Verify Dijkstra path requests enforce scope checks for non-admin users. (+14 more)
+Cohesion: 0.13
+Nodes (12): ExposureHistoryEntry, clean_stores(), test_history_clear(), test_history_empty(), test_history_preserved(), test_history_record_event(), Clear all correlated exposures., ExposureHistoryService (+4 more)
 
 ### Community 157 - "Community 157"
 Cohesion: 0.08
@@ -1283,36 +1287,36 @@ Cohesion: 0.08
 Nodes (23): 1. Core Verification Criteria Summary, 2. Sprint-by-Sprint Verification Details, 3. Final Verification Scores, 4. Deferral Recommendation, AegisX Sprint 24–37 Architectural & Verification Audit Report, Architecture Score: 95/100, Operational Readiness Score: 90/100, Roadmap Compliance Score: 100/100 (+15 more)
 
 ### Community 159 - "Workflow & Scan Execution"
-Cohesion: 0.11
-Nodes (15): PurpleTeamHistoryEntry, test_history_clear(), test_history_empty(), test_history_preserved(), test_history_record_event(), AttackValidationService, Clear all validation records., Retrieve all validation records. (+7 more)
+Cohesion: 0.08
+Nodes (25): PurpleTeamHistoryEntry, clean_stores(), test_history_clear(), test_history_empty(), test_history_preserved(), test_snapshot_rebuild_after_cache_deletion(), test_snapshot_rebuild_consistency(), CreateExerciseRequest (+17 more)
 
 ### Community 160 - "Cyber Resilience Intelligen..."
-Cohesion: 0.14
-Nodes (16): DecisionHistoryEntry, DecisionResponse, Verify that redundant sync calls do not add duplicate items to decision list., Verify that an archived decision rejects status transitions., Verify sync doesn't reactivate archived decisions., test_archived_decision_not_reactivated_by_sync(), test_decision_duplicate_prevention(), test_decision_terminal_state_enforcement() (+8 more)
+Cohesion: 0.12
+Nodes (16): DecisionResponse, Verify that an archived decision rejects status transitions., Verify sync doesn't reactivate archived decisions., test_archived_decision_not_reactivated_by_sync(), test_decision_terminal_state_enforcement(), DecisionHistoryService, Clear all decision history logs., Record an immutable history log for a decision. (+8 more)
 
 ### Community 161 - "Liveness check to confirm t..."
-Cohesion: 0.15
-Nodes (15): FabricHistoryEntry, FabricIntelligenceNodeResponse, FabricPriority, FabricSnapshotResponse, FabricStatus, Verify that a terminated node rejects transitions., test_fabric_terminal_state_enforcement(), FabricHistoryService (+7 more)
+Cohesion: 0.14
+Nodes (15): FabricIntelligenceNodeResponse, Verify transition to SUSPENDED status., Verify that a terminated node rejects transitions., Verify snapshot generation computes counts and average confidence correctly., test_fabric_suspend_transition(), test_fabric_terminal_state_enforcement(), test_snapshot_rebuild_consistency(), Transition fabric node status to TERMINATED (terminal state). (+7 more)
 
 ### Community 162 - "Community 162"
-Cohesion: 0.17
-Nodes (23): get_auth_header(), setup_basic_mock_db(), test_api_create_analytics_reader_forbidden(), test_api_create_analytics_success(), test_api_get_active_analytics(), test_api_get_analyst_rankings(), test_api_get_archived_analytics(), test_api_get_drift_admin() (+15 more)
+Cohesion: 0.10
+Nodes (38): get_auth_header(), mock_admin(), mock_operator(), mock_reader(), setup_basic_mock_db(), test_analyst_ranking_stability(), test_analytics_fingerprint_case_insensitivity(), test_analytics_fingerprint_changes_on_name() (+30 more)
 
 ### Community 163 - "TERMINAL_SCANRUN_STATES"
-Cohesion: 0.13
-Nodes (18): test_ai_context_program_injection(), test_closed_program_not_reactivated_by_snapshot(), test_completed_program_not_reactivated_by_snapshot(), test_program_duplicate_prevention(), test_program_score_change_detection(), test_program_snapshot_not_authoritative(), test_program_snapshot_rebuild_from_source_of_truth(), test_program_terminal_state_not_reactivated_by_sync() (+10 more)
+Cohesion: 0.15
+Nodes (16): test_ai_context_program_injection(), test_program_auto_creation(), test_program_snapshot_not_authoritative(), test_program_snapshot_rebuild_from_source_of_truth(), test_snapshot_rebuild_after_cache_corruption(), test_snapshot_rebuild_after_cache_deletion(), test_snapshot_rebuild_consistency(), test_snapshot_rebuild_statistics_calculation() (+8 more)
 
 ### Community 164 - "Community 164"
-Cohesion: 0.17
-Nodes (14): useResilienceObjectives(), useResilienceRecords(), useUpdateResilienceStatus(), useSOCAnalysts(), useSOCKPIs(), useSOCQueueSummary(), QUERY_KEYS, CopilotAuditTrail (+6 more)
+Cohesion: 0.13
+Nodes (18): useResilienceObjectives(), useResilienceRecords(), useUpdateResilienceStatus(), useSOCAnalysts(), useSOCKPIs(), useSOCQueueSummary(), QUERY_KEYS, CopilotAuditTrail (+10 more)
 
 ### Community 165 - "Community 165"
-Cohesion: 0.11
-Nodes (17): Verify snapshot rebuild logic respects terminal closed states., Verify get_snapshot rebuilds from source if the cache is missing or deleted., Verify snapshot rebuilds if cache exists but keys are corrupted/missing., Verify snapshot doesn't store state exclusively; clearing snapshots doesn't dele, Verify get_snapshot loads from the source of truth when cache is empty., Verify that snapshot rebuild preserves plan identity and history., test_closed_plan_not_reactivated_by_snapshot(), test_planning_identity_preserved_after_snapshot_rebuild() (+9 more)
+Cohesion: 0.12
+Nodes (15): Verify snapshot rebuild logic respects terminal closed states., Verify get_snapshot rebuilds from source if the cache is missing or deleted., Verify snapshot rebuilds if cache exists but keys are corrupted/missing., Verify snapshot doesn't store state exclusively; clearing snapshots doesn't dele, Verify get_snapshot loads from the source of truth when cache is empty., test_closed_plan_not_reactivated_by_snapshot(), test_snapshot_not_authoritative(), test_snapshot_rebuild_after_cache_corruption() (+7 more)
 
 ### Community 166 - "Frontend Application Pages"
-Cohesion: 0.04
-Nodes (84): AssetHistory, AssetRelationship, set_current_tenant_id(), Plugin, PluginCreate, PluginEventResponse, PluginResponse, PluginUpdate (+76 more)
+Cohesion: 0.06
+Nodes (45): Plugin, PluginCreate, PluginEventResponse, PluginResponse, PluginUpdate, mock_plugin_a(), Approval requires successful validation. Unvalidated plugins fail approval., Verify registry and host operations log appropriate rows in plugin_events. (+37 more)
 
 ### Community 167 - "This is NOT the Next.js you..."
 Cohesion: 0.09
@@ -1322,33 +1326,37 @@ Nodes (17): test_determine_severity_critical(), test_determine_severity_high(), 
 Cohesion: 0.09
 Nodes (21): 1. Cyber Resilience Integration Tests, 1. Cyber Resilience Terminal State Rule, 1. Domain Model, 1. Domain Model, 2. Registries, 2. Registries, 2. Service Resilience Preservation Rule, 3. Core Services (+13 more)
 
+### Community 169 - "next.config.ts"
+Cohesion: 0.08
+Nodes (5): CacheDict, CacheList, MemoryStorageAdapter, Resolve the configured cache storage provider dynamically., StorageFactory
+
 ### Community 170 - "postcss.config.mjs"
-Cohesion: 0.10
-Nodes (18): Verify that knowledge relevance, confidence, and severity shifts emit specific h, test_knowledge_recalculation_events(), clean_stores(), test_extra_knowledge_26(), test_extra_knowledge_27(), test_extra_knowledge_28(), test_history_clear_knowledge(), test_history_record_event_directly_knowledge() (+10 more)
+Cohesion: 0.14
+Nodes (13): Requirement 7: External asset classification. Public IP or internet host., Requirement 8: Internal asset classification. Private RFC1918/local., Requirement 9: Unknown classification. Insufficient info., Verify existing classifications and extension point are intact., test_exposure_extension_point(), test_external_classification(), test_internal_classification(), test_unknown_classification() (+5 more)
 
 ### Community 171 - "routes.ts"
-Cohesion: 0.15
-Nodes (16): test_ai_context_executive_injection(), test_executive_snapshot_clear(), test_report_auto_creation(), test_report_duplicate_prevention(), test_report_snapshot_not_authoritative(), test_scope_isolation_between_snapshots(), test_snapshot_not_authoritative(), test_snapshot_rebuild_after_cache_corruption() (+8 more)
+Cohesion: 0.17
+Nodes (14): test_ai_context_executive_injection(), test_executive_snapshot_clear(), test_report_duplicate_prevention(), test_report_snapshot_not_authoritative(), test_snapshot_not_authoritative(), test_snapshot_rebuild_after_cache_corruption(), test_snapshot_rebuild_after_cache_deletion(), test_snapshot_rebuild_consistency() (+6 more)
 
 ### Community 172 - "Sprint 11 — Implementation ..."
 Cohesion: 0.12
-Nodes (15): Test Dashboard trend time-series calculation., Test Risk report mapping and risk history loading., test_dashboard_trend_generation(), test_risk_report_generation(), DashboardTrendService, Service to generate time-series trend metrics for dashboard visualization., Generate time-series trends for platform risk and open findings counts inside a, Service to track and manage in-memory history of asset risk/criticality     chan (+7 more)
+Nodes (10): Test that executive report cache invalidates properly., test_executive_cache_invalidation(), Invalidate all cached entries associated with the asset., Clear cache primarily for testing., Helper to check if a template ID matches any configured templates in scan., Identify findings that disappeared in the current scan run and mark them., Clear Executive Report cache., Clear cached Asset report for the given asset. (+2 more)
 
 ### Community 173 - "Sprint 18 — Implementation ..."
-Cohesion: 0.13
-Nodes (6): CyberRiskHistory, CyberRiskRecord, RiskHistoryEntry, CyberRiskRepository, Retrieve a risk record by fingerprint., Record an immutable history event for a risk record.
+Cohesion: 0.16
+Nodes (3): CyberRiskRecord, CyberRiskRepository, Retrieve a risk record by fingerprint.
 
 ### Community 174 - "Sprint 22 — Implementation ..."
-Cohesion: 0.13
-Nodes (15): setup_test_db(), test_attack_surface_mapping_api(), test_attack_surface_mapping_email(), test_attack_surface_mapping_host(), test_attack_surface_mapping_identity(), test_attack_surface_mapping_network(), test_attack_surface_mapping_web(), test_attack_surface_registry_categories() (+7 more)
+Cohesion: 0.12
+Nodes (16): setup_test_db(), test_attack_surface_mapping_api(), test_attack_surface_mapping_email(), test_attack_surface_mapping_host(), test_attack_surface_mapping_identity(), test_attack_surface_mapping_network(), test_attack_surface_mapping_web(), test_attack_surface_registry_categories() (+8 more)
 
 ### Community 175 - "Sprint 23 — Implementation ..."
 Cohesion: 0.12
 Nodes (16): Verify snapshot rebuild logic respects terminal archived states., Verify snapshot generation computes counts and average net benefits correctly., Verify get_snapshot rebuilds from source if the cache is missing or deleted., Verify snapshot rebuilds if cache exists but keys are corrupted/missing., Verify snapshot doesn't store state exclusively; clearing snapshots doesn't dele, Verify get_snapshot loads from the source of truth when cache is empty., test_archived_decision_not_reactivated_by_snapshot(), test_snapshot_not_authoritative() (+8 more)
 
 ### Community 176 - "Sprint 25 — Implementation ..."
-Cohesion: 0.12
-Nodes (16): Verify snapshot rebuild logic respects terminal terminated states., Verify snapshot generation computes counts and average confidence correctly., Verify get_snapshot rebuilds from source if the cache is missing or deleted., Verify snapshot rebuilds if cache exists but keys are corrupted/missing., Verify snapshot doesn't store state exclusively; clearing snapshots doesn't dele, Verify get_snapshot loads from the source of truth when cache is empty., test_snapshot_not_authoritative(), test_snapshot_rebuild_after_cache_corruption() (+8 more)
+Cohesion: 0.11
+Nodes (17): Verify snapshot rebuild logic respects terminal terminated states., Verify get_snapshot rebuilds from source if the cache is missing or deleted., Verify snapshot rebuilds if cache exists but keys are corrupted/missing., Verify snapshot doesn't store state exclusively; clearing snapshots doesn't dele, Verify get_snapshot loads from the source of truth when cache is empty., Verify that redundant sync calls do not add duplicate items., test_fabric_duplicate_prevention(), test_snapshot_not_authoritative() (+9 more)
 
 ### Community 177 - "Sprint 30 — Implementation ..."
 Cohesion: 0.10
@@ -1359,28 +1367,28 @@ Cohesion: 0.10
 Nodes (19): 1. Services & Hooks Layer, 2. UI Components & Layout, 3. Navigation Update, Automated Integration Tests, Goal Description, Implementation Plan — Sprint 40: Attack Surface & Security Intelligence Workspace MVP, Manual Verification, [MODIFY] [page.tsx](file:///c:/Users/Aditya/Desktop/AegisX%20-%20Copy/frontend/src/app/page.tsx) (+11 more)
 
 ### Community 179 - "Community 179"
-Cohesion: 0.15
-Nodes (5): SecurityKnowledgeRecommendation, SecurityKnowledgeRecord, SecurityKnowledgeRelationship, KnowledgeRepository, Retrieve a GRC knowledge record by fingerprint.
+Cohesion: 0.19
+Nodes (3): SecurityIntelligenceEdge, SecurityIntelligenceNode, GraphRepository
 
 ### Community 180 - "e2e-stub.js"
-Cohesion: 0.18
-Nodes (11): PlanningHistoryEntry, PlanningRecordResponse, Verify that a closed plan rejects status transitions., test_plan_terminal_state_enforcement(), AutonomousSecurityPlanningService, Approve the plan. Plan approvals must always be manually triggered by operators, Close the plan (terminal state)., Retrieve all plans currently tracked. (+3 more)
+Cohesion: 0.14
+Nodes (15): PlanningHistoryEntry, PlanningRecordResponse, Verify that a closed plan rejects status transitions., Verify sync doesn't reactivate closed plans., test_closed_plan_not_reactivated_by_sync(), test_plan_terminal_state_enforcement(), approve_plan(), Approve the plan. Plan approvals must always be manually triggered by operators (+7 more)
 
 ### Community 181 - "Sprint 29 — Walkthrough"
 Cohesion: 0.16
 Nodes (17): FindingEvidenceResponse, FindingHistoryResponse, FindingResponse, acknowledge_finding(), check_finding_ownership(), get_finding_details(), get_finding_evidences(), list_findings() (+9 more)
 
 ### Community 182 - "Sprint 30 — Walkthrough"
-Cohesion: 0.15
-Nodes (15): PurpleTeamFindingResponse, test_findings_create(), test_findings_duplicate_prevention(), test_findings_empty(), test_findings_immutable(), test_gap_finding_creation(), test_validation_finding_creation(), test_validation_finding_preservation() (+7 more)
+Cohesion: 0.14
+Nodes (12): Verify correlation correctly maps case-specific and incident-specific evidence., Verify that evidence identity remains completely stable after transition to VERI, Verify that evidence stable identity/fingerprint is preserved after transfer to, Verify ARCHIVED terminal state for evidence blocks modification, transfers, or r, test_archived_evidence_terminal_enforcement(), test_case_evidence_correlation(), test_evidence_fingerprint_stability_after_transfer(), test_evidence_identity_preserved_after_verification() (+4 more)
 
 ### Community 183 - "Sprint 31 — Walkthrough"
 Cohesion: 0.10
-Nodes (51): AuditMixin, SoftDeleteMixin, TenantOwnedMixin, VersionedMixin, Artifact, AssetHistory, AssetPort, AssetRelationship (+43 more)
+Nodes (45): AuditMixin, SoftDeleteMixin, TenantOwnedMixin, VersionedMixin, Artifact, AssetHistory, AssetRelationship, Base (+37 more)
 
 ### Community 184 - "Sprint 32 — Walkthrough"
-Cohesion: 0.16
-Nodes (10): Verify snapshot regeneration and caching., test_incident_snapshot_cache(), Retrieve all incidents from store., IncidentSnapshotService, Get the cached snapshot for an asset, or globally if None. Rebuilds dynamically, Rebuild and cache the incident snapshot for an asset., Rebuild and cache the global incident snapshot., Generate and cache snapshot directly. (+2 more)
+Cohesion: 0.12
+Nodes (11): clean_stores(), Clear the in-memory evidence store., Clear all logged history., Clear all in-memory incident records., IncidentSnapshotService, Get the cached snapshot for an asset, or globally if None. Rebuilds dynamically, Rebuild and cache the incident snapshot for an asset., Rebuild and cache the global incident snapshot. (+3 more)
 
 ### Community 185 - "Workflow & Scan Execution"
 Cohesion: 0.11
@@ -1391,36 +1399,36 @@ Cohesion: 0.11
 Nodes (18): API Router, Bug Fix Applied, Domain Model, Files Created, Full Suite Regression, Hardening Rules Enforced, History Preservation Rule, Integrations Modified (+10 more)
 
 ### Community 187 - "requirements.txt"
-Cohesion: 0.12
-Nodes (14): ThreatActorResponse, Verify Lazarus group pre-seeded profile., Verify APT29 pre-seeded profile., Verify actor lookup by case insensitive name or alias., Verify getting all registered profiles., test_threat_actor_registry_all(), test_threat_actor_registry_apt29(), test_threat_actor_registry_case_insensitive() (+6 more)
+Cohesion: 0.06
+Nodes (36): CampaignResponse, ThreatActorResponse, test_actor_campaign_coverage(), test_hunt_coverage_active(), Verify Lazarus group pre-seeded profile., Verify APT29 pre-seeded profile., Verify actor lookup by case insensitive name or alias., Verify getting all registered profiles. (+28 more)
 
 ### Community 188 - "CLAUDE.md"
 Cohesion: 0.12
-Nodes (13): Verify drift updates ignore closed plans and preserve terminal status., Verify structural drift logic detects plan benefit and count shifts., Verify drift logs can be cleared., Verify that drift processing preserves plan identity and history., test_closed_plan_not_reactivated_by_drift(), test_planning_drift_clearing(), test_planning_drift_detection(), test_planning_identity_preserved_after_drift_processing() (+5 more)
+Nodes (13): Verify drift updates ignore closed plans and preserve terminal status., Verify structural drift logic detects plan benefit and count shifts., Verify drift logs can be cleared., test_closed_plan_not_reactivated_by_drift(), test_planning_drift_clearing(), test_planning_drift_detection(), clean_stores(), list_drifts() (+5 more)
 
 ### Community 189 - "next-env.d.ts"
-Cohesion: 0.11
-Nodes (17): Verify Copilot prompt builder restrains AI from mutating plans., test_ai_advisory_only_enforcement(), test_ai_advisory_only_enforcement(), test_ai_advisory_only_enforcement(), test_ai_prompt_builder_restriction(), test_ai_advisory_only_enforcement(), Verify Copilot prompt builder restrains AI from mutating decisions., test_ai_advisory_only_enforcement() (+9 more)
+Cohesion: 0.17
+Nodes (11): test_ai_advisory_only_enforcement(), test_ai_advisory_only_enforcement(), test_ai_prompt_builder_restriction(), test_ai_advisory_only_enforcement(), Verify Copilot prompt builder restrains AI from mutating graph structures., test_ai_advisory_only_enforcement(), test_ai_advisory_only_enforcement(), test_ai_advisory_only_enforcement() (+3 more)
 
 ### Community 190 - "playwright.config.ts"
-Cohesion: 0.11
-Nodes (14): test_extra_10(), test_extra_17(), test_extra_18(), test_extra_31(), test_extra_7(), test_extra_8(), test_extra_9(), test_frequency_registry_aro() (+6 more)
+Cohesion: 0.18
+Nodes (8): test_extra_17(), test_extra_18(), test_extra_31(), test_frequency_registry_aro(), test_frequency_registry_list(), Resolve deterministic ARO (Annualized Rate of Occurrence) for a frequency label., List all supported frequency labels., RiskFrequencyRegistry
 
 ### Community 191 - "vitest.config.ts"
-Cohesion: 0.11
-Nodes (14): test_extra_11(), test_extra_12(), test_extra_13(), test_extra_14(), test_extra_15(), test_extra_16(), test_extra_32(), test_impact_registry_factor() (+6 more)
+Cohesion: 0.18
+Nodes (8): test_extra_15(), test_extra_16(), test_extra_32(), test_impact_registry_factor(), test_impact_registry_list(), Resolve deterministic Exposure Factor for an impact label., List all supported impact labels., RiskImpactRegistry
 
 ### Community 192 - "file.svg"
-Cohesion: 0.11
-Nodes (14): test_executive_drift_detection(), test_kpi_score_defaults(), test_kri_score_defaults(), test_report_identity_preserved_after_scorecard_recalculation(), test_report_identity_preserved_after_trend_recalculation(), test_report_score_stability(), test_scope_isolation_between_scorecards(), test_scorecard_deterministic() (+6 more)
+Cohesion: 0.12
+Nodes (14): ExecutiveScorecardResponse, test_executive_drift_detection(), test_report_identity_preserved_after_scorecard_recalculation(), test_report_identity_preserved_after_trend_recalculation(), test_report_score_stability(), test_scope_isolation_between_scorecards(), test_scorecard_deterministic(), test_scorecard_generation() (+6 more)
 
 ### Community 193 - "globe.svg"
 Cohesion: 0.14
-Nodes (14): setup_test_db(), test_actor_campaign_coverage(), test_ai_context_injection_asset(), test_ai_context_injection_executive(), test_hunt_coverage_active(), test_hunt_coverage_empty(), test_hunt_drift_coverage_change(), test_hunt_drift_no_change() (+6 more)
+Nodes (17): setup_test_db(), test_ai_context_injection_asset(), test_ai_context_injection_executive(), test_attack_hunt_generation(), test_attack_hunt_generation_correlation_findings(), test_attack_hunt_generation_partial_coverage(), test_hunt_creation(), test_hunt_drift_coverage_change() (+9 more)
 
 ### Community 194 - "next.svg"
-Cohesion: 0.13
-Nodes (15): mock_scan_run(), mock_scope(), mock_workflow(), test_asset_confidence_update(), test_asset_persistence_new(), test_duplicate_asset_discovered_by_multiple_plugins(), test_event_schema_fields(), test_output_normalization() (+7 more)
+Cohesion: 0.12
+Nodes (14): mock_scan_run(), mock_scope(), mock_workflow(), test_asset_confidence_update(), test_asset_persistence_new(), test_assetfinder_plugin_run(), test_duplicate_asset_discovered_by_multiple_plugins(), test_event_schema_fields() (+6 more)
 
 ### Community 195 - "vercel.svg"
 Cohesion: 0.11
@@ -1432,83 +1440,83 @@ Nodes (17): 1. Graph Component Terminal State Rule, 2. Graph Identity Preservati
 
 ### Community 197 - "ci.yml"
 Cohesion: 0.12
-Nodes (15): RoadmapResponse, Verify optimization updates ignore closed plans., Verify optimization calculation logic is fully deterministic., Verify that optimization sequencing preserves plan identity and history., Verify optimization sequence calculations are deterministic for identical inputs, Verify optimization calculation respects scope boundaries and doesn't leak recor, Verify planning scores are stable and do not drift without input parameters chan, test_closed_plan_not_reactivated_by_optimization() (+7 more)
+Nodes (14): Verify domains are lowercased and stripped., Verify emails are lowercased and stripped., Verify hashes are lowercased., Verify SHA-256 generation., Verify fingerprint is stable and deterministic., Verify fingerprinting normalizes the value first., test_ioc_fingerprint_normalization(), test_ioc_fingerprint_sha256() (+6 more)
 
 ### Community 198 - "Community 198"
-Cohesion: 0.17
-Nodes (9): Verify cases store can be cleared., test_case_service_clear(), Retrieve all cases from store., CaseSnapshotService, Get the cached snapshot for an asset, or globally if None. Rebuilds dynamically, Rebuild and cache the case snapshot for a specific asset., Rebuild and cache the global case snapshot., Generate and cache snapshot directly for an asset. (+1 more)
+Cohesion: 0.16
+Nodes (11): Verify that case snapshot rebuilds global statistics correctly., Verify that case snapshot rebuilds statistics dynamically from in-memory cases., test_case_snapshot_global(), test_case_snapshot_rebuild_consistency(), CaseSnapshotService, Get the cached snapshot for an asset, or globally if None. Rebuilds dynamically, Rebuild and cache the case snapshot for a specific asset., Rebuild and cache the global case snapshot. (+3 more)
 
 ### Community 199 - "Community 199"
-Cohesion: 0.14
-Nodes (13): test_ai_context_control_validation_injection(), test_control_auto_creation(), test_control_duplicate_prevention(), test_control_sync_preserves_identity(), test_control_type_registry_resolve(), test_snapshot_active_degraded_failed_counts(), test_snapshot_rebuild_after_cache_corruption(), test_snapshot_rebuild_after_cache_deletion() (+5 more)
+Cohesion: 0.17
+Nodes (12): ResilienceHistoryEntry, test_history_empty_for_invalid_id(), test_history_entry_frozen(), test_history_entry_properties(), test_history_order_preserved_on_multiple_events(), test_history_record_event_directly(), test_resilience_drift_non_terminal_history(), test_resilience_history_immutable() (+4 more)
 
 ### Community 200 - "Community 200"
-Cohesion: 0.12
-Nodes (10): test_actor_mapping_preserved(), test_attack_validation_registry_techniques(), test_attack_validation_registry_valid(), AdversaryEmulationService, Retrieve threat actors associated with a given technique., AttackValidationRegistry, Retrieve all pre-seeded validation techniques., Check if a technique is pre-seeded/registered. (+2 more)
+Cohesion: 0.25
+Nodes (5): test_attack_validation_registry_techniques(), test_attack_validation_registry_valid(), AttackValidationRegistry, Retrieve all pre-seeded validation techniques., Check if a technique is pre-seeded/registered.
 
 ### Community 201 - "Community 201"
-Cohesion: 0.13
-Nodes (13): clean_fabric_stores(), Verify drift updates ignore terminated nodes and preserve terminal status., Verify structural drift logic detects node and score shifts., Verify drift logs can be cleared., Verify that drift processing preserves fabric identity., test_fabric_drift_clearing(), test_fabric_drift_detection(), test_fabric_identity_preserved_after_drift_processing() (+5 more)
+Cohesion: 0.12
+Nodes (13): clean_fabric_stores(), Verify drift updates ignore terminated nodes and preserve terminal status., Verify drift logs can be cleared., Verify that drift processing preserves fabric identity., test_fabric_drift_clearing(), test_fabric_identity_preserved_after_drift_processing(), test_terminated_fabric_not_reactivated_by_drift(), list_drifts() (+5 more)
 
 ### Community 202 - "Community 202"
 Cohesion: 0.12
 Nodes (4): MockDiscoveryPlugin, MockFailingPlugin, MockInvalidPlugin, MockTimeoutPlugin
 
 ### Community 203 - "Community 203"
-Cohesion: 0.14
-Nodes (12): CampaignResponse, Verify Operation Ghost pre-seeded campaign details., Verify campaign lookup is case insensitive., Verify getting all campaign profiles., test_campaign_registry_all(), test_campaign_registry_case_insensitive(), test_campaign_registry_ghost(), CampaignProfile (+4 more)
+Cohesion: 0.13
+Nodes (13): Requirements 12, 13, 14: Score, level, explanation generation., Requirement 15: Registry-driven scoring. Weights must match registry., Requirement 16: Multiple factor accumulation., Requirement 17: Critical finding impact., Requirement 18: Score clamping (0 <= score <= 100)., test_critical_finding_impact(), test_multiple_factor_accumulation(), test_registry_driven_scoring() (+5 more)
 
 ### Community 204 - "Community 204"
 Cohesion: 0.20
 Nodes (9): GrcContent(), useGRCAssessments(), useGRCGaps(), useUpdateAssessmentStatus(), useUploadEvidence(), GrcAssessment, GrcEvidence, GrcGap (+1 more)
 
 ### Community 205 - "Community 205"
-Cohesion: 0.12
-Nodes (15): Verify manual transition to APPROVED status., Verify transition to ACTIVE status., Verify transition to CLOSED status., Verify planning recommendations append history but never overwrite previous hist, Verify history entries returned are deep copies and cannot be modified by caller, Verify history log entries are sorted chronologically and retain exact sequences, Verify syncing identical components preserves the original plan IDs and history., test_plan_activate_transition() (+7 more)
+Cohesion: 0.08
+Nodes (30): get_auth_header(), Verify manual transition to APPROVED status., Verify transition to ACTIVE status., Verify transition to CLOSED status., Verify planning recommendations append history but never overwrite previous hist, Verify history entries returned are deep copies and cannot be modified by caller, Verify history log entries are sorted chronologically and retain exact sequences, Verify Copilot prompt builder restrains AI from mutating plans. (+22 more)
 
 ### Community 206 - "Community 206"
-Cohesion: 0.13
-Nodes (14): clean_stores(), test_compliance_history_immutable(), test_compliance_history_on_acceptance(), test_compliance_history_on_closure(), test_compliance_history_on_evidence_upload(), test_compliance_history_ordering(), test_compliance_history_preserved(), test_extra_grc_13() (+6 more)
+Cohesion: 0.15
+Nodes (13): ComplianceHistoryEntry, test_compliance_history_immutable(), test_compliance_history_on_evidence_upload(), test_compliance_history_preserved(), test_extra_grc_13(), test_extra_grc_14(), test_extra_grc_15(), test_history_clear_grc() (+5 more)
 
 ### Community 207 - "Community 207"
-Cohesion: 0.14
-Nodes (12): Verify drift updates ignore archived decisions and preserve terminal status., Verify structural drift logic detects decision benefit and count shifts., Verify drift logs can be cleared., Verify that drift processing preserves decision identity and history., test_archived_decision_not_reactivated_by_drift(), test_decision_drift_clearing(), test_decision_drift_detection(), test_decision_identity_preserved_after_drift_processing() (+4 more)
+Cohesion: 0.13
+Nodes (13): clean_decision_stores(), Verify drift updates ignore archived decisions and preserve terminal status., Verify structural drift logic detects decision benefit and count shifts., Verify drift logs can be cleared., test_archived_decision_not_reactivated_by_drift(), test_decision_drift_clearing(), test_decision_drift_detection(), list_drifts() (+5 more)
 
 ### Community 208 - "Community 208"
-Cohesion: 0.14
-Nodes (11): Verify that reputation change triggers ioc.reputation_changed event., Verify that attribution or severity change triggers ioc.drift event., Verify cache-only consistency dynamically rebuilds snapshot if missing., test_ioc_drift_attribution_severity(), test_ioc_drift_reputation(), test_ti_snapshot_consistency(), IOCDriftService, Check for threat intelligence drift and reputation updates compared to a previou (+3 more)
+Cohesion: 0.22
+Nodes (10): PostureHistoryEntry, test_posture_history_clear(), test_posture_history_deepcopied(), test_posture_history_empty(), test_posture_history_preserved(), test_posture_history_record(), PostureHistoryService, Clear all logged posture history. (+2 more)
 
 ### Community 209 - "Community 209"
-Cohesion: 0.19
-Nodes (9): PluginHost, PluginValidationError, Instantiate and run the plugin with the payload.          Enforces timeouts, exe, Raised when a plugin fails validation.      Fails during manifest check, dynamic, Extension point for future sandbox implementation (e.g. seccomp, Docker)., Extension point for future CPU, RAM, and other hardware resource limits., Dynamically load the plugin class using importlib., Verify that the plugin class implements required BasePlugin methods. (+1 more)
+Cohesion: 0.11
+Nodes (17): Test dynamic import of base modules and verify class existence., Validation checks verify manifest and methods, but must NEVER invoke run()., Execution timeout triggers TimeoutError, updates state, and logs failure., Exception boundaries capture plugin runtime crashes and log plugin.failed., test_dynamic_loading(), test_exception_handling(), test_timeout_handling(), test_validation_never_executes_run() (+9 more)
 
 ### Community 210 - "Community 210"
 Cohesion: 0.12
 Nodes (15): 1. Worker Isolation Hardening (Finding 1), 2. GRC & GRC Knowledge Recalculation (Findings 6 & 7), 3. Threat Fusion Persistence & Terminal States (Finding 2), 4. model Collisions Remediation (Finding 4), 5. Copilot Context Coverage & advisory restrictions (Finding 5), Domain Model, Dynamic Test Coverage (165/165 Passed), Files Created (+7 more)
 
 ### Community 211 - "Community 211"
-Cohesion: 0.19
-Nodes (13): MilestoneResponse, Verify background worker refresh does not reactivate closed plans., Verify priority calculation utilizes weights correctly., Verify resource utilization coefficient adapts to completed milestones., Verify snapshot generation computes counts and average progress correctly., Verify that worker refresh preserves plan identity and history., test_closed_plan_not_reactivated_by_worker(), test_milestone_completion_impact() (+5 more)
+Cohesion: 0.10
+Nodes (24): MilestoneResponse, Verify background worker refresh does not reactivate closed plans., Verify optimization updates ignore closed plans., Verify optimization calculation logic is fully deterministic., Verify priority calculation utilizes weights correctly., Verify resource utilization coefficient adapts to completed milestones., Verify snapshot generation computes counts and average progress correctly., Verify that worker refresh preserves plan identity and history. (+16 more)
 
 ### Community 212 - "Community 212"
-Cohesion: 0.15
-Nodes (10): HuntHistoryEntry, test_hunt_complete_transition(), test_hunt_history_immutable(), test_hunt_history_survives_sync(), test_hunt_review_transition(), HuntHistoryService, Get all logged history for a hunt., Record an immutable history event for a hunt. (+2 more)
+Cohesion: 0.12
+Nodes (18): HuntHistoryEntry, test_hunt_activate_transition(), test_hunt_close_transition(), test_hunt_complete_transition(), test_hunt_history_immutable(), test_hunt_history_recording(), test_hunt_history_survives_sync(), test_hunt_sync_preserves_identity() (+10 more)
 
 ### Community 213 - "Community 213"
-Cohesion: 0.04
-Nodes (76): create_user_cli(), create_refresh_token(), decode_token(), generate_api_key(), hash_api_key(), hash_password(), Hash a password using bcrypt., Verify a plain text password against a bcrypt hash. (+68 more)
+Cohesion: 0.07
+Nodes (42): LoginRequest, TokenRefreshRequest, TokenResponse, UserBase, UserCreate, UserResponse, UserUpdate, Response (+34 more)
 
 ### Community 214 - "Community 214"
-Cohesion: 0.13
-Nodes (11): ProgramHistoryEntry, clean_stores(), test_program_history_clear(), test_program_history_immutable(), test_program_history_preserved(), test_program_history_survives_snapshot_rebuild(), test_program_service_clear(), Clear all logged program history. (+3 more)
+Cohesion: 0.20
+Nodes (6): clean_stores(), test_program_correlation_clear(), Clear all program correlations., Retrieve correlations for a security program., Clear all logged program history., Clear all security program caches.
 
 ### Community 215 - "Community 215"
-Cohesion: 0.17
-Nodes (11): test_control_coverage_calculations(), test_control_coverage_empty(), test_control_coverage_empty_scope(), test_control_effectiveness_history_preserved(), test_control_effectiveness_history_survives_retirement(), test_control_validation_preservation(), Calculate ATT&CK, Detection, Purple Team, Hunt, and Exposure coverage across sco, Retrieve historical effectiveness scores. (+3 more)
+Cohesion: 0.18
+Nodes (8): test_control_coverage_empty(), test_control_coverage_empty_scope(), test_snapshot_rebuild_after_cache_corruption(), ControlCoverageService, Calculate ATT&CK, Detection, Purple Team, Hunt, and Exposure coverage across sco, Retrieve validations for a control., Dynamically rebuild snapshot stats from active control records., ValidationResponse
 
 ### Community 216 - "Community 216"
-Cohesion: 0.13
-Nodes (12): test_extra_1(), test_extra_2(), test_extra_3(), test_extra_4(), test_extra_5(), test_extra_6(), test_scenario_registry_list(), test_scenario_registry_types_count() (+4 more)
+Cohesion: 0.21
+Nodes (8): test_executive_risk_metrics_rebuild(), test_snapshot_rebuild_after_cache_deletion(), test_snapshot_trends_limit(), PostureDriftService, Clear the posture snapshot cache., Retrieve the cached posture snapshot. Rebuilds dynamically if missing/corrupted., Dynamically rebuild organizational risk, posture scores, and critical counts fro, SecurityPostureSnapshotService
 
 ### Community 217 - "Community 217"
 Cohesion: 0.13
@@ -1523,20 +1531,20 @@ Cohesion: 0.23
 Nodes (13): KPIResponse, KRIResponse, ProgramInitiativeResponse, ProgramObjectiveResponse, test_initiative_completion(), test_objective_completion(), test_program_health_score(), test_program_health_score_all_empty() (+5 more)
 
 ### Community 220 - "Community 220"
-Cohesion: 0.15
-Nodes (13): get_auth_header(), Verify that redundant sync calls do not add duplicate items to plan list., Verify sync doesn't reactivate closed plans., Verify that build_asset_context includes planning_summary and planning_records., Verify planning API requests enforce scope checks for non-admin users., Verify plans can be synced/created dynamically and validates categories., Verify SHA-256 fingerprints are deterministic and stable across identical calls., test_ai_context_planning_injection() (+5 more)
+Cohesion: 0.11
+Nodes (24): Verify that redundant sync calls do not add duplicate items to plan list., test_plan_duplicate_prevention(), activate_plan(), check_scope_ownership(), close_plan(), create_plan(), get_allowed_scope_ids(), get_plan() (+16 more)
 
 ### Community 221 - "Community 221"
-Cohesion: 0.14
-Nodes (9): test_get_resilience_objective_compliance_calculation(), test_objective_service_clear(), test_resilience_objective_compliance_default_no_objectives(), test_set_objective(), test_set_objective_updates_timestamp(), RecoveryObjective, Clear all recovery objectives., Create or update a recovery objective (RTO/RPO) for a resilience record. (+1 more)
+Cohesion: 0.10
+Nodes (13): clean_stores(), test_get_resilience_objective_compliance_calculation(), test_history_clear(), test_objective_service_clear(), test_resilience_objective_compliance_default_no_objectives(), test_set_objective(), test_set_objective_updates_timestamp(), RecoveryObjective (+5 more)
 
 ### Community 222 - "Community 222"
 Cohesion: 0.14
 Nodes (10): test_determine_severity_critical(), test_determine_severity_high(), test_determine_severity_low(), test_determine_severity_medium(), test_extra_knowledge_25(), test_severity_registry_threshold(), KnowledgeSeverityRegistry, Resolve deterministic severity score threshold weight. (+2 more)
 
 ### Community 223 - "Community 223"
-Cohesion: 0.23
-Nodes (8): FindingSnapshotService, _make_utc(), Aggregate finding counts, scan timestamps, and trend metrics for a         speci, Service to aggregate finding statistics (snapshots) per asset., Recompute and save the snapshot for a specific asset., Count newly created findings for this asset since the timestamp., Count findings transitioned to resolved for this asset since the         timesta, Count resolved findings rediscovered for this asset since the         timestamp.
+Cohesion: 0.18
+Nodes (10): test_finding_snapshot_generation(), FindingSnapshotService, _make_utc(), Aggregate finding counts, scan timestamps, and trend metrics for a         speci, Service to aggregate finding statistics (snapshots) per asset., Recompute and save the snapshot for a specific asset., Retrieve the latest snapshot from memory storage., Count newly created findings for this asset since the timestamp. (+2 more)
 
 ### Community 224 - "Community 224"
 Cohesion: 0.14
@@ -1555,12 +1563,12 @@ Cohesion: 0.14
 Nodes (13): 1. Deterministic Event Fingerprinting (`monitoring_fingerprint_service.py`), 1. Verification Test Suite, 2. Baseline State Service (`baseline_state_service.py`), 2. Full Regression Validation, 3. Continuous Refresh Engine & Drift Detection (`continuous_refresh_service.py`), 4. Cache-Only Snapshots (`monitoring_snapshot_service.py`), 5. API Gateway Routers (`api/v1/routers/monitoring.py`), 6. AI Copilot Enrichment (+5 more)
 
 ### Community 228 - "Community 228"
-Cohesion: 0.15
-Nodes (8): MilestoneType, PlanningSnapshotResponse, PlanPriority, PlanStatus, MilestoneTypeRegistry, Validate if milestone_type is a valid MilestoneType., PlanningPriorityRegistry, Get the weight coefficient for a milestone type.
+Cohesion: 0.22
+Nodes (5): RoadmapResponse, PlanningOptimizationService, Compute deterministic roadmap optimization for a plan., PlanningPriorityRegistry, Get the weight coefficient for a milestone type.
 
 ### Community 229 - "Community 229"
-Cohesion: 0.19
-Nodes (9): ControlHistoryEntry, test_control_history_immutability(), test_control_history_preserves_events(), test_control_history_service_get(), test_control_history_service_record(), ControlHistoryService, Clear all logged control history., Get all logged history for a security control. (+1 more)
+Cohesion: 0.14
+Nodes (11): ControlHistoryEntry, clean_stores(), test_control_history_immutability(), test_control_history_service_get(), test_control_history_service_record(), ControlHistoryService, Clear all logged control history., Get all logged history for a security control. (+3 more)
 
 ### Community 230 - "Community 230"
 Cohesion: 0.17
@@ -1575,12 +1583,12 @@ Cohesion: 0.15
 Nodes (9): test_recovery_objective_registry_rpo_tiers(), test_recovery_objective_registry_tiers(), test_recovery_objective_registry_types(), test_recovery_objective_registry_types_list(), test_recovery_objective_registry_validate(), Get standard hours tiers for RTO/RPO., List supported recovery objective types., Validate if a value is a standard tier for objective type. (+1 more)
 
 ### Community 233 - "Community 233"
-Cohesion: 0.15
-Nodes (7): clean_stores(), test_hunt_snapshot_consistency_cleared(), Clear all logged history., Clear all hypotheses., Clear all cached snapshots., Clear all correlated IOC groups., Clear all in-memory IOC records and references.
+Cohesion: 0.13
+Nodes (9): clean_stores(), test_hunt_snapshot_by_scope(), test_hunt_snapshot_consistency_cleared(), Clear all logged history., Clear all hypotheses., Clear all hunt records and references., HuntSnapshotService, Clear all cached snapshots. (+1 more)
 
 ### Community 234 - "Community 234"
-Cohesion: 0.15
-Nodes (10): clean_graph_stores(), Verify structural drift logic detects node/edge count changes and weight changes, Verify graph drift logs can be cleared., Verify get_snapshot rebuilds from source graph if the cache is missing or delete, test_graph_drift_clearing(), test_graph_drift_detection(), test_snapshot_rebuild_after_cache_deletion(), Clear all in-memory graph drift logs. (+2 more)
+Cohesion: 0.17
+Nodes (8): test_posture_registry_categories(), test_posture_registry_resolve(), test_posture_registry_resolve_fallback(), test_posture_registry_valid_check(), Check if a category is valid/registered., Resolve string/enum to RiskCategory, defaulting to OPERATIONAL., Retrieve all registered risk/posture categories., SecurityPostureRegistry
 
 ### Community 235 - "Community 235"
 Cohesion: 0.15
@@ -1599,24 +1607,20 @@ Cohesion: 0.15
 Nodes (12): AegisX Sprint 37.6C — Implementation Readiness Review, Deliverable 1: Complete Model Inventory, Deliverable 2: Repository Inventory, Deliverable 3: Service Impact Matrix (308 Services), Deliverable 4: Migration Dependency Map, Deliverable 5: Implementation Backlog (4-6 Weeks), Epic 1: Multi-Tenancy & Persistence Foundations, Epic 2: Domain Modeling & Repositories (+4 more)
 
 ### Community 239 - "Community 239"
-Cohesion: 0.21
-Nodes (10): CaseHistoryEntry, Verify case history can be cleared., Verify that case history entries are immutable, append-only, and preserved after, Verify GET /cases/{id}/timeline retrieves history audit logs., test_api_timeline(), test_case_history_clear(), test_case_history_preserved_after_closure(), CaseHistoryService (+2 more)
-
-### Community 240 - "Community 240"
-Cohesion: 0.20
-Nodes (8): GraphAnalysisResponse, GraphEdgeResponse, GraphHistoryEntry, GraphPathResponse, GraphSnapshotResponse, Record an immutable history log for a graph node or edge., Transition an edge to DEPRECATED (terminal state)., Retrieve an edge by ID.
+Cohesion: 0.25
+Nodes (6): Verify case history can be cleared., Verify that case history entries are immutable, append-only, and preserved after, test_case_history_clear(), test_case_history_preserved_after_closure(), Get all logged history for a case., Record a history event for a case. Entries are immutable and appended to the his
 
 ### Community 241 - "Community 241"
 Cohesion: 0.32
 Nodes (8): useCreateTenantWorkspace(), useSSOConfiguration(), useTenantsList(), useUpdateSSOConfiguration(), SSOConfiguration, ssoService, TenantWorkspace, AdminSsoContent()
 
 ### Community 242 - "Community 242"
-Cohesion: 0.20
-Nodes (7): clean_hardening_stores(), clean_grc_threat_stores(), Clear all GRC records and lookup cache., Clear all GRC knowledge records and lookup cache., Clear all GRC threat intelligence history logs., Clear the GRC threat intelligence snapshot cache., Clear all GRC threat intelligence records and lookup cache.
+Cohesion: 0.13
+Nodes (11): clean_hardening_stores(), clean_grc_threat_stores(), Verify snapshot can be completely rebuilt if cache is deleted., Verify snapshot recovery when cached dict is corrupted., test_snapshot_rebuild_after_cache_corruption(), test_snapshot_rebuild_after_cache_deletion(), Clear all GRC records and lookup cache., Clear all GRC knowledge records and lookup cache. (+3 more)
 
 ### Community 243 - "Community 243"
-Cohesion: 0.17
-Nodes (8): clean_stores(), test_snapshot_cache_clear(), test_snapshot_corruption_rebuild(), test_snapshot_defaults_for_missing_scope(), Clear all resilience records., Clear the snapshot cache., Retrieve the cached snapshot, defaulting to a minimal fallback if missing or cor, Clear all logged resilience history.
+Cohesion: 0.20
+Nodes (10): ComplianceGapResponse, test_compliance_gap_tracking_missing_evidence(), test_compliance_gap_tracking_no_controls(), test_compliance_gap_tracking_no_gaps(), test_extra_grc_16(), test_extra_grc_17(), test_extra_grc_18(), get_gaps() (+2 more)
 
 ### Community 244 - "Community 244"
 Cohesion: 0.20
@@ -1643,16 +1647,16 @@ Cohesion: 0.17
 Nodes (11): API Gateway, Automated Tests, Changes Made, Core Services, Coverage Results, Domain Models, Integrations, Registries (+3 more)
 
 ### Community 250 - "Community 250"
-Cohesion: 0.22
-Nodes (8): ConfidencePropagationResponse, FabricCorrelationResponse, Verify propagation route objects are automatically generated., test_propagation_route_auto_creation(), IntelligencePropagationService, Compute deterministic confidence scores for a node., Compute the propagation routes dynamically and deterministically., Compute cross-domain correlation score maps deterministically.
+Cohesion: 0.10
+Nodes (25): ConfidencePropagationResponse, FabricCorrelationResponse, Verify propagation route objects are automatically generated., test_propagation_route_auto_creation(), calculate_score_maps(), check_scope_ownership(), get_allowed_scope_ids(), get_fabric_node() (+17 more)
 
 ### Community 251 - "Community 251"
-Cohesion: 0.27
-Nodes (7): CampaignStatus, IOCResponse, IOCSeverity, IOCStatus, IOCType, ThreatActorStatus, ThreatFeedType
+Cohesion: 0.05
+Nodes (47): BaseModel, PlanningSnapshotResponse, ValidationResponse, AssetExplanationSchema, ExecutiveSummarySchema, FindingExplanationSchema, RiskScenarioResponse, ExecutiveReportResponse (+39 more)
 
 ### Community 252 - "Community 252"
-Cohesion: 0.18
-Nodes (7): clean_planning_stores(), clean_stores(), clean_stores(), test_concurrent_history_updates(), Clear all in-memory plans and history logs., PlanningHistoryService, Clear all history logs.
+Cohesion: 0.25
+Nodes (5): clean_planning_stores(), clean_stores(), test_concurrent_history_updates(), Clear all in-memory plans and history logs., Clear all history logs.
 
 ### Community 253 - "Community 253"
 Cohesion: 0.20
@@ -1671,16 +1675,16 @@ Cohesion: 0.18
 Nodes (11): Acceptance Criteria, API Integrations, Components, Product Value, Screens, Sprint 39: Core Asset & Triage Workspace, Sprint Objective, State Management (+3 more)
 
 ### Community 257 - "Community 257"
-Cohesion: 0.05
-Nodes (13): MemoryStorageAdapter, RedisStorageAdapter, Resolve the configured cache storage provider dynamically., StorageFactory, CacheStorageProtocol, Store a value in the cache by key., Remove a key and its value from the cache., Retrieve all keys matching a specific pattern. (+5 more)
+Cohesion: 0.12
+Nodes (9): CacheStorageProtocol, Store a value in the cache by key., Remove a key and its value from the cache., Retrieve all keys matching a specific pattern., Clear all entries in this cache namespace., Acquire a lock for concurrency control. Returns True if successful., Release a previously acquired lock., Retrieve a value from the cache by key. (+1 more)
 
 ### Community 258 - "Community 258"
 Cohesion: 0.18
 Nodes (11): Acceptance Criteria, API Integrations, Components, Product Value, Screens, Sprint 40: SOC Queues & Resilience Monitor, Sprint Objective, State Management (+3 more)
 
 ### Community 259 - "Community 259"
-Cohesion: 0.11
-Nodes (8): CyberResilienceHistory, ResilienceHistoryEntry, ModelType, BaseRepository, CyberResilienceRepository, EventRepository, Record an immutable history event for a resilience record., Convert a CyberResilienceHistory DB record to ResilienceHistoryEntry response sc
+Cohesion: 0.08
+Nodes (8): CyberResilienceHistory, SecurityKnowledgeRecord, SecurityKnowledgeRelationship, ModelType, BaseRepository, CyberResilienceRepository, EventRepository, KnowledgeRepository
 
 ### Community 260 - "Community 260"
 Cohesion: 0.18
@@ -1715,8 +1719,8 @@ Cohesion: 0.18
 Nodes (10): Architectural Constraints (Sprint 1–26 Compliance), Automated Tests, Core Services (`backend/src/services/`) [NEW], Domain Models (`backend/src/domain/entities/executive_reporting.py`) [NEW], Fingerprinting (`backend/src/services/executive_report_fingerprint_service.py`) [NEW], Integrations [MODIFY], Registries (`backend/src/services/`) [NEW], Sprint 27: Executive Risk & Board Reporting Intelligence (+2 more)
 
 ### Community 268 - "Community 268"
-Cohesion: 0.18
-Nodes (10): 10. Production Readiness & Scores (Phase 9), 1. Executive Summary, 5. API Audit (Phase 4), 6. AI Audit (Phase 5), 9. Cross-Sprint Consistency (Phase 8), AegisX Full Architectural & Implementation Audit Report, Audit Findings:, Context Completeness: (+2 more)
+Cohesion: 0.14
+Nodes (13): 10. Production Readiness & Scores (Phase 9), 1. Executive Summary, 5. API Audit (Phase 4), 6. AI Audit (Phase 5), 8. Test Audit (Phase 7), 9. Cross-Sprint Consistency (Phase 8), AegisX Full Architectural & Implementation Audit Report, Audit Findings: (+5 more)
 
 ### Community 269 - "Community 269"
 Cohesion: 0.18
@@ -1743,12 +1747,12 @@ Cohesion: 0.13
 Nodes (14): 10. Estimated implementation progress based on current files, 3. Frontend file inventory, 4. Backend file inventory, 5. New routers added beyond Sprint 4, 6. New services added beyond Sprint 4, 7. New tests added beyond Sprint 4, 8. New database models added beyond Sprint 4, 9. New Celery tasks added beyond Sprint 4 (+6 more)
 
 ### Community 275 - "Community 275"
-Cohesion: 0.20
-Nodes (6): DecisionImpactResponse, DecisionTradeoffResponse, Compute deterministic tradeoff factors., Compute deterministic impact metrics., Retrieve pre-seeded factors for a decision type., TradeoffFactorRegistry
+Cohesion: 0.29
+Nodes (4): DecisionTradeoffService, Compute deterministic impact metrics., Retrieve pre-seeded factors for a decision type., TradeoffFactorRegistry
 
 ### Community 276 - "Community 276"
-Cohesion: 0.22
-Nodes (7): test_control_severity_highest(), test_control_severity_registry_resolve(), test_severity_hierarchy_empty(), test_severity_hierarchy_order(), ControlSeverityRegistry, Determine the highest severity from a sequence of severities., Safely resolve control severity from enum or string, defaulting to LOW.
+Cohesion: 0.25
+Nodes (6): test_control_severity_highest(), test_control_severity_registry_resolve(), test_severity_hierarchy_empty(), test_severity_hierarchy_order(), Determine the highest severity from a sequence of severities., Safely resolve control severity from enum or string, defaulting to LOW.
 
 ### Community 277 - "Community 277"
 Cohesion: 0.22
@@ -1802,10 +1806,6 @@ Nodes (10): Acceptance Criteria, API Integrations, Components, Screens, Sprint 4
 Cohesion: 0.20
 Nodes (10): Acceptance Criteria, API Integrations, Components, Screens, Sprint 47: Saved Investigations, Alerting & Report Builder, Sprint Objective, State Management, Testing Requirements (+2 more)
 
-### Community 291 - "Community 291"
-Cohesion: 0.24
-Nodes (4): Return recommendations that haven't been seen or updated         for a given num, Calculate the age of the recommendation in days., Record recommendation creation or recomputation, handling priority         updat, RecommendationHistoryService
-
 ### Community 292 - "Community 292"
 Cohesion: 0.15
 Nodes (12): 10. Missing roadmap documents, 11. Gap analysis between repository state and planned state, 1. Actual roadmap position, 2. Actual completed sprint number, 3. Router inventory, 4. Endpoint inventory, 5. Service inventory, 6. Database model inventory (+4 more)
@@ -1850,21 +1850,17 @@ Nodes (9): API Gateway & Router, Automated Integration Tests, Changes Made, Core
 Cohesion: 0.20
 Nodes (9): 1. Concurrent Test Coverage, 1. Storage Abstraction Layer, 2. Core Suite Regression Verification, 2. Services Refactoring (Sprints 24–37 Stateful Inventory), 3. Terminology & Calculations Cleanup, 4. Cache Bootstrap Recovery Pipeline, Changes Made, Hardening Walkthrough: Storage Abstraction Layer & Cache Recovery Pipeline (+1 more)
 
-### Community 303 - "Community 303"
-Cohesion: 0.22
-Nodes (6): DecisionImpact, DecisionSnapshotResponse, DecisionStatus, DecisionType, DecisionImpactRegistry, Validate if decision_impact is a valid DecisionImpact.
-
 ### Community 304 - "Community 304"
-Cohesion: 0.22
-Nodes (5): clean_stores(), test_concurrent_graph_updates(), GraphHistoryService, Clear all GRC graph history logs., Clear all nodes, edges, lookup maps, and histories.
+Cohesion: 0.18
+Nodes (8): test_critical_services_returns_empty_when_no_records(), test_distribution_returns_zero_counts_default(), test_get_critical_services_count(), test_get_resilience_by_scope_isolation(), test_get_resilience_distribution_stats(), Get all resilience records filtered by scope., Filter resilience records to MISSION_CRITICAL or HIGH criticality only., Get status distribution breakdown counts.
 
 ### Community 305 - "Community 305"
-Cohesion: 0.22
-Nodes (8): test_ai_prompt_builder_advisory_cyber_resilience(), test_ai_advisory_only_enforcement(), test_ai_prompt_builder_advisory(), test_ai_advisory_only_enforcement_compliance(), test_ai_advisory_only_enforcement_knowledge(), test_ai_prompt_builder_advisory_soc(), test_ai_executive_prompt_constraints(), Construct prompt for organization-wide executive summary and compliance.
+Cohesion: 0.24
+Nodes (6): test_severity_mapping(), FindingNormalizationService, FindingSeverityRules, Normalize a severity input to its lowercase canonical representation., Retrieve the integer rank of a severity level (1-5)., Check if the given value represents a valid supported severity level.
 
 ### Community 306 - "Community 306"
-Cohesion: 0.22
-Nodes (6): test_criticality_registry_weight(), test_criticality_registry_weight_invalid(), test_resilience_score(), CriticalityRegistry, Resolve deterministic weight factors for service criticality., Calculate resilience score weighted: readiness 30%, objective compliance 30%, cr
+Cohesion: 0.33
+Nodes (4): test_criticality_registry_weight(), test_criticality_registry_weight_invalid(), CriticalityRegistry, Resolve deterministic weight factors for service criticality.
 
 ### Community 307 - "Community 307"
 Cohesion: 0.22
@@ -1875,16 +1871,16 @@ Cohesion: 0.22
 Nodes (6): clean_stores(), test_executive_history_clear(), test_executive_reports_clear(), Clear all logged report history., Clear all report caches., Clear the trend cache.
 
 ### Community 309 - "Community 309"
-Cohesion: 0.22
-Nodes (6): test_kpi_registry_count(), test_kpi_registry_list(), test_kpi_registry_validate(), List all supported operational KPIs., Validate if a KPI is supported., SOCKPIRegistry
+Cohesion: 0.24
+Nodes (8): KnowledgeRelationshipResponse, test_extra_knowledge_29(), test_relationship_mapping_deterministic(), test_relationship_preservation(), get_relationships(), Get all GRC knowledge relationships., Create a new GRC knowledge relationship., Get all GRC knowledge relationships.
 
 ### Community 310 - "Community 310"
-Cohesion: 0.22
-Nodes (6): test_kri_registry_count(), test_kri_registry_list(), test_kri_registry_validate(), List all supported operational KRIs., Validate if a KRI is supported., SOCKRIRegistry
+Cohesion: 0.12
+Nodes (13): test_calculate_kri_critical_risk(), test_calculate_kri_high_risk(), test_calculate_kri_low_risk(), test_calculate_kri_medium_risk(), test_kri_registry_count(), test_kri_registry_list(), test_kri_registry_validate(), test_set_kri() (+5 more)
 
 ### Community 311 - "Community 311"
-Cohesion: 0.28
-Nodes (6): test_program_correlation_append_only(), test_program_correlation_clear(), test_program_correlation_preservation(), Clear all program correlations., Retrieve correlations for a security program., Correlate security program against incidents, cases, and active alerts.
+Cohesion: 0.20
+Nodes (6): test_exercise_type_registered(), test_exercise_type_valid(), ExerciseTypeRegistry, Check if an exercise type is registered/valid., Resolve string/enum to ExerciseType, defaulting to ATTACK_SIMULATION., Retrieve all registered exercise types.
 
 ### Community 312 - "Community 312"
 Cohesion: 0.22
@@ -1919,40 +1915,40 @@ Cohesion: 0.18
 Nodes (10): 1. Core Modifications (Sprints 1-4 Adjustments), 2. Sprint 5: Plugin Architecture, 3. Sprint 6: Recon & Service Discovery, 4. Sprint 7: Asset Intelligence & History, 5. Sprint 8: Vulnerability Management, 6. Sprint 9: Correlation & Risk Intelligence, 7. Sprint 10: Reporting & Analytics, 8. Sprints 38/39: Frontend Application Parity (+2 more)
 
 ### Community 320 - "Community 320"
-Cohesion: 0.29
-Nodes (6): Verify drift detection triggers when average scores drop., Verify drift clearing / stable events tracking., test_threat_intel_drift_clearing(), test_threat_intel_drift_detection(), Clear all tracked workflow events., Get all tracked workflow events.
+Cohesion: 0.25
+Nodes (6): Verify drift clearing / stable events tracking., test_threat_intel_drift_clearing(), get_threat_drift(), Retrieve list of emitted drift events from the workflow event system., Clear all tracked workflow events., Get all tracked workflow events.
 
 ### Community 321 - "Community 321"
 Cohesion: 0.25
 Nodes (8): 11. Final Deliverable & Recommended Fix Order, A. Critical Defects (Priority 1), B. High Priority Defects (Priority 2), C. Medium Priority Defects (Priority 3), D. Dead Code Report, E. Test & Integration Gap Report, F. Recommended Fix Order, G. Whether Sprint 38 Should Begin
 
 ### Community 322 - "Community 322"
-Cohesion: 0.38
-Nodes (5): ControlSeverity, ControlStatus, ControlType, ValidationResponse, ValidationStatus
+Cohesion: 0.36
+Nodes (6): CreateReportRequest, TransitionStatusRequest, ExecutiveHeatmapService, ExecutiveScorecardService, ExecutiveSnapshotService, ExecutiveTrendService
 
 ### Community 323 - "Community 323"
-Cohesion: 0.29
-Nodes (6): CorrelationResponse, Detailed explanation of a single risk factor contribution., Unified risk parameters, scores, and explanations for an asset., Unified correlation details of an asset., RiskExplanationResponse, RiskResponse
+Cohesion: 0.15
+Nodes (13): CorrelationResponse, Detailed explanation of a single risk factor contribution., Unified risk parameters, scores, and explanations for an asset., Unified correlation details of an asset., RiskExplanationResponse, RiskResponse, RiskResponse, check_asset_ownership() (+5 more)
 
 ### Community 324 - "Community 324"
-Cohesion: 0.33
-Nodes (5): ExecutiveReportResponse, ExecutiveReportStatus, ExecutiveScorecardResponse, ExecutiveSeverity, ScorecardStatus
+Cohesion: 0.25
+Nodes (6): FindingEvidence, test_evidence_immutability(), FindingEvidenceService, Service to persist finding evidence records as append-only versions., Generate a SHA-256 hash of the evidence fields., Create a new FindingEvidence record if it doesn't exist.
 
 ### Community 325 - "Community 325"
-Cohesion: 0.29
-Nodes (5): ComplianceControlResponse, ComplianceSeverity, GovernanceSnapshotResponse, GovernanceStatus, RiskAcceptanceStatus
+Cohesion: 0.13
+Nodes (22): GovernanceSnapshotResponse, RiskAcceptanceResponse, accept_risk(), check_asset_ownership(), get_asset_governance_status(), get_finding_governance_status(), get_governance_summary(), list_accepted_risks() (+14 more)
 
 ### Community 326 - "Community 326"
-Cohesion: 0.38
-Nodes (5): ExerciseSeverity, ExerciseStatus, ExerciseType, ValidationResponse, ValidationStatus
+Cohesion: 0.25
+Nodes (6): test_template_affected_asset_count(), test_template_severity_distribution(), Aggregate stats for a single template., List aggregates for all templates in the database., Service to track template findings, severity distribution, and     affected asse, TemplateTrackingService
 
 ### Community 327 - "Community 327"
-Cohesion: 0.29
-Nodes (4): EdgeType, GraphEdgeTypeRegistry, Validate if edge_type is a valid GRC Graph EdgeType., Retrieve pre-seeded edge weight.
+Cohesion: 0.22
+Nodes (8): Test the readiness check (/readyz) returns 200     when all backend services are, Test that /readyz returns 503 Service Unavailable     when the database query fa, Test that /readyz returns 503 Service Unavailable     when Redis fails to respon, Test the liveness check endpoint (/healthz) returns 200 OK., test_healthz(), test_readyz_db_failure(), test_readyz_redis_failure(), test_readyz_success()
 
 ### Community 328 - "Community 328"
-Cohesion: 0.29
-Nodes (4): clean_stores(), test_concurrent_fabric_propagation(), Clear all history logs., Clear all in-memory fabric nodes and history logs.
+Cohesion: 0.18
+Nodes (7): FabricHistoryEntry, clean_stores(), test_concurrent_fabric_propagation(), FabricHistoryService, Clear all history logs., Record an immutable history log for a fabric node., Clear all in-memory fabric nodes and history logs.
 
 ### Community 329 - "Community 329"
 Cohesion: 0.29
@@ -1971,12 +1967,12 @@ Cohesion: 0.29
 Nodes (3): test_nuclei_plugin_execution(), NucleiPlugin, Nuclei Plugin for vulnerability scanning.     Executes nuclei to detect vulnerab
 
 ### Community 333 - "Community 333"
-Cohesion: 0.29
-Nodes (4): clean_stores(), Clear all in-memory baseline caches., Clear all in-memory events and fingerprints., Clear the cached platform monitoring snapshot.
+Cohesion: 0.20
+Nodes (6): clean_stores(), Clear all in-memory baseline caches., MonitoringSnapshotService, Clear the cached platform monitoring snapshot., Retrieve cumulative metrics snapshot, rebuilding if empty., Aggregate snapshot metrics by traversing event logs.
 
 ### Community 334 - "Community 334"
-Cohesion: 0.33
-Nodes (5): test_snapshot_rebuild_after_cache_deletion(), test_snapshot_rebuild_consistency(), PurpleTeamSnapshotService, Clear all cached snapshots., Get the cached snapshot, rebuilding dynamically if missing (consistency).
+Cohesion: 0.25
+Nodes (5): test_extra_grc_19(), test_framework_mapping_calculation(), test_framework_mapping_deterministic(), FrameworkMappingService, Deprecated placeholder calculation method.
 
 ### Community 335 - "Community 335"
 Cohesion: 0.29
@@ -1987,12 +1983,12 @@ Cohesion: 0.29
 Nodes (5): test_extra_knowledge_24(), test_tag_registry_count(), test_tag_registry_list(), KnowledgeTagRegistry, List all pre-seeded tags.
 
 ### Community 337 - "Community 337"
-Cohesion: 0.29
-Nodes (4): test_kpi_registry_validation(), KPIRegistry, Retrieve pre-seeded KPIs definitions and targets., Check if a KPI name is pre-seeded/registered.
+Cohesion: 0.14
+Nodes (8): test_kpi_calculation(), test_kpi_registry_validation(), ControlValidationSnapshotService, Retrieve the cached snapshot, defaulting to a minimal fallback if missing or cor, KPIRegistry, Retrieve pre-seeded KPIs definitions and targets., Check if a KPI name is pre-seeded/registered., Recalculate and return all pre-seeded KPIs dynamically.
 
 ### Community 338 - "Community 338"
-Cohesion: 0.29
-Nodes (4): test_kri_registry_validation(), KRIRegistry, Retrieve pre-seeded KRIs definitions and thresholds., Check if a KRI name is pre-seeded/registered.
+Cohesion: 0.13
+Nodes (9): test_kri_calculation(), test_kri_registry_validation(), test_program_correlation_empty_scope(), Retrieve all cases from store., KRIRegistry, Retrieve pre-seeded KRIs definitions and thresholds., Check if a KRI name is pre-seeded/registered., Recalculate and return all pre-seeded KRIs dynamically. (+1 more)
 
 ### Community 339 - "Community 339"
 Cohesion: 0.29
@@ -2007,8 +2003,8 @@ Cohesion: 0.33
 Nodes (5): RiskForecastResponse, test_extra_24(), test_forecast_deterministic(), test_forecast_generation(), Project 4-quarter deterministic risk forecasts.
 
 ### Community 342 - "Community 342"
-Cohesion: 0.47
-Nodes (4): PostureSeverity, RiskCategory, RiskResponse, RiskStatus
+Cohesion: 0.25
+Nodes (5): clean_stores(), test_risk_correlation_preservation(), Clear all posture correlations., Retrieve correlations for a posture., RiskCorrelationService
 
 ### Community 343 - "Community 343"
 Cohesion: 0.33
@@ -2019,24 +2015,32 @@ Cohesion: 0.33
 Nodes (5): get_auth_header(), Verify ThreatIntelActorResponse Pydantic schema exists., Verify that a failure in Sprint 33 Threat Intel block does not skip executing Sp, test_threat_intel_actor_model_rename(), test_worker_isolation_failure_independence()
 
 ### Community 345 - "Community 345"
-Cohesion: 0.33
-Nodes (4): Verify incident fingerprint calculation stability., test_incident_fingerprint_stability(), IncidentFingerprintService, Generate a stable, deterministic SHA-256 fingerprint for an incident.
+Cohesion: 0.25
+Nodes (5): test_risk_category_mappings(), test_risk_category_supported(), Retrieve all supported risk classifications., Check if classification is supported., RiskCategoryRegistry
+
+### Community 347 - "Community 347"
+Cohesion: 0.25
+Nodes (4): ControlCorrelationService, Clear all control correlations., Retrieve correlations for a control., Correlate control against Detections, Purple Team exercises, Hunts, Exposures, a
+
+### Community 349 - "Community 349"
+Cohesion: 0.15
+Nodes (5): test_theharvester_plugin_run(), ToolExecutor, NaabuPlugin, Naabu Plugin for Port Discovery.     Executes naabu to identify open ports. No p, TheHarvesterPlugin
 
 ### Community 350 - "Community 350"
-Cohesion: 0.33
-Nodes (4): clean_decision_stores(), DecisionHistoryService, Clear all decision history logs., Clear all in-memory decisions and registry caches.
+Cohesion: 0.29
+Nodes (6): test_extra_grc_11(), test_framework_registry_list(), test_framework_registry_types_count(), get_frameworks(), List supported GRC frameworks., List all supported GRC frameworks.
 
 ### Community 351 - "Community 351"
-Cohesion: 0.33
-Nodes (5): test_archived_knowledge_not_reactivated_by_drift(), test_extra_knowledge_43(), test_knowledge_drift_detection(), test_knowledge_identity_preserved_after_drift_processing(), Compare current GRC knowledge parameters against baseline snapshot to detect dri
+Cohesion: 0.29
+Nodes (6): test_queue_metrics_deterministic(), get_backlog(), get_queues(), Get SOC queue metrics., Get SOC backlog metrics., Retrieve queue sizes, efficiency and backlog summary metrics.
 
 ### Community 352 - "Community 352"
 Cohesion: 0.33
 Nodes (5): test_risk_prioritization(), test_risk_prioritization_empty(), test_risk_prioritization_same_severity(), test_risk_prioritization_stable_sort(), Sort and prioritize security posture records based on severity level and risk sc
 
 ### Community 353 - "Community 353"
-Cohesion: 0.27
-Nodes (4): test_program_fingerprint_case_insensitivity(), test_program_fingerprint_stability(), Generate stable security program fingerprint using SHA-256(name:category:severit, Check if a category is valid.
+Cohesion: 0.50
+Nodes (3): test_program_fingerprint_case_insensitivity(), test_program_fingerprint_stability(), Generate stable security program fingerprint using SHA-256(name:category:severit
 
 ### Community 354 - "Community 354"
 Cohesion: 0.33
@@ -2048,19 +2052,19 @@ Nodes (3): GraphFingerprintService, Generate stable SHA-256 fingerprint for a gr
 
 ### Community 357 - "Changes Made"
 Cohesion: 0.33
-Nodes (3): List all supported threat intelligence sources., Validate if a source is supported., ThreatSourceRegistry
+Nodes (4): test_snapshot_rebuild_after_cache_deletion(), test_snapshot_rebuild_after_corruption(), Clear the snapshot cache., Dynamically rebuild the exposure snapshot statistics from scratch and update cac
 
 ### Community 358 - "Changes Made"
 Cohesion: 0.40
 Nodes (3): clean_stores(), Clear all risk records and lookup cache., Clear the trend store.
 
 ### Community 359 - "Sprint 22 Walkthrough: Purple Team & ATT&CK Validation Intelligence"
-Cohesion: 0.40
-Nodes (3): Verify evidence references are read-only and retain original snapshots., test_incident_evidence_stability(), Add a read-only historical reference of an entity to the incident evidence.
+Cohesion: 0.33
+Nodes (5): test_compliance_score_calculation(), test_compliance_scoring_zero_controls(), test_extra_grc_22(), test_extra_grc_23(), Calculate deterministic framework coverage, control coverage, evidence completen
 
 ### Community 360 - "Changes Made"
-Cohesion: 0.40
-Nodes (3): Verify background worker refresh does not reactivate deprecated nodes or edges., test_deprecated_component_not_reactivated_by_worker(), Assemble node structures from across active database and in-memory domains.
+Cohesion: 0.33
+Nodes (5): test_fingerprint_casing(), test_fingerprint_length(), test_fingerprint_normalization(), test_fingerprint_stability(), Generate stable security posture fingerprint using SHA-256(category:asset_id:nor
 
 ### Community 361 - "Changes Made"
 Cohesion: 0.40
@@ -2075,8 +2079,8 @@ Cohesion: 0.50
 Nodes (3): FabricFingerprintService, FingerprintService, Generate stable SHA-256 fingerprint for a fabric intelligence node or channel.
 
 ### Community 364 - "Changes Made"
-Cohesion: 0.50
-Nodes (3): KnowledgeRecommendationResponse, test_recommendation_generation(), Generate deterministic recommendations for security workflows.
+Cohesion: 0.33
+Nodes (3): Get the SLA deadline days for a given recommendation priority., RemediationSLARegistry, Calculate target due date based on created_at and priority SLA days.
 
 ### Community 365 - "autonomous_planning.py"
 Cohesion: 0.50
@@ -2087,8 +2091,8 @@ Cohesion: 0.50
 Nodes (3): test_control_type_registry_invalid(), test_control_type_registry_valid(), Check if a control type is valid.
 
 ### Community 367 - "AlertQueueService"
-Cohesion: 0.50
-Nodes (3): test_resilience_readiness_score_planned(), test_resilience_scores_deterministic(), Calculate readiness score weighted: plan coverage 40%, validation coverage 30%,
+Cohesion: 0.40
+Nodes (3): ProgramHistoryEntry, Get all logged history for a security program., Record an immutable history event for a security program.
 
 ### Community 368 - "clean_stores"
 Cohesion: 0.50
@@ -2099,12 +2103,12 @@ Cohesion: 0.50
 Nodes (3): test_extra_25(), test_sle_calculation(), Calculate Single Loss Expectancy: SLE = Asset Value * Exposure Factor.
 
 ### Community 370 - "Sprint 26: Security Program Intelligence"
-Cohesion: 0.50
-Nodes (3): test_scorecard_registry_validation(), test_scorecard_status_thresholds(), Resolve ScorecardStatus based on health score thresholds.
+Cohesion: 0.40
+Nodes (4): test_control_mapping_validation(), test_extra_grc_20(), test_extra_grc_21(), Validate if control belongs to framework.
 
 ### Community 371 - "Changes Completed"
-Cohesion: 0.50
-Nodes (3): Verify manual escalation to owner works and logs history., test_incident_escalation_manual_owner(), Escalate incident to the primary owner of the linked assets.
+Cohesion: 0.40
+Nodes (3): test_actor_mapping_preserved(), AdversaryEmulationService, Retrieve threat actors associated with a given technique.
 
 ### Community 372 - "Changes Made"
 Cohesion: 0.50
@@ -2113,6 +2117,10 @@ Nodes (3): Verify threat indicator types validation consistency., test_threat_in
 ### Community 373 - "NaabuPlugin"
 Cohesion: 0.50
 Nodes (3): Verify stable hash generation regardless of casing or whitespace., test_threat_intel_fingerprint_stability(), Generate stable GRC threat intelligence fingerprint using SHA-256.
+
+### Community 374 - "NmapPlugin"
+Cohesion: 0.40
+Nodes (3): test_output_normalization(), DiscoveryNormalizationService, Normalize raw output of discovery tools into standardized format.
 
 ### Community 375 - "ControlCorrelationService"
 Cohesion: 0.50
@@ -2142,6 +2150,10 @@ Nodes (3): Cyber Resilience Intelligence (Sprint 28), Failures must never crash 
 Cohesion: 0.29
 Nodes (6): 1. Inventory Summary, 2. Actual Completed Sprint Number, 3. Partially Implemented Features, 4. Missing Tests, 5. Recommended Commit Groups, Repository Reconciliation Report
 
+### Community 388 - "Sprint 38 & 39 Completed Code Review"
+Cohesion: 0.50
+Nodes (3): test_confidence_score_calculation_approved(), test_confidence_score_calculation_unapproved(), Calculate deterministic confidence score based on approval status.
+
 ### Community 392 - ".clear_plans"
 Cohesion: 0.50
 Nodes (4): 3. Service Audit (Phase 2), Unused Models:, Unused Registries:, Unused Services:
@@ -2150,37 +2162,41 @@ Nodes (4): 3. Service Audit (Phase 2), Unused Models:, Unused Registries:, Unuse
 Cohesion: 0.50
 Nodes (4): 7. Identity & Terminal State Audit (Phase 6), Deterministic Hashing:, Identity Preservation:, Terminal State Enforcement:
 
+### Community 395 - ".list_types"
+Cohesion: 0.50
+Nodes (3): test_risk_score_calculation(), test_risk_score_stability(), Aggregate risks and calculate deterministic likelihood, impact, and risk score.
+
 ### Community 398 - "Build Verification Report"
 Cohesion: 0.40
 Nodes (4): 1. Frontend Build & Lint (`npm run lint`, `tsc --noEmit`), 2. Backend Lint (`ruff check src/`), 3. Recommended Actions, Build Verification Report
+
+### Community 399 - ".record_event"
+Cohesion: 0.09
+Nodes (14): _execute_workflow_async(), Requirement 28: Worker resilience. Verify snapshot errors do not crash., test_worker_resilience(), test_capability_mismatch_rejection(), test_ownership_validation(), test_worker_stability(), Run compliance gap tracking logic (read-only derived intelligence)., Run GRC compliance scoring calculations (read-only derived intelligence). (+6 more)
 
 ### Community 408 - ".validate"
 Cohesion: 0.67
 Nodes (3): 4. Worker Audit (Phase 3), Audit Findings:, Execution & Ordering Flow:
 
-### Community 409 - ".validate"
-Cohesion: 0.67
-Nodes (3): 8. Test Audit (Phase 7), Gaps & Coverage Vulnerabilities:, Test Analysis:
-
 ## Knowledge Gaps
 - **1498 isolated node(s):** `MockInvalidPlugin`, `eslintConfig`, `nextConfig`, `name`, `version` (+1493 more)
   These have ≤1 connection - possible missing edges or undocumented components.
-- **312 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
+- **313 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `User` connect `Authentication & User Management` to `Finding Reconciliation & Analysis`, `Incident Management & Investigation`, `Sprint 25 Walkthrough: Cont...`, `Finding Reconciliation & Analysis`, `Authentication & User Management`, `Authentication & User Management`, `Authentication & User Management`, `Authentication & User Management`, `Authentication & User Management`, `Authentication & User Management`, `Authentication & User Management`, `Governance & Compliance Drift`, `Alert Operations & Severity`, `Authentication & User Management`, `Authentication & User Management`, `Authentication & User Management`, `Reconnaissance Plugins`, `Authentication & User Management`, `Workflow & Scan Execution`, `Reconnaissance Plugins`, `Authentication & User Management`, `Core Principles`, `Authentication & User Management`, `Deploy on Vercel`, `Authentication & User Management`, `Authentication & User Management`, `Frontend Application Pages`, `Sprint 24 Walkthrough: Secu...`, `Reconnaissance Plugins`, `Authentication & User Management`, `Authentication & User Management`, `Authentication & User Management`, `Reconnaissance Plugins`, `Authentication & User Management`, `Sprint 29 — Walkthrough`, `Workflow & Scan Execution`, `Sprint 31 — Walkthrough`, `Finding Reconciliation & Analysis`, `Sprint 30 — Walkthrough`, `Incident Management & Investigation`, `Reconnaissance Plugins`, `Workflow & Scan Execution`, `Authentication & User Management`, `Authentication & User Management`, `AI Copilot & Guardrails`, `Authentication & User Management`, `Community 213`, `Community 220`, `@testing-library/react`, `Reconnaissance Plugins`, `Alert Operations & Severity`, `Asset Risk & Exposure Exposure`, `Authentication & User Management`, `Authentication & User Management`, `Workflow & Scan Execution`, `Governance & Compliance Drift`, `Alert Operations & Severity`, `Authentication & User Management`, `Finding Reconciliation & Analysis`, `Authentication & User Management`, `Workflow & Scan Execution`, `Walkthrough: Sprint 21 – Th...`, `Sprint 22 Walkthrough: Purp...`, `Sprint 19 Walkthrough: Dete...`?**
-  _High betweenness centrality (0.040) - this node is a cross-community bridge._
-- **Why does `AIContextBuilder` connect `Authentication & User Management` to `Finding Reconciliation & Analysis`, `Incident Management & Investigation`, `Authentication & User Management`, `Governance & Compliance Drift`, `Authentication & User Management`, `Alert Operations & Severity`, `Frontend Application Pages`, `Authentication & User Management`, `Reconnaissance Plugins`, `Workflow & Scan Execution`, `Authentication & User Management`, `Authentication & User Management`, `Workflow & Scan Execution`, `Cyber Resilience Intelligen...`, `Liveness check to confirm t...`, `Community 165`, `Reconnaissance Plugins`, `Authentication & User Management`, `Finding Reconciliation & Analysis`, `Sprint 11 — Implementation ...`, `Authentication & User Management`, `Authentication & User Management`, `Sprint 23 — Implementation ...`, `Sprint 25 — Implementation ...`, `e2e-stub.js`, `Sprint 30 — Walkthrough`, `Sprint 31 — Walkthrough`, `Sprint 32 — Walkthrough`, `Community 198`, `Finding Reconciliation & Analysis`, `AI Copilot & Guardrails`, `Community 334`, `Finding Reconciliation & Analysis`, `Community 350`, `Authentication & User Management`, `Community 229`, `Authentication & User Management`, `Community 239`, `Async HTTP client fixture w...`, `Community 250`, `Community 252`?**
-  _High betweenness centrality (0.013) - this node is a cross-community bridge._
-- **Why does `PluginExecutionError` connect `Workflow & Scan Execution` to `next.svg`, `Community 332`, `Community 209`, `Community 278`, `Sprint 31 — Walkthrough`, `Community 346`, `Community 347`, `Community 348`, `Community 349`?**
-  _High betweenness centrality (0.010) - this node is a cross-community bridge._
+- **Why does `User` connect `Authentication & User Management` to `Finding Reconciliation & Analysis`, `Incident Management & Investigation`, `Authentication & User Management`, `Authentication & User Management`, `Authentication & User Management`, `Authentication & User Management`, `Authentication & User Management`, `Authentication & User Management`, `Authentication & User Management`, `Authentication & User Management`, `Authentication & User Management`, `Authentication & User Management`, `Workflow & Scan Execution`, `Authentication & User Management`, `Authentication & User Management`, `Authentication & User Management`, `Authentication & User Management`, `Authentication & User Management`, `Sprint 24 Walkthrough: Secu...`, `Reconnaissance Plugins`, `Authentication & User Management`, `Finding Reconciliation & Analysis`, `Authentication & User Management`, `Reconnaissance Plugins`, `Workflow & Scan Execution`, `Incident Management & Investigation`, `Reconnaissance Plugins`, `Workflow & Scan Execution`, `Authentication & User Management`, `Authentication & User Management`, `AI Copilot & Guardrails`, `Authentication & User Management`, `@testing-library/react`, `Reconnaissance Plugins`, `Authentication & User Management`, `Asset Risk & Exposure Exposure`, `Authentication & User Management`, `Governance & Compliance Drift`, `Alert Operations & Severity`, `Finding Reconciliation & Analysis`, `Authentication & User Management`, `Workflow & Scan Execution`, `Walkthrough: Sprint 21 – Th...`, `Sprint 22 Walkthrough: Purp...`, `Finding Reconciliation & Analysis`, `Remediation & SLA Monitoring`, `Sprint 19 Walkthrough: Dete...`, `Sprint 25 Walkthrough: Cont...`, `Finding Reconciliation & Analysis`, `Authentication & User Management`, `Governance & Compliance Drift`, `Community 143`, `Authentication & User Management`, `Reconnaissance Plugins`, `Community 149`, `Core Principles`, `Workflow & Scan Execution`, `Liveness check to confirm t...`, `Community 162`, `Frontend Application Pages`, `e2e-stub.js`, `Sprint 29 — Walkthrough`, `Sprint 31 — Walkthrough`, `requirements.txt`, `CLAUDE.md`, `file.svg`, `Community 201`, `Community 205`, `Community 207`, `Community 213`, `Community 220`, `Community 243`, `Community 250`, `Community 251`, `Community 309`, `Community 320`, `Community 322`, `Community 323`, `Community 325`, `Community 350`, `Community 351`, `.record_event`?**
+  _High betweenness centrality (0.046) - this node is a cross-community bridge._
+- **Why does `BasePlugin` connect `Reporting & Dashboard Services` to `.clear_fabric`, `next.svg`, `Community 202`, `Community 332`, `Community 209`, `Community 346`, `Community 348`, `Community 349`?**
+  _High betweenness centrality (0.015) - this node is a cross-community bridge._
+- **Why does `AIContextBuilder` connect `Authentication & User Management` to `Finding Reconciliation & Analysis`, `Incident Management & Investigation`, `Finding Reconciliation & Analysis`, `Authentication & User Management`, `Authentication & User Management`, `Alert Operations & Severity`, `Frontend Application Pages`, `Authentication & User Management`, `Reconnaissance Plugins`, `Workflow & Scan Execution`, `Authentication & User Management`, `Deploy on Vercel`, `Authentication & User Management`, `Authentication & User Management`, `Workflow & Scan Execution`, `Cyber Resilience Intelligen...`, `Liveness check to confirm t...`, `Authentication & User Management`, `TERMINAL_SCANRUN_STATES`, `Community 165`, `Reconnaissance Plugins`, `Authentication & User Management`, `Finding Reconciliation & Analysis`, `Authentication & User Management`, `Authentication & User Management`, `Sprint 23 — Implementation ...`, `Sprint 25 — Implementation ...`, `e2e-stub.js`, `Sprint 31 — Walkthrough`, `Sprint 32 — Walkthrough`, `Reconnaissance Plugins`, `requirements.txt`, `Community 322`, `Community 198`, `Community 328`, `Finding Reconciliation & Analysis`, `AI Copilot & Guardrails`, `Community 208`, `Community 337`, `Community 342`, `Finding Reconciliation & Analysis`, `Community 216`, `Community 347`, `Authentication & User Management`, `Community 229`, `Community 233`, `Community 250`?**
+  _High betweenness centrality (0.012) - this node is a cross-community bridge._
 - **Are the 61 inferred relationships involving `User` (e.g. with `create_user_cli()` and `AuditMixin`) actually correct?**
   _`User` has 61 INFERRED edges - model-reasoned connections that need verification._
 - **What connects `Run migrations in 'offline' mode.      This configures the context with just a U`, `Run migrations in 'online' mode.      In this scenario we need to create an Engi`, `Retrieve the currently authenticated user from API key or JWT Bearer token.` to the rest of the system?**
-  _3416 weakly-connected nodes found - possible documentation gaps or missing edges._
+  _3412 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `Finding Reconciliation & Analysis` be split into smaller, more focused modules?**
-  _Cohesion score 0.05522501906941266 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.07995520716685331 - nodes in this community are weakly interconnected._
 - **Should `Incident Management & Investigation` be split into smaller, more focused modules?**
-  _Cohesion score 0.029867256637168143 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.0387263339070568 - nodes in this community are weakly interconnected._

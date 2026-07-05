@@ -43,6 +43,7 @@ class GraphNodeResponse(BaseModel):
     entity_id: uuid.UUID
     status: GraphComponentStatus
     scope_id: Optional[uuid.UUID] = None
+    tenant_id: Optional[uuid.UUID] = None
 
 
 class GraphEdgeResponse(BaseModel):
@@ -56,6 +57,7 @@ class GraphEdgeResponse(BaseModel):
     weight: float
     status: GraphComponentStatus
     scope_id: Optional[uuid.UUID] = None
+    tenant_id: Optional[uuid.UUID] = None
 
 
 class GraphPathResponse(BaseModel):

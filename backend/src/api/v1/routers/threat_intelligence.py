@@ -498,7 +498,7 @@ async def triage_threat(
         await check_scope_ownership(db, record.scope_id, current_user)
 
     try:
-        updated = ThreatIntelligenceService.transition_status(
+        updated = await ThreatIntelligenceService.transition_status(
             threat_intel_id, ThreatIntelStatus.IN_TRIAGE
         )
         return ThreatIntelligenceService.to_response(updated)
@@ -522,7 +522,7 @@ async def fuse_threat(
         await check_scope_ownership(db, record.scope_id, current_user)
 
     try:
-        updated = ThreatIntelligenceService.fuse_threat(threat_intel_id, payload.confidence)
+        updated = await ThreatIntelligenceService.fuse_threat(threat_intel_id, payload.confidence)
         return ThreatIntelligenceService.to_response(updated)
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
@@ -543,7 +543,7 @@ async def archive_threat(
         await check_scope_ownership(db, record.scope_id, current_user)
 
     try:
-        updated = ThreatIntelligenceService.transition_status(
+        updated = await ThreatIntelligenceService.transition_status(
             threat_intel_id, ThreatIntelStatus.ARCHIVED
         )
         return ThreatIntelligenceService.to_response(updated)

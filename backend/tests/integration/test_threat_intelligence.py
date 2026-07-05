@@ -1027,7 +1027,7 @@ async def test_threat_intel_triage_transition():
         tags=["botnet"],
     )
     assert t.status == ThreatIntelStatus.ACTIVE
-    updated = ThreatIntelligenceService.transition_status(t.threat_intel_id, ThreatIntelStatus.IN_TRIAGE)
+    updated = await ThreatIntelligenceService.transition_status(t.threat_intel_id, ThreatIntelStatus.IN_TRIAGE)
     assert updated.status == ThreatIntelStatus.IN_TRIAGE
 
 
@@ -1040,7 +1040,7 @@ async def test_threat_intel_fuse_transition():
         source="OSINT",
         tags=["botnet"],
     )
-    updated = ThreatIntelligenceService.fuse_threat(t.threat_intel_id, 85.0)
+    updated = await ThreatIntelligenceService.fuse_threat(t.threat_intel_id, 85.0)
     assert updated.status == ThreatIntelStatus.FUSED
     assert updated.confidence == 85.0
 
@@ -1054,7 +1054,7 @@ async def test_threat_intel_archive_transition():
         source="OSINT",
         tags=["botnet"],
     )
-    updated = ThreatIntelligenceService.transition_status(t.threat_intel_id, ThreatIntelStatus.ARCHIVED)
+    updated = await ThreatIntelligenceService.transition_status(t.threat_intel_id, ThreatIntelStatus.ARCHIVED)
     assert updated.status == ThreatIntelStatus.ARCHIVED
 
 
@@ -1067,10 +1067,10 @@ async def test_threat_intel_terminal_state_enforcement():
         source="OSINT",
         tags=["botnet"],
     )
-    ThreatIntelligenceService.transition_status(t.threat_intel_id, ThreatIntelStatus.ARCHIVED)
+    await ThreatIntelligenceService.transition_status(t.threat_intel_id, ThreatIntelStatus.ARCHIVED)
     
     with pytest.raises(ValueError):
-        ThreatIntelligenceService.transition_status(t.threat_intel_id, ThreatIntelStatus.ACTIVE)
+        await ThreatIntelligenceService.transition_status(t.threat_intel_id, ThreatIntelStatus.ACTIVE)
 
 
 @pytest.mark.asyncio
@@ -1082,7 +1082,7 @@ async def test_archived_threat_intel_not_reactivated_by_sync():
         source="OSINT",
         tags=["botnet"],
     )
-    ThreatIntelligenceService.transition_status(t.threat_intel_id, ThreatIntelStatus.ARCHIVED)
+    await ThreatIntelligenceService.transition_status(t.threat_intel_id, ThreatIntelStatus.ARCHIVED)
 
     # Re-sync
     synced = await ThreatIntelligenceService.create_or_sync_threat(
@@ -1103,7 +1103,7 @@ async def test_archived_threat_intel_not_reactivated_by_worker(mock_db):
         source="OSINT",
         tags=["botnet"],
     )
-    ThreatIntelligenceService.transition_status(t.threat_intel_id, ThreatIntelStatus.ARCHIVED)
+    await ThreatIntelligenceService.transition_status(t.threat_intel_id, ThreatIntelStatus.ARCHIVED)
 
     # Running sync_threats and fusion should not reactivate it
     await ThreatIntelligenceService.sync_threats(mock_db)
@@ -1120,7 +1120,7 @@ async def test_archived_threat_intel_not_reactivated_by_snapshot(mock_db):
         source="OSINT",
         tags=["botnet"],
     )
-    ThreatIntelligenceService.transition_status(t.threat_intel_id, ThreatIntelStatus.ARCHIVED)
+    await ThreatIntelligenceService.transition_status(t.threat_intel_id, ThreatIntelStatus.ARCHIVED)
 
     await ThreatIntelSnapshotService.generate_snapshot(mock_db, SCOPE_ID)
     record = ThreatIntelligenceService.get_threat(t.threat_intel_id)
@@ -1136,7 +1136,7 @@ async def test_archived_threat_intel_not_reactivated_by_drift(mock_db):
         source="OSINT",
         tags=["botnet"],
     )
-    ThreatIntelligenceService.transition_status(t.threat_intel_id, ThreatIntelStatus.ARCHIVED)
+    await ThreatIntelligenceService.transition_status(t.threat_intel_id, ThreatIntelStatus.ARCHIVED)
 
     await ThreatIntelDriftService.process_drift(mock_db, SCOPE_ID, {"summary": {"average_fusion_score": 10.0}})
     record = ThreatIntelligenceService.get_threat(t.threat_intel_id)
@@ -1152,7 +1152,7 @@ async def test_archived_threat_intel_not_reactivated_by_fusion():
         source="OSINT",
         tags=["botnet"],
     )
-    ThreatIntelligenceService.transition_status(t.threat_intel_id, ThreatIntelStatus.ARCHIVED)
+    await ThreatIntelligenceService.transition_status(t.threat_intel_id, ThreatIntelStatus.ARCHIVED)
 
     ThreatIntelFusionService.calculate()
     record = ThreatIntelligenceService.get_threat(t.threat_intel_id)
@@ -1168,7 +1168,7 @@ async def test_threat_intel_history_preserved():
         source="OSINT",
         tags=["botnet"],
     )
-    history = ThreatIntelHistoryService.get_history(t.threat_intel_id)
+    history = await ThreatIntelHistoryService.get_history(t.threat_intel_id)
     assert len(history) == 1
     assert history[0].event_type == "CREATED"
 
@@ -1182,7 +1182,7 @@ async def test_threat_intel_history_immutable():
         source="OSINT",
         tags=["botnet"],
     )
-    history = ThreatIntelHistoryService.get_history(t.threat_intel_id)
+    history = await ThreatIntelHistoryService.get_history(t.threat_intel_id)
     with pytest.raises(Exception):
         history.append("malicious-history-insertion")
 
@@ -1196,10 +1196,10 @@ async def test_threat_intel_history_order_preserved():
         source="OSINT",
         tags=["botnet"],
     )
-    ThreatIntelligenceService.transition_status(t.threat_intel_id, ThreatIntelStatus.IN_TRIAGE)
-    ThreatIntelligenceService.transition_status(t.threat_intel_id, ThreatIntelStatus.ARCHIVED)
+    await ThreatIntelligenceService.transition_status(t.threat_intel_id, ThreatIntelStatus.IN_TRIAGE)
+    await ThreatIntelligenceService.transition_status(t.threat_intel_id, ThreatIntelStatus.ARCHIVED)
 
-    history = ThreatIntelHistoryService.get_history(t.threat_intel_id)
+    history = await ThreatIntelHistoryService.get_history(t.threat_intel_id)
     assert len(history) == 3
     assert history[0].event_type == "CREATED"
     assert history[1].event_type == "TRIAGED"
@@ -1419,7 +1419,7 @@ async def test_worker_integration(mock_db):
     # Check that after run, we have fused record
     for threat in ThreatIntelligenceService.get_all_threats():
         score = ThreatIntelFusionService.calculate_fusion_score(threat.value, threat.indicator_type.value)
-        ThreatIntelligenceService.fuse_threat(threat.threat_intel_id, score)
+        await ThreatIntelligenceService.fuse_threat(threat.threat_intel_id, score)
 
     fused = [r for r in ThreatIntelligenceService.get_all_threats() if r.status == ThreatIntelStatus.FUSED]
     assert len(fused) == 1
@@ -1455,7 +1455,7 @@ async def test_threat_intel_identity_preserved_after_fusion_refresh():
     tid = t.threat_intel_id
     
     score = ThreatIntelFusionService.calculate_fusion_score(t.value, t.indicator_type.value)
-    ThreatIntelligenceService.fuse_threat(tid, score)
+    await ThreatIntelligenceService.fuse_threat(tid, score)
     
     record = ThreatIntelligenceService.get_threat(tid)
     assert record.threat_intel_id == tid

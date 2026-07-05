@@ -18,15 +18,47 @@ class ThreatRepository(BaseRepository[ThreatIntelIOC]):
     def __init__(self, session):
         super().__init__(session, ThreatIntelIOC)
 
+    async def get(self, id: uuid.UUID) -> Optional[ThreatIntelIOC]:
+        result = await self.session.execute(
+            select(ThreatIntelIOC).filter(
+                ThreatIntelIOC.ioc_id == id,
+                ThreatIntelIOC.is_deleted == False
+            )
+        )
+        return result.scalar_one_or_none()
+
+    async def get_by_id(self, id: uuid.UUID) -> Optional[ThreatIntelIOC]:
+        return await self.get(id)
+
+    async def get_by_fingerprint(self, fingerprint: str) -> Optional[ThreatIntelIOC]:
+        result = await self.session.execute(
+            select(ThreatIntelIOC).filter(
+                ThreatIntelIOC.ioc_fingerprint == fingerprint,
+                ThreatIntelIOC.is_deleted == False
+            )
+        )
+        return result.scalar_one_or_none()
+
+    async def list(self) -> List[ThreatIntelIOC]:
+        result = await self.session.execute(
+            select(ThreatIntelIOC).filter(ThreatIntelIOC.is_deleted == False)
+        )
+        return list(result.scalars().all())
+
     # Actor methods
     async def get_actor(self, actor_id: uuid.UUID) -> Optional[ThreatIntelActor]:
         result = await self.session.execute(
-            select(ThreatIntelActor).filter_by(actor_id=actor_id)
+            select(ThreatIntelActor).filter(
+                ThreatIntelActor.actor_id == actor_id,
+                ThreatIntelActor.is_deleted == False
+            )
         )
         return result.scalar_one_or_none()
 
     async def list_actors(self) -> List[ThreatIntelActor]:
-        result = await self.session.execute(select(ThreatIntelActor))
+        result = await self.session.execute(
+            select(ThreatIntelActor).filter(ThreatIntelActor.is_deleted == False)
+        )
         return list(result.scalars().all())
 
     async def save_actor(self, actor: ThreatIntelActor) -> None:
@@ -35,12 +67,17 @@ class ThreatRepository(BaseRepository[ThreatIntelIOC]):
     # Campaign methods
     async def get_campaign(self, campaign_id: uuid.UUID) -> Optional[ThreatIntelCampaign]:
         result = await self.session.execute(
-            select(ThreatIntelCampaign).filter_by(campaign_id=campaign_id)
+            select(ThreatIntelCampaign).filter(
+                ThreatIntelCampaign.campaign_id == campaign_id,
+                ThreatIntelCampaign.is_deleted == False
+            )
         )
         return result.scalar_one_or_none()
 
     async def list_campaigns(self) -> List[ThreatIntelCampaign]:
-        result = await self.session.execute(select(ThreatIntelCampaign))
+        result = await self.session.execute(
+            select(ThreatIntelCampaign).filter(ThreatIntelCampaign.is_deleted == False)
+        )
         return list(result.scalars().all())
 
     async def save_campaign(self, campaign: ThreatIntelCampaign) -> None:

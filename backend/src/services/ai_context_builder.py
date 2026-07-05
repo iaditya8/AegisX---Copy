@@ -1682,7 +1682,7 @@ class AIContextBuilder:
                     "event_type": h.event_type,
                     "details": h.details,
                 }
-                for h in ThreatIntelHistoryService.get_history(r.threat_intel_id)
+                for h in await ThreatIntelHistoryService.get_history(r.threat_intel_id)
             ]
             records_list.append(rdata)
 

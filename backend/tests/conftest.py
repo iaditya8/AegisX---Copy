@@ -33,6 +33,7 @@ class InterceptedExecuteMock(AsyncMock):
                     "GRCAssessment", "GRCFrameworkControl", "GRCEvidence", "GRCGap", "GRCHistory",
                     "SecurityKnowledgeRecord", "SecurityKnowledgeRelationship", "SecurityKnowledgeRecommendation", "SecurityKnowledgeHistory",
                     "ThreatIntelIOC", "ThreatIntelActor", "ThreatIntelCampaign", "ThreatIntelIOCActorMapping", "ThreatIntelIOCCampaignMapping", "ThreatIntelActorCampaignMapping", "ThreatIntelHistory", "IntelligenceEvent",
+                    "SecurityIntelligenceNode", "SecurityIntelligenceEdge", "SecurityIntelligenceGraphHistory",
                     "CyberRiskRecord", "CyberRiskScenario", "CyberRiskForecast", "CyberRiskHistory"
                 ]:
                     is_migrated_model = True
@@ -67,6 +68,7 @@ class InterceptedGetMock(AsyncMock):
             "GRCAssessment", "GRCFrameworkControl", "GRCEvidence", "GRCGap", "GRCHistory",
             "SecurityKnowledgeRecord", "SecurityKnowledgeRelationship", "SecurityKnowledgeRecommendation", "SecurityKnowledgeHistory",
             "ThreatIntelIOC", "ThreatIntelActor", "ThreatIntelCampaign", "ThreatIntelIOCActorMapping", "ThreatIntelIOCCampaignMapping", "ThreatIntelActorCampaignMapping", "ThreatIntelHistory", "IntelligenceEvent",
+            "SecurityIntelligenceNode", "SecurityIntelligenceEdge", "SecurityIntelligenceGraphHistory",
             "CyberRiskRecord", "CyberRiskScenario", "CyberRiskForecast", "CyberRiskHistory"
         ]
         
@@ -135,9 +137,11 @@ class StatefulMockSession(AsyncMock):
         def _add_impl(entity):
             from datetime import datetime, timezone
             import uuid
-            for pk in ["id", "resilience_id", "analytics_id", "knowledge_id", "assessment_id", "risk_id"]:
+            for pk in ["id", "resilience_id", "analytics_id", "knowledge_id", "assessment_id", "risk_id", "node_id", "edge_id", "ioc_id", "actor_id", "campaign_id"]:
                 if hasattr(entity, pk) and getattr(entity, pk, None) is None:
                     setattr(entity, pk, uuid.uuid4())
+            if hasattr(entity, "is_deleted") and getattr(entity, "is_deleted", None) is None:
+                entity.is_deleted = False
             if hasattr(entity, "created_at") and entity.created_at is None:
                 entity.created_at = datetime.now(timezone.utc)
             if hasattr(entity, "updated_at") and entity.updated_at is None:

@@ -40,29 +40,6 @@ def get_auth_header(user_id: uuid.UUID, role: str) -> dict:
     return {"Authorization": f"Bearer {token}"}
 
 
-@pytest.fixture
-def mock_db():
-    db = MagicMock()
-    mock_result = MagicMock()
-    mock_result.scalars.return_value.all.return_value = []
-    mock_result.scalar_one_or_none.return_value = None
-    db.execute = AsyncMock(return_value=mock_result)
-    db.get = AsyncMock()
-    db.commit = AsyncMock()
-    db.refresh = AsyncMock()
-    db.rollback = AsyncMock()
-    db.flush = AsyncMock()
-
-    def mock_add(entity):
-        import uuid
-        for pk in ["id", "resilience_id", "analytics_id", "knowledge_id", "assessment_id", "risk_id"]:
-            if hasattr(entity, pk) and getattr(entity, pk, None) is None:
-                try:
-                    setattr(entity, pk, uuid.uuid4())
-                except Exception:
-                    pass
-    db.add = MagicMock(side_effect=mock_add)
-    return db
 
 
 # --- Fabric Structures & Lifecycle ---
@@ -595,6 +572,7 @@ async def test_worker_integration(mock_db):
     mock_scope.deleted_at = None
     mock_scope.owner_id = ADMIN_ID
 
+    orig_get = getattr(mock_db, "_orig_get_impl", None)
     async def mock_get(model, ident):
         if model.__name__ == "Workflow" and ident == workflow_id:
             return mock_workflow
@@ -602,6 +580,8 @@ async def test_worker_integration(mock_db):
             return mock_scan_run
         if model.__name__ == "Scope" and ident == SCOPE_ID:
             return mock_scope
+        if orig_get:
+            return await orig_get(model, ident)
         return None
 
     mock_result = MagicMock()

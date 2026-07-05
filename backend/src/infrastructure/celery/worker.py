@@ -865,7 +865,7 @@ async def _execute_workflow_async(
                                 if threat.status == ThreatIntelStatus.ARCHIVED:
                                     continue
                                 score = ThreatIntelFusionService.calculate_fusion_score(threat.value, threat.indicator_type.value)
-                                ThreatIntelligenceService.fuse_threat(threat.threat_intel_id, score)
+                                await ThreatIntelligenceService.fuse_threat(threat.threat_intel_id, score)
 
                             ThreatIntelFusionService.calculate()
 

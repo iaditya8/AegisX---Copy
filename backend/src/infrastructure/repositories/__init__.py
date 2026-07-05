@@ -6,6 +6,7 @@ from src.infrastructure.repositories.grc_repository import GRCRepository
 from src.infrastructure.repositories.knowledge_repository import KnowledgeRepository
 from src.infrastructure.repositories.threat_repository import ThreatRepository
 from src.infrastructure.repositories.cyber_risk_repository import CyberRiskRepository
+from src.infrastructure.repositories.graph_repository import GraphRepository
 
 __all__ = [
     "BaseRepository",
@@ -16,4 +17,5 @@ __all__ = [
     "KnowledgeRepository",
     "ThreatRepository",
     "CyberRiskRepository",
+    "GraphRepository",
 ]

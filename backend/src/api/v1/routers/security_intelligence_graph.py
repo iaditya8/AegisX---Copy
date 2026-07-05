@@ -91,7 +91,7 @@ async def create_node(
     """Create or sync a new graph node."""
     if req.scope_id:
         await check_scope_ownership(db, req.scope_id, current_user)
-    return SecurityIntelligenceGraphService.create_or_sync_node(
+    return await SecurityIntelligenceGraphService.create_or_sync_node(
         node_type=req.node_type,
         entity_id=req.entity_id,
         scope_id=req.scope_id,
@@ -117,7 +117,7 @@ async def create_edge(
     if req.scope_id:
         await check_scope_ownership(db, req.scope_id, current_user)
 
-    return SecurityIntelligenceGraphService.create_or_sync_edge(
+    return await SecurityIntelligenceGraphService.create_or_sync_edge(
         source_id=req.source_id,
         target_id=req.target_id,
         edge_type=req.edge_type,
@@ -138,7 +138,7 @@ async def deprecate_component(
     if node:
         if node.scope_id:
             await check_scope_ownership(db, node.scope_id, current_user)
-        SecurityIntelligenceGraphService.deprecate_node(id)
+        await SecurityIntelligenceGraphService.deprecate_node(id)
         return {"status": "success", "message": f"Node {id} deprecated successfully."}
 
     # Check edges
@@ -146,7 +146,7 @@ async def deprecate_component(
     if edge:
         if edge.scope_id:
             await check_scope_ownership(db, edge.scope_id, current_user)
-        SecurityIntelligenceGraphService.deprecate_edge(id)
+        await SecurityIntelligenceGraphService.deprecate_edge(id)
         return {"status": "success", "message": f"Edge {id} deprecated successfully."}
 
     raise HTTPException(

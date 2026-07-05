@@ -10,6 +10,7 @@ from src.infrastructure.repositories import (
     KnowledgeRepository,
     ThreatRepository,
     CyberRiskRepository,
+    GraphRepository,
 )
 from src.core.tenant import get_current_tenant_id
 
@@ -27,6 +28,7 @@ class UnitOfWork:
         self.knowledge_repo: KnowledgeRepository = None
         self.threat_repo: ThreatRepository = None
         self.risk_repo: CyberRiskRepository = None
+        self.graph_repo: GraphRepository = None
 
     async def __aenter__(self):
         self.session = self.session_factory()
@@ -47,6 +49,7 @@ class UnitOfWork:
         self.knowledge_repo = KnowledgeRepository(self.session)
         self.threat_repo = ThreatRepository(self.session)
         self.risk_repo = CyberRiskRepository(self.session)
+        self.graph_repo = GraphRepository(self.session)
         return self
 
     async def __aexit__(self, exc_type, exc_val, exc_tb):

@@ -47,6 +47,8 @@ class CacheBootstrapService:
         await GovernanceRiskComplianceService.sync_assessments(db)
         await SecurityKnowledgeService.sync_knowledge(db)
         await ThreatIntelligenceService.sync_threats(db)
+        from src.services.graph_bootstrap_service import GraphBootstrapService
+        await GraphBootstrapService.bootstrap()
 
         # 4. Recalculate derived scores (Calculations and playbooks)
         from src.services.analyst_performance_service import AnalystPerformanceService
@@ -85,7 +87,7 @@ class CacheBootstrapService:
             if threat.status == ThreatIntelStatus.ARCHIVED:
                 continue
             score = ThreatIntelFusionService.calculate_fusion_score(threat.value, threat.indicator_type.value)
-            ThreatIntelligenceService.fuse_threat(threat.threat_intel_id, score)
+            await ThreatIntelligenceService.fuse_threat(threat.threat_intel_id, score)
         ThreatIntelFusionService.calculate()
 
         # Run FAIR risk quantification

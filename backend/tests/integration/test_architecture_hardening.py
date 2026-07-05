@@ -111,11 +111,11 @@ async def test_threat_fusion_persistence_and_terminal_state():
         tags=["phishing"],
         scope_id=SCOPE_ID,
     )
-    ThreatIntelligenceService.transition_status(archived_t.threat_intel_id, ThreatIntelStatus.ARCHIVED)
+    archived_t = await ThreatIntelligenceService.transition_status(archived_t.threat_intel_id, ThreatIntelStatus.ARCHIVED)
 
     # Trigger fusion updates
-    ThreatIntelligenceService.fuse_threat(active_t.threat_intel_id, 99.0)
-    ThreatIntelligenceService.fuse_threat(archived_t.threat_intel_id, 99.0)
+    active_t = await ThreatIntelligenceService.fuse_threat(active_t.threat_intel_id, 99.0)
+    archived_t = await ThreatIntelligenceService.fuse_threat(archived_t.threat_intel_id, 99.0)
 
     # Verify active was updated and fused
     assert active_t.status == ThreatIntelStatus.FUSED

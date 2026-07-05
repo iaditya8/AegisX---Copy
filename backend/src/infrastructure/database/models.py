@@ -11,6 +11,7 @@ from sqlalchemy import (
     String,
     UniqueConstraint,
     text,
+    Float,
 )
 from sqlalchemy.dialects.postgresql import INET, JSONB, UUID, ARRAY
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
@@ -1057,11 +1058,8 @@ class SecurityKnowledgeHistory(Base, TenantOwnedMixin, AuditMixin, VersionedMixi
 # THREAT INTELLIGENCE DOMAIN
 # ==============================================================================
 
-class ThreatIntelIOC(Base):
+class ThreatIntelIOC(Base, TenantOwnedMixin, AuditMixin, VersionedMixin, SoftDeleteMixin):
     __tablename__ = "threat_intel_iocs"
-    tenant_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False
-    )
 
     ioc_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), primary_key=True, server_default=text("gen_random_uuid()")
@@ -1073,22 +1071,15 @@ class ThreatIntelIOC(Base):
     status: Mapped[str] = mapped_column(String, nullable=False)
     reputation: Mapped[int] = mapped_column(Integer, nullable=False)
     feed_type: Mapped[str] = mapped_column(String, nullable=False)
+    confidence: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
+    tags: Mapped[list[str]] = mapped_column(ARRAY(String), server_default="{}", nullable=False)
     scope_id: Mapped[Optional[uuid.UUID]] = mapped_column(
         UUID(as_uuid=True), ForeignKey("scopes.id", ondelete="SET NULL"), nullable=True
     )
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=text("now()")
-    )
-    updated_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=text("now()")
-    )
 
 
-class ThreatIntelActor(Base):
+class ThreatIntelActor(Base, TenantOwnedMixin, AuditMixin, VersionedMixin, SoftDeleteMixin):
     __tablename__ = "threat_intel_actors"
-    tenant_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False
-    )
 
     actor_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), primary_key=True, server_default=text("gen_random_uuid()")
@@ -1100,11 +1091,8 @@ class ThreatIntelActor(Base):
     status: Mapped[str] = mapped_column(String, nullable=False)
 
 
-class ThreatIntelCampaign(Base):
+class ThreatIntelCampaign(Base, TenantOwnedMixin, AuditMixin, VersionedMixin, SoftDeleteMixin):
     __tablename__ = "threat_intel_campaigns"
-    tenant_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False
-    )
 
     campaign_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), primary_key=True, server_default=text("gen_random_uuid()")
@@ -1116,11 +1104,8 @@ class ThreatIntelCampaign(Base):
     status: Mapped[str] = mapped_column(String, nullable=False)
 
 
-class ThreatIntelIOCActorMapping(Base):
+class ThreatIntelIOCActorMapping(Base, TenantOwnedMixin):
     __tablename__ = "threat_intel_ioc_actor_mapping"
-    tenant_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False
-    )
 
     ioc_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("threat_intel_iocs.ioc_id", ondelete="CASCADE"), primary_key=True
@@ -1130,11 +1115,8 @@ class ThreatIntelIOCActorMapping(Base):
     )
 
 
-class ThreatIntelIOCCampaignMapping(Base):
+class ThreatIntelIOCCampaignMapping(Base, TenantOwnedMixin):
     __tablename__ = "threat_intel_ioc_campaign_mapping"
-    tenant_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False
-    )
 
     ioc_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("threat_intel_iocs.ioc_id", ondelete="CASCADE"), primary_key=True
@@ -1144,11 +1126,8 @@ class ThreatIntelIOCCampaignMapping(Base):
     )
 
 
-class ThreatIntelActorCampaignMapping(Base):
+class ThreatIntelActorCampaignMapping(Base, TenantOwnedMixin):
     __tablename__ = "threat_intel_actor_campaign_mapping"
-    tenant_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False
-    )
 
     actor_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("threat_intel_actors.actor_id", ondelete="CASCADE"), primary_key=True
@@ -1158,11 +1137,8 @@ class ThreatIntelActorCampaignMapping(Base):
     )
 
 
-class ThreatIntelHistory(Base):
+class ThreatIntelHistory(Base, TenantOwnedMixin, AuditMixin):
     __tablename__ = "threat_intel_history"
-    tenant_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False
-    )
 
     id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), primary_key=True, server_default=text("gen_random_uuid()")
@@ -1175,6 +1151,54 @@ class ThreatIntelHistory(Base):
     )
     event_type: Mapped[str] = mapped_column(String, nullable=False)
     details: Mapped[Dict[str, Any]] = mapped_column(JSONB, nullable=False)
+
+
+# ==============================================================================
+# SECURITY INTELLIGENCE GRAPH DOMAIN
+# ==============================================================================
+
+class SecurityIntelligenceNode(Base, TenantOwnedMixin, AuditMixin, VersionedMixin, SoftDeleteMixin):
+    __tablename__ = "security_intelligence_nodes"
+
+    node_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, server_default=text("gen_random_uuid()")
+    )
+    node_fingerprint: Mapped[str] = mapped_column(String, unique=True, nullable=False)
+    node_type: Mapped[str] = mapped_column(String, nullable=False)
+    entity_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False)
+    status: Mapped[str] = mapped_column(String, nullable=False)
+    scope_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("scopes.id", ondelete="SET NULL"), nullable=True
+    )
+
+
+class SecurityIntelligenceEdge(Base, TenantOwnedMixin, AuditMixin, VersionedMixin, SoftDeleteMixin):
+    __tablename__ = "security_intelligence_edges"
+
+    edge_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, server_default=text("gen_random_uuid()")
+    )
+    edge_fingerprint: Mapped[str] = mapped_column(String, unique=True, nullable=False)
+    source_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False)
+    target_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False)
+    edge_type: Mapped[str] = mapped_column(String, nullable=False)
+    confidence: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
+    weight: Mapped[float] = mapped_column(Float, nullable=False)
+    status: Mapped[str] = mapped_column(String, nullable=False)
+    scope_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("scopes.id", ondelete="SET NULL"), nullable=True
+    )
+
+
+class SecurityIntelligenceGraphHistory(Base, TenantOwnedMixin, AuditMixin):
+    __tablename__ = "security_intelligence_graph_history"
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, server_default=text("gen_random_uuid()")
+    )
+    component_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False)
+    event_type: Mapped[str] = mapped_column(String, nullable=False)
+    details: Mapped[str] = mapped_column(String, nullable=False)
 
 
 class CyberRiskRecord(Base, TenantOwnedMixin, AuditMixin, VersionedMixin, SoftDeleteMixin):
