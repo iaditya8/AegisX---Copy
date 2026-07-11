@@ -1977,3 +1977,106 @@ class PurpleTeamHistory(Base, TenantOwnedMixin, AuditMixin):
         Index("ix_purple_team_history_exercise", "exercise_id"),
     )
 
+
+# ==============================================================================
+# UNIFIED CORRELATION ENGINE DOMAIN
+# ==============================================================================
+
+from sqlalchemy import Column, Text
+from sqlalchemy.orm import relationship
+
+class CorrelationRule(Base, TenantOwnedMixin, AuditMixin):
+    __tablename__ = "correlation_rules"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    name = Column(String(255), nullable=False)
+    description = Column(Text, nullable=True)
+    status = Column(String(50), default="active")  # active, inactive
+    condition_expression = Column(JSONB, nullable=False)  # JSON rule structure
+    priority_level = Column(String(50), nullable=False)  # critical, high, medium, low
+    rule_version = Column(Integer, nullable=False, default=1)  # incremented on each rule edit
+
+    rule_matches = relationship("CorrelationRuleMatch", back_populates="rule", cascade="all, delete-orphan")
+
+    __table_args__ = (
+        Index("ix_correlation_rules_tenant", "tenant_id"),
+    )
+
+
+class CorrelationCluster(Base, TenantOwnedMixin, AuditMixin):
+    __tablename__ = "correlation_clusters"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    asset_id = Column(UUID(as_uuid=True), ForeignKey("assets.id", ondelete="CASCADE"), nullable=False)
+    unified_score = Column(Float, default=0.0)
+    score_breakdown_json = Column(JSONB, nullable=True)
+    status = Column(String(50), default="open")  # open, triaged, closed
+    fingerprint = Column(String(255), nullable=False)  # deterministic hash of root signals
+    associated_incident_id = Column(UUID(as_uuid=True), ForeignKey("incidents.id", ondelete="SET NULL"), nullable=True)
+
+    signals = relationship("CorrelationClusterSignal", back_populates="cluster", cascade="all, delete-orphan")
+    history = relationship("CorrelationHistory", back_populates="cluster", cascade="all, delete-orphan")
+    rule_matches = relationship("CorrelationRuleMatch", back_populates="cluster", cascade="all, delete-orphan")
+
+    __table_args__ = (
+        UniqueConstraint("tenant_id", "fingerprint", name="uq_cluster_tenant_fingerprint"),
+        Index("ix_correlation_clusters_tenant_asset", "tenant_id", "asset_id"),
+        Index("ix_correlation_clusters_incident", "associated_incident_id"),
+    )
+
+
+class CorrelationClusterSignal(Base, TenantOwnedMixin):
+    __tablename__ = "correlation_cluster_signals"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    cluster_id = Column(UUID(as_uuid=True), ForeignKey("correlation_clusters.id", ondelete="CASCADE"), nullable=False)
+    signal_type = Column(String(100), nullable=False)
+    signal_id = Column(UUID(as_uuid=True), nullable=False)
+    added_at = Column(DateTime(timezone=True), server_default=text("now()"))
+
+    cluster = relationship("CorrelationCluster", back_populates="signals")
+
+    __table_args__ = (
+        UniqueConstraint("cluster_id", "signal_type", "signal_id", name="uq_cluster_signal"),
+        Index("ix_correlation_signals_lookup", "signal_type", "signal_id"),
+        Index("ix_correlation_signals_tenant", "tenant_id"),
+    )
+
+
+class CorrelationHistory(Base, TenantOwnedMixin, AuditMixin):
+    __tablename__ = "correlation_history"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    cluster_id = Column(UUID(as_uuid=True), ForeignKey("correlation_clusters.id", ondelete="CASCADE"), nullable=False)
+    event_type = Column(String(100), nullable=False)
+    details_json = Column(JSONB, nullable=True)
+    timestamp = Column(DateTime(timezone=True), server_default=text("now()"), nullable=False)
+
+    cluster = relationship("CorrelationCluster", back_populates="history")
+
+    __table_args__ = (
+        Index("ix_correlation_history_cluster", "cluster_id"),
+        Index("ix_correlation_history_tenant", "tenant_id"),
+    )
+
+
+class CorrelationRuleMatch(Base, TenantOwnedMixin, AuditMixin):
+    __tablename__ = "correlation_rule_matches"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    rule_id = Column(UUID(as_uuid=True), ForeignKey("correlation_rules.id", ondelete="CASCADE"), nullable=False)
+    rule_version_used = Column(Integer, nullable=False)  # snapshot of rule_version at match time
+    cluster_id = Column(UUID(as_uuid=True), ForeignKey("correlation_clusters.id", ondelete="CASCADE"), nullable=False)
+    matched_at = Column(DateTime(timezone=True), server_default=text("now()"), nullable=False)
+    confidence = Column(Float, nullable=False)  # 0.0 - 1.0
+    evidence_json = Column(JSONB, nullable=True)
+
+    rule = relationship("CorrelationRule", back_populates="rule_matches")
+    cluster = relationship("CorrelationCluster", back_populates="rule_matches")
+
+    __table_args__ = (
+        Index("ix_correlation_rule_matches_rule", "rule_id"),
+        Index("ix_correlation_rule_matches_cluster", "cluster_id"),
+        Index("ix_correlation_rule_matches_tenant", "tenant_id"),
+    )
+

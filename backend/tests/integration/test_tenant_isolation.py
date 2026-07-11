@@ -114,7 +114,7 @@ async def test_finding_service_transaction_neutrality(mock_db):
     tenant_id = uuid.uuid4()
     set_current_tenant_id(tenant_id)
     
-    asset = Asset(id=uuid.uuid4(), scope_id=uuid.uuid4(), host="example.com", tenant_id=tenant_id)
+    asset = Asset(id=uuid.uuid4(), scope_id=uuid.uuid4(), host="example.com", ip="example.com", tenant_id=tenant_id)
     wf = Workflow(id=uuid.uuid4(), tenant_id=tenant_id)
     mock_db._entities[Asset] = [asset]
     mock_db._entities[Workflow] = [wf]

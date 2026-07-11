@@ -9,7 +9,7 @@ from src.api.v1.routers.alerts import router as alerts_router
 from src.api.v1.routers.assets import router as assets_router
 from src.api.v1.routers.auth import router as auth_router
 from src.api.v1.routers.copilot import router as copilot_router
-from src.api.v1.routers.correlations import router as correlations_router
+from src.api.v1.routers.correlations import router as correlations_router, router2 as correlations_prefix_router
 from src.api.v1.routers.findings import router as findings_router
 from src.api.v1.routers.governance import router as governance_router
 from src.api.v1.routers.health import router as health_router
@@ -79,6 +79,7 @@ app.include_router(workflows_router, prefix=settings.API_V1_STR)
 app.include_router(scan_runs_router, prefix=settings.API_V1_STR)
 app.include_router(plugins_router, prefix=settings.API_V1_STR)
 app.include_router(correlations_router, prefix=settings.API_V1_STR)
+app.include_router(correlations_prefix_router, prefix=settings.API_V1_STR)
 app.include_router(reports_router, prefix=settings.API_V1_STR)
 app.include_router(copilot_router, prefix=settings.API_V1_STR)
 app.include_router(recommendations_router, prefix=settings.API_V1_STR)

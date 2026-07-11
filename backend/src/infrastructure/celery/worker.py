@@ -1013,3 +1013,31 @@ def execute_workflow_task(
     scope_id = uuid.UUID(scope_id_str)
     tenant_id = uuid.UUID(tenant_id_str)
     return run_async_task(_execute_workflow_async(workflow_id, scan_run_id, scope_id, tenant_id))
+
+
+@celery_app.task(name="correlation_event_task")
+def correlation_event_task(event_type: str, payload: dict, tenant_id_str: str):
+    if not tenant_id_str:
+        from src.core.tenant import TenantContextError
+        raise TenantContextError("correlation_event_task requires a non-empty tenant_id_str")
+    
+    tenant_id = uuid.UUID(tenant_id_str)
+    from src.core.tenant import set_current_tenant_id
+    set_current_tenant_id(tenant_id)
+    
+    async def run():
+        from src.infrastructure.database.session import AsyncSessionLocal
+        from src.services.correlation_event_consumer import CorrelationEventConsumer
+        async with AsyncSessionLocal() as db:
+            import sqlalchemy as sa
+            await db.execute(
+                sa.text("SELECT set_config('app.current_tenant', :tenant_id, true)"),
+                {"tenant_id": str(tenant_id)}
+            )
+            await CorrelationEventConsumer.consume_event(db, event_type, payload)
+            await db.commit()
+            
+    try:
+        return run_async_task(run())
+    finally:
+        set_current_tenant_id(None)

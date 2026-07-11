@@ -1,17 +1,114 @@
 import uuid
-from typing import Any, Dict
-
-from sqlalchemy import select
+from typing import List, Optional, Dict, Any
+from sqlalchemy.future import select
+from sqlalchemy.orm import selectinload
 from sqlalchemy.ext.asyncio import AsyncSession
-from src.infrastructure.database.models import Asset, AssetPort, AssetService, Finding
-from src.services.asset_exposure_service import (
-    AssetExposureService,
-    ExposureClassification,
+
+from src.infrastructure.database.models import (
+    CorrelationRule,
+    CorrelationCluster,
+    CorrelationHistory,
+    Incident,
+    Asset,
+    AssetPort,
+    AssetService,
+    Finding,
 )
+from src.infrastructure.database.unit_of_work import UnitOfWork
+from src.services.correlation_incident_bridge import CorrelationIncidentBridge
+from src.core.tenant import require_current_tenant_id
+from src.services.asset_exposure_service import AssetExposureService, ExposureClassification
 
 
 class CorrelationService:
-    """Service to generate a unified correlation snapshot for an asset."""
+    @classmethod
+    async def create_rule(
+        cls,
+        name: str,
+        description: Optional[str],
+        condition_expression: dict,
+        priority_level: str,
+    ) -> CorrelationRule:
+        tenant_id = require_current_tenant_id()
+        async with UnitOfWork() as uow:
+            rule = CorrelationRule(
+                id=uuid.uuid4(),
+                tenant_id=tenant_id,
+                name=name,
+                description=description,
+                condition_expression=condition_expression,
+                priority_level=priority_level,
+                rule_version=1,
+            )
+            await uow.correlation_repo.save_rule(rule)
+            await uow.commit()
+            return rule
+
+    @classmethod
+    async def list_rules(cls) -> List[CorrelationRule]:
+        async with UnitOfWork() as uow:
+            return await uow.correlation_repo.find_active_rules()
+
+    @classmethod
+    async def get_rule(cls, rule_id: uuid.UUID) -> Optional[CorrelationRule]:
+        async with UnitOfWork() as uow:
+            return await uow.correlation_repo.get_rule(rule_id)
+
+    @classmethod
+    async def list_clusters(cls) -> List[CorrelationCluster]:
+        async with UnitOfWork() as uow:
+            # We want to eagerly load the signals relationship
+            tenant_id = require_current_tenant_id()
+            query = select(CorrelationCluster).filter(
+                CorrelationCluster.tenant_id == tenant_id
+            ).options(
+                selectinload(CorrelationCluster.signals),
+                selectinload(CorrelationCluster.history)
+            ).order_by(CorrelationCluster.unified_score.desc())
+            res = await uow.session.execute(query)
+            return list(res.scalars().all())
+
+    @classmethod
+    async def get_cluster(cls, cluster_id: uuid.UUID) -> Optional[CorrelationCluster]:
+        async with UnitOfWork() as uow:
+            tenant_id = require_current_tenant_id()
+            query = select(CorrelationCluster).filter(
+                CorrelationCluster.tenant_id == tenant_id,
+                CorrelationCluster.id == cluster_id
+            ).options(
+                selectinload(CorrelationCluster.signals),
+                selectinload(CorrelationCluster.history)
+            )
+            res = await uow.session.execute(query)
+            return res.scalar_one_or_none()
+
+    @classmethod
+    async def get_history(cls, cluster_id: uuid.UUID) -> List[CorrelationHistory]:
+        async with UnitOfWork() as uow:
+            tenant_id = require_current_tenant_id()
+            query = select(CorrelationHistory).filter(
+                CorrelationHistory.tenant_id == tenant_id,
+                CorrelationHistory.cluster_id == cluster_id
+            ).order_by(CorrelationHistory.timestamp.asc())
+            res = await uow.session.execute(query)
+            return list(res.scalars().all())
+
+    @classmethod
+    async def escalate_cluster(
+        cls,
+        cluster_id: uuid.UUID,
+        title: Optional[str] = None,
+        description: Optional[str] = None,
+    ) -> Incident:
+        async with UnitOfWork() as uow:
+            incident = await CorrelationIncidentBridge.escalate_cluster(
+                db=uow.session,
+                cluster_id=cluster_id,
+                title=title,
+                description=description,
+            )
+            await uow.commit()
+            return incident
 
     @classmethod
     async def correlate_asset(

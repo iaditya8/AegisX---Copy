@@ -16,6 +16,7 @@ from src.infrastructure.repositories.posture_repository import PostureRepository
 from src.infrastructure.repositories.decision_repository import DecisionRepository
 from src.infrastructure.repositories.program_repository import ProgramRepository
 from src.infrastructure.repositories.purple_team_repository import PurpleTeamRepository
+from src.infrastructure.repositories.correlation_repository import CorrelationRepository
 
 __all__ = [
     "BaseRepository",
@@ -36,4 +37,5 @@ __all__ = [
     "DecisionRepository",
     "ProgramRepository",
     "PurpleTeamRepository",
+    "CorrelationRepository",
 ]

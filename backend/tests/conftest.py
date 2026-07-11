@@ -56,7 +56,8 @@ class InterceptedExecuteMock(AsyncMock):
                     "SecurityPosture", "SecurityPostureHistory",
                     "SecurityDecision", "SecurityDecisionHistory",
                     "SecurityProgram", "SecurityProgramObjective", "SecurityProgramInitiative", "SecurityProgramHistory",
-                    "PurpleTeamExercise", "PurpleTeamValidation", "PurpleTeamFinding", "PurpleTeamHistory"
+                    "PurpleTeamExercise", "PurpleTeamValidation", "PurpleTeamFinding", "PurpleTeamHistory",
+                    "CorrelationRule", "CorrelationCluster", "CorrelationClusterSignal", "CorrelationHistory", "CorrelationRuleMatch"
                 ]:
                     is_migrated_model = True
             except Exception:
@@ -99,7 +100,8 @@ class InterceptedGetMock(AsyncMock):
             "SecurityPosture", "SecurityPostureHistory",
             "SecurityDecision", "SecurityDecisionHistory",
             "SecurityProgram", "SecurityProgramObjective", "SecurityProgramInitiative", "SecurityProgramHistory",
-            "PurpleTeamExercise", "PurpleTeamValidation", "PurpleTeamFinding", "PurpleTeamHistory"
+            "PurpleTeamExercise", "PurpleTeamValidation", "PurpleTeamFinding", "PurpleTeamHistory",
+            "CorrelationRule", "CorrelationCluster", "CorrelationClusterSignal", "CorrelationHistory", "CorrelationRuleMatch"
         ]
         
         from unittest.mock import DEFAULT

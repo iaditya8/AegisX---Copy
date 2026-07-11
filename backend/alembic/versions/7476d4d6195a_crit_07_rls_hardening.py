@@ -14,8 +14,8 @@ import sqlalchemy as sa
 # revision identifiers, used by Alembic.
 revision: str = '7476d4d6195a'
 down_revision: Union[str, None] = '8e2fe6d6496f'
-branch_labels: Union[str, Sequence[str], None] = 'None'
-depends_on: Union[str, Sequence[str], None] = 'None'
+branch_labels: Union[str, Sequence[str], None] = None
+depends_on: Union[str, Sequence[str], None] = None
 
 
 ALL_TENANT_TABLES = [

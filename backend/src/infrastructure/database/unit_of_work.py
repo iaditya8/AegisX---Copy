@@ -20,6 +20,7 @@ from src.infrastructure.repositories import (
     DecisionRepository,
     ProgramRepository,
     PurpleTeamRepository,
+    CorrelationRepository,
 )
 from src.core.tenant import get_current_tenant_id
 
@@ -48,6 +49,7 @@ class UnitOfWork:
         self.decision_repo: DecisionRepository = None
         self.program_repo: ProgramRepository = None
         self.purple_team_repo: PurpleTeamRepository = None
+        self.correlation_repo: CorrelationRepository = None
 
     async def __aenter__(self):
         self.session = self.session_factory()
@@ -85,6 +87,7 @@ class UnitOfWork:
         self.decision_repo = DecisionRepository(self.session)
         self.program_repo = ProgramRepository(self.session)
         self.purple_team_repo = PurpleTeamRepository(self.session)
+        self.correlation_repo = CorrelationRepository(self.session)
         return self
 
     async def __aexit__(self, exc_type, exc_val, exc_tb):
@@ -93,7 +96,21 @@ class UnitOfWork:
         await self.session.close()
 
     async def commit(self):
+        pending_events = []
+        if self.session:
+            for obj in self.session.new:
+                if obj.__class__.__name__ == "WorkflowEvent":
+                    pending_events.append((obj.event_type, obj.payload, obj.tenant_id))
+
         await self.session.commit()
+
+        for event_type, payload, tenant_id in pending_events:
+            if event_type in ("finding.discovered", "alert.created", "threat.ioc_added", "validation.failed"):
+                try:
+                    from src.infrastructure.celery.worker import correlation_event_task
+                    correlation_event_task.delay(event_type, payload, str(tenant_id))
+                except Exception:
+                    pass
 
     async def rollback(self):
         await self.session.rollback()
