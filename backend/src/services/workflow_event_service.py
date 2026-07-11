@@ -57,6 +57,6 @@ class WorkflowEventService:
                 timestamp=datetime.now(timezone.utc),
             )
             db.add(event)
-            await db.commit()
+            await db.flush()
             return event
         return None

@@ -205,19 +205,19 @@
     "semantic_hash": "cc6a567e71f110d84dc586c96beb901d"
   },
   "backend/src/infrastructure/celery/worker.py": {
-    "mtime": 1783257872.7238321,
-    "ast_hash": "dd0927d37cf03940421ab735f47cf1be",
+    "mtime": 1783724360.240453,
+    "ast_hash": "3a1f89f0efc19a569fe3664730c1058c",
     "semantic_hash": ""
   },
   "backend/src/infrastructure/database/models.py": {
-    "mtime": 1783257795.9055822,
-    "ast_hash": "1af445b4bc9ab0d2ebe903a44b2e835e",
+    "mtime": 1783724367.7643282,
+    "ast_hash": "89f7447fdcec33db9e33167cbd2d6105",
     "semantic_hash": ""
   },
   "backend/src/infrastructure/database/session.py": {
-    "mtime": 1781211468.839821,
-    "ast_hash": "e9df1259af19fb708350b2b937c006e7",
-    "semantic_hash": "e9df1259af19fb708350b2b937c006e7"
+    "mtime": 1783724287.2862873,
+    "ast_hash": "2ff0d6dbda13ee494a3ffb4581605183",
+    "semantic_hash": ""
   },
   "backend/src/main.py": {
     "mtime": 1782639273.1028087,
@@ -290,8 +290,8 @@
     "semantic_hash": "786254af83392568c552728d126a8c66"
   },
   "backend/src/services/ai_context_builder.py": {
-    "mtime": 1783258607.4548676,
-    "ast_hash": "8de887ba5724a0106e2cb4cf293139f4",
+    "mtime": 1783724474.43139,
+    "ast_hash": "54a64344354284ab0006078d3817368d",
     "semantic_hash": ""
   },
   "backend/src/services/ai_guardrails.py": {
@@ -520,9 +520,9 @@
     "semantic_hash": "913a64179b4b433460c68c1c12f69fe6"
   },
   "backend/src/services/finding_service.py": {
-    "mtime": 1782249493.6207166,
-    "ast_hash": "6b37bdc348665e17abf275a7e63107de",
-    "semantic_hash": "6b37bdc348665e17abf275a7e63107de"
+    "mtime": 1783743161.178628,
+    "ast_hash": "26c7caa51456bf1bc42e33968a5aada6",
+    "semantic_hash": ""
   },
   "backend/src/services/finding_severity_rules.py": {
     "mtime": 1781379016.1896398,
@@ -565,8 +565,8 @@
     "semantic_hash": ""
   },
   "backend/src/services/incident_service.py": {
-    "mtime": 1783257423.5890126,
-    "ast_hash": "eeee0eaaf75d498f35a6dd29e7b64244",
+    "mtime": 1783724702.836251,
+    "ast_hash": "6b5c697b633126737970d6f1e3b38d34",
     "semantic_hash": ""
   },
   "backend/src/services/incident_severity_registry.py": {
@@ -745,18 +745,18 @@
     "semantic_hash": "2e37447f89f98e77632da75549c017f5"
   },
   "backend/src/services/workflow_event_service.py": {
-    "mtime": 1782683097.064151,
-    "ast_hash": "13428277c43adb31b801825e7eece795",
+    "mtime": 1783743144.578855,
+    "ast_hash": "05ed740ff731f5e5a15c4e8498edf55d",
     "semantic_hash": ""
   },
   "backend/src/services/workflow_service.py": {
-    "mtime": 1781216430.226539,
-    "ast_hash": "aeb87cfbc5768cafb10cb35a0868ff23",
-    "semantic_hash": "aeb87cfbc5768cafb10cb35a0868ff23"
+    "mtime": 1783723695.2907293,
+    "ast_hash": "9710821204a7af7ac0383ed7aa7865c5",
+    "semantic_hash": ""
   },
   "backend/tests/conftest.py": {
-    "mtime": 1783257347.8781478,
-    "ast_hash": "f1735437920c08c546b94e64b96dc6bb",
+    "mtime": 1783723909.5944436,
+    "ast_hash": "b4ca770f2c82836de6ee666f812cfa32",
     "semantic_hash": ""
   },
   "backend/tests/integration/test_alerts.py": {
@@ -785,8 +785,8 @@
     "semantic_hash": "0f4bd1c9426ab04c2408f14010496e27"
   },
   "backend/tests/integration/test_findings.py": {
-    "mtime": 1783190942.3929105,
-    "ast_hash": "ab71806e5e3bc185b51a19e31d0fcc0e",
+    "mtime": 1783724291.6952443,
+    "ast_hash": "088a5b58b3a28f15232cff17b66fc650",
     "semantic_hash": ""
   },
   "backend/tests/integration/test_governance.py": {
@@ -840,8 +840,8 @@
     "semantic_hash": "be6a3ba3ff46c0fc703e7f688517bd8f"
   },
   "backend/tests/integration/test_service_discovery.py": {
-    "mtime": 1783190946.0958228,
-    "ast_hash": "8a4499c478fe1b5da7e9c301b74edac9",
+    "mtime": 1783724299.2517993,
+    "ast_hash": "310b6dd5a28f7625af757ea44de49711",
     "semantic_hash": ""
   },
   "backend/tests/integration/test_users.py": {
@@ -850,8 +850,8 @@
     "semantic_hash": "f5a08e7df226f3b3ddd77b1e66b5f6df"
   },
   "backend/tests/integration/test_workflows.py": {
-    "mtime": 1782521635.6056087,
-    "ast_hash": "68cadab4875541ade40c485203a47401",
+    "mtime": 1783724425.104554,
+    "ast_hash": "20794932f03ecf3f18650f1b6d89fb22",
     "semantic_hash": ""
   },
   "frontend/eslint.config.mjs": {
@@ -1670,8 +1670,8 @@
     "semantic_hash": "a2760511c65806022ad20adf74370ff3"
   },
   "backend/src/api/v1/routers/cases.py": {
-    "mtime": 1782504084.14608,
-    "ast_hash": "df48aa2f567881cc1d13e707890668f3",
+    "mtime": 1783724483.0311,
+    "ast_hash": "ba84ad9be4e086c1df01dbcc60e12ccc",
     "semantic_hash": ""
   },
   "backend/src/domain/entities/case.py": {
@@ -1680,8 +1680,8 @@
     "semantic_hash": ""
   },
   "backend/src/services/case_evidence_correlation_service.py": {
-    "mtime": 1782503856.657664,
-    "ast_hash": "56f351785e69885e769aad320ffa5036",
+    "mtime": 1783724456.7471578,
+    "ast_hash": "9555d9cd24753bec8a68f128a46b5962",
     "semantic_hash": ""
   },
   "backend/src/services/case_fingerprint_service.py": {
@@ -1695,8 +1695,8 @@
     "semantic_hash": ""
   },
   "backend/src/services/case_service.py": {
-    "mtime": 1782503875.6738524,
-    "ast_hash": "ee642189989c662fa3a55ceb68d1fa3d",
+    "mtime": 1783724694.7887197,
+    "ast_hash": "aa76401682c29e618526f6982a6c972e",
     "semantic_hash": ""
   },
   "backend/src/services/case_severity_registry.py": {
@@ -1720,8 +1720,8 @@
     "semantic_hash": ""
   },
   "backend/tests/integration/test_cases.py": {
-    "mtime": 1783207795.3541746,
-    "ast_hash": "ed9849a5a8ceaa576d2463909010f4ea",
+    "mtime": 1783724444.6368594,
+    "ast_hash": "576ceeb9296b77b4c29285aa664419bf",
     "semantic_hash": ""
   },
   "backend/src/api/v1/routers/detections.py": {
@@ -1785,8 +1785,8 @@
     "semantic_hash": ""
   },
   "backend/src/api/v1/routers/threat_intelligence.py": {
-    "mtime": 1783240794.3506906,
-    "ast_hash": "bc276d7ed46e1e9cced78c29a5d7def1",
+    "mtime": 1783743180.0352304,
+    "ast_hash": "ecd436bba3fd4e885c9b041c20ba1862",
     "semantic_hash": ""
   },
   "backend/src/domain/entities/threat_intelligence.py": {
@@ -1825,8 +1825,8 @@
     "semantic_hash": ""
   },
   "backend/src/services/ioc_service.py": {
-    "mtime": 1782521006.7183547,
-    "ast_hash": "6e2566450f977b5f7398476ebaa7809b",
+    "mtime": 1783743194.1713123,
+    "ast_hash": "18a33a874b17194ecf4e08c1e882fd69",
     "semantic_hash": ""
   },
   "backend/src/services/ioc_type_registry.py": {
@@ -2145,8 +2145,8 @@
     "semantic_hash": ""
   },
   "backend/src/services/security_posture_service.py": {
-    "mtime": 1783258184.9806585,
-    "ast_hash": "c70d1edab05282afeaffed66eeb712f4",
+    "mtime": 1783724712.080492,
+    "ast_hash": "d73045947acae3edecda05ee45c1affa",
     "semantic_hash": ""
   },
   "backend/src/services/security_posture_snapshot_service.py": {
@@ -2205,8 +2205,8 @@
     "semantic_hash": ""
   },
   "backend/src/services/control_validation_service.py": {
-    "mtime": 1782560535.1714716,
-    "ast_hash": "71a954ee678fbe938f9633a679e10c3a",
+    "mtime": 1783743207.2685015,
+    "ast_hash": "9de2e88a40da663513a95ce44b7b7589",
     "semantic_hash": ""
   },
   "backend/src/services/control_validation_snapshot_service.py": {
@@ -2750,8 +2750,8 @@
     "semantic_hash": ""
   },
   "backend/src/services/graph_correlation_service.py": {
-    "mtime": 1783241019.372568,
-    "ast_hash": "c62dc09703475a8d32f1425904d7fdec",
+    "mtime": 1783724634.7316034,
+    "ast_hash": "3198e71aa394688e8d397e8d9c03c9c6",
     "semantic_hash": ""
   },
   "backend/src/services/graph_drift_service.py": {
@@ -2790,8 +2790,8 @@
     "semantic_hash": ""
   },
   "backend/src/services/security_intelligence_graph_service.py": {
-    "mtime": 1783240993.0891879,
-    "ast_hash": "f2230cd2114de10feeef6d6110925153",
+    "mtime": 1783724858.141188,
+    "ast_hash": "aa7eda82d920ad447f28e05519a907f1",
     "semantic_hash": ""
   },
   "backend/src/services/threat_indicator_type_registry.py": {
@@ -2825,8 +2825,8 @@
     "semantic_hash": ""
   },
   "backend/src/services/threat_intelligence_service.py": {
-    "mtime": 1783240987.8560016,
-    "ast_hash": "eb6f84ff11adae49fd7ea605274b9eda",
+    "mtime": 1783724734.8121645,
+    "ast_hash": "40c9e230d7076367203ac236930c57ce",
     "semantic_hash": ""
   },
   "backend/src/services/threat_severity_registry.py": {
@@ -2845,8 +2845,8 @@
     "semantic_hash": ""
   },
   "backend/tests/integration/test_security_intelligence_graph.py": {
-    "mtime": 1783241066.9621358,
-    "ast_hash": "08cee8158fc37fc78eac3f3f72ea84c6",
+    "mtime": 1783724647.06819,
+    "ast_hash": "453462be2c9e5be79351ae416e9aa989",
     "semantic_hash": ""
   },
   "Implementation/plans/sprint_30-37_hardening_plan.md": {
@@ -3020,8 +3020,8 @@
     "semantic_hash": ""
   },
   "backend/src/domain/entities/security_intelligence_fabric.py": {
-    "mtime": 1782639202.810894,
-    "ast_hash": "c36c39e601ff6c4f289e4848d3b83559",
+    "mtime": 1783724551.3780656,
+    "ast_hash": "70fa16f142183e96d212ad7e2c00eb3c",
     "semantic_hash": ""
   },
   "backend/src/services/confidence_weight_registry.py": {
@@ -3050,8 +3050,8 @@
     "semantic_hash": ""
   },
   "backend/src/services/intelligence_propagation_service.py": {
-    "mtime": 1782639242.9534843,
-    "ast_hash": "d592e0645b201205d76f1aa0f3464770",
+    "mtime": 1783724582.3221025,
+    "ast_hash": "b8c01703e70a2efd9104ecb7b5790a3f",
     "semantic_hash": ""
   },
   "backend/src/services/intelligence_source_registry.py": {
@@ -3065,8 +3065,8 @@
     "semantic_hash": ""
   },
   "backend/src/services/unified_security_intelligence_fabric_service.py": {
-    "mtime": 1783258052.9784043,
-    "ast_hash": "e3a10d02a590ca43e25acad26292aadf",
+    "mtime": 1783724784.221733,
+    "ast_hash": "99d7b489ffb6678354dee027a50f5aee",
     "semantic_hash": ""
   },
   "backend/tests/integration/test_security_intelligence_fabric.py": {
@@ -3120,8 +3120,8 @@
     "semantic_hash": ""
   },
   "backend/tests/integration/test_concurrent_fabric_propagation.py": {
-    "mtime": 1782666704.8074057,
-    "ast_hash": "73a8a2636dcf9e97c0f6582760ef1c40",
+    "mtime": 1783724511.4081106,
+    "ast_hash": "70ce9dbea8377530f8c533c06b4a1b6f",
     "semantic_hash": ""
   },
   "backend/tests/integration/test_concurrent_graph_updates.py": {
@@ -3175,13 +3175,13 @@
     "semantic_hash": ""
   },
   "backend/src/core/tenant.py": {
-    "mtime": 1783124676.484124,
-    "ast_hash": "b4676a23e5b7f4997afb1819cad0cfb1",
+    "mtime": 1783723887.9225662,
+    "ast_hash": "64b355b2d38a5d4c7d2ab89bd64daa00",
     "semantic_hash": ""
   },
   "backend/src/infrastructure/database/unit_of_work.py": {
-    "mtime": 1783249206.9913657,
-    "ast_hash": "86f803994ba0044b19c19a4a0bd407ea",
+    "mtime": 1783724013.602493,
+    "ast_hash": "47ad7ce939f9e32ec1070120e88aac73",
     "semantic_hash": ""
   },
   "backend/src/infrastructure/repositories/__init__.py": {
@@ -3190,8 +3190,8 @@
     "semantic_hash": ""
   },
   "backend/src/infrastructure/repositories/base.py": {
-    "mtime": 1783126907.1177478,
-    "ast_hash": "15b26d10a43399e1e6c2d2f61f33111d",
+    "mtime": 1783724311.6201444,
+    "ast_hash": "ac1847aae934624f00d0b816f823e50f",
     "semantic_hash": ""
   },
   "backend/src/infrastructure/repositories/cyber_resilience_repository.py": {
@@ -3520,8 +3520,8 @@
     "semantic_hash": ""
   },
   "backend/debug_log.txt": {
-    "mtime": 1783258790.7671945,
-    "ast_hash": "223a620bdceb832bd54ac6d93cff3afe",
+    "mtime": 1783739778.3544016,
+    "ast_hash": "f198c601cc3f1189236e4f1cfac0bbc2",
     "semantic_hash": ""
   },
   "backend/docs/architecture/DomainPersistenceStandards.md": {
@@ -3540,8 +3540,8 @@
     "semantic_hash": ""
   },
   "backend/src/services/graph_bootstrap_service.py": {
-    "mtime": 1783240763.438162,
-    "ast_hash": "6831051726d385fc1a392595fc11c789",
+    "mtime": 1783724773.9331007,
+    "ast_hash": "19f45a4477084532f4f63fb806c8168a",
     "semantic_hash": ""
   },
   "backend/alembic/versions/8e2fe6d6496f_add_related_entities_to_hunts.py": {
@@ -3604,17 +3604,72 @@
     "ast_hash": "d9bd86e197e049e6d401ea352e7b1cf9",
     "semantic_hash": ""
   },
-  "IMPLEMENTATION_REPORT.md": {
+  "backend/alembic/versions/7476d4d6195a_crit_07_rls_hardening.py": {
+    "mtime": 1783724818.0448272,
+    "ast_hash": "43f7414bfd1bfb28cbb279b2c069f510",
+    "semantic_hash": ""
+  },
+  "backend/scripts/pre_deployment_backup.sh": {
+    "mtime": 1783739707.9130125,
+    "ast_hash": "c46a08aad40b908e157c8008c96eb3fa",
+    "semantic_hash": ""
+  },
+  "backend/src/api/v1/dependencies/db.py": {
+    "mtime": 1783723656.0842333,
+    "ast_hash": "ffc3b820e40b5aec36ae89e75892cc31",
+    "semantic_hash": ""
+  },
+  "backend/src/infrastructure/cache/tenant_cache_dict.py": {
+    "mtime": 1783724759.037146,
+    "ast_hash": "1163ef8f082bd12cd0ab002eeaa3efe0",
+    "semantic_hash": ""
+  },
+  "backend/tests/integration/test_tenant_isolation.py": {
+    "mtime": 1783743234.5990636,
+    "ast_hash": "b4e587447af9bd510cdb5fe8bffeacf1",
+    "semantic_hash": ""
+  },
+  "Docs/architecture/adr/ADR-001-CRIT-06-Persistence-Remediation.md": {
+    "mtime": 1783260175.2896397,
+    "ast_hash": "0676e63cf8a5c37f336812c0d3267fcd",
+    "semantic_hash": ""
+  },
+  "audits/AEGISX_CORRELATION_READINESS_AUDIT.md": {
+    "mtime": 1783267261.7346625,
+    "ast_hash": "de88a9d3a3fde97139b8e08958791e06",
+    "semantic_hash": ""
+  },
+  "audits/AEGISX_INTELLIGENCE_DEPTH_AUDIT.md": {
+    "mtime": 1783261136.9824746,
+    "ast_hash": "8ead88a4539078ed49cbbb2c6d1584ba",
+    "semantic_hash": ""
+  },
+  "audits/AEGISX_PLATFORM_STATE_ASSESSMENT.md": {
+    "mtime": 1783260718.2921302,
+    "ast_hash": "867079317ff231b8f86e885a6cbe7a0a",
+    "semantic_hash": ""
+  },
+  "audits/CRIT_06_FINAL_CLOSURE_AUDIT.md": {
+    "mtime": 1783260008.1233463,
+    "ast_hash": "0715b19e8dcfe56ba0153d3a4b7226ed",
+    "semantic_hash": ""
+  },
+  "audits/IMPLEMENTATION_REPORT.md": {
     "mtime": 1783258819.327147,
     "ast_hash": "1f5023fe413782f82bff81041fa8d67d",
     "semantic_hash": ""
   },
-  "MIGRATION_REPORT.md": {
+  "audits/MIGRATION_REPORT.md": {
     "mtime": 1783258827.653475,
     "ast_hash": "a564fd6cf821fdd8467714c5e07b5c03",
     "semantic_hash": ""
   },
-  "TEST_EXECUTION_REPORT.md": {
+  "audits/PHASE_2_SPRINT_01_UNIFIED_CORRELATION_ENGINE_BLUEPRINT.md": {
+    "mtime": 1783269620.3512852,
+    "ast_hash": "d13231b657858dbc22a571281f2502c8",
+    "semantic_hash": ""
+  },
+  "audits/TEST_EXECUTION_REPORT.md": {
     "mtime": 1783258836.5796716,
     "ast_hash": "019da21322b823aacdd53c92f401a385",
     "semantic_hash": ""

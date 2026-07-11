@@ -157,7 +157,7 @@ class FindingService:
                     },
                 )
                 db.add(finding)
-                await db.commit()
+                await db.flush()
                 await db.refresh(finding)
 
                 # 2. History
@@ -205,7 +205,7 @@ class FindingService:
                     timestamp=now,
                 )
                 db.add(event)
-                await db.commit()
+                await db.flush()
 
             else:
                 # Existing finding - update last_seen
@@ -365,7 +365,7 @@ class FindingService:
                     db.add(audit)
 
                 # Save updates
-                await db.commit()
+                await db.flush()
 
             # 7. Create/version evidence
             await FindingEvidenceService.create_evidence(
@@ -483,7 +483,7 @@ class FindingService:
         )
         db.add(event)
 
-        await db.commit()
+        await db.flush()
 
         # Recompute snapshot
         await FindingSnapshotService.update_finding_snapshot(db, finding.asset_id)

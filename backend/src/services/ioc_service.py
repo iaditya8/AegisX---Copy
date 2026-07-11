@@ -1,6 +1,7 @@
 import uuid
 from datetime import datetime, timezone
 from typing import Dict, List, Optional
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.domain.entities.threat_intelligence import IOCSeverity, IOCStatus, IOCType, ThreatFeedType
 from src.services.ioc_fingerprint_service import IOCFingerprintService
@@ -80,6 +81,7 @@ class IOCService:
         scope_id: Optional[uuid.UUID] = None,
         threat_actors: Optional[List[str]] = None,
         campaigns: Optional[List[str]] = None,
+        db: Optional[AsyncSession] = None,
     ) -> IOCRecord:
         """Create or synchronize an IOC record, keeping its identity and terminal states stable."""
         if not IOCTypeRegistry.validate_value(ioc_type, value):
@@ -167,6 +169,29 @@ class IOCService:
             "CREATED",
             f"Created active IOC record: {normalized} ({ioc_type.value})",
         )
+
+        if db is not None:
+            from src.services.workflow_event_service import WorkflowEventService
+            import asyncio
+            coro = WorkflowEventService.emit_event(
+                db=db,
+                event_type="threat.ioc_added",
+                correlation_id=ioc_id,
+                payload={
+                    "ioc_id": str(ioc_id),
+                    "value": normalized,
+                    "ioc_type": ioc_type.value,
+                    "severity": severity.value,
+                    "reputation": reputation,
+                }
+            )
+            try:
+                loop = asyncio.get_running_loop()
+                if loop.is_running():
+                    loop.create_task(coro)
+            except RuntimeError:
+                asyncio.run(coro)
+
         return record
 
     @classmethod

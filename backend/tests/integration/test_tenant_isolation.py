@@ -76,3 +76,182 @@ async def test_base_repository_tenant_mismatch_prevention(mock_db):
         await repo.save(asset)
         
     set_current_tenant_id(None)
+
+
+@pytest.mark.asyncio
+async def test_workflow_event_service_transaction_neutrality(mock_db):
+    """Verify that WorkflowEventService.emit_event does not commit the transaction."""
+    from src.services.workflow_event_service import WorkflowEventService
+    from src.infrastructure.database.models import Workflow
+    
+    tenant_id = uuid.uuid4()
+    set_current_tenant_id(tenant_id)
+    
+    # Mock Workflow retrieval
+    wf = Workflow(id=uuid.uuid4(), tenant_id=tenant_id)
+    mock_db._entities[Workflow] = [wf]
+    
+    event = await WorkflowEventService.emit_event(
+        db=mock_db,
+        event_type="test.event",
+        payload={"data": "test"}
+    )
+    
+    assert event is not None
+    # Verify db.add was called
+    assert any(isinstance(e, type(event)) for e in mock_db._entities.get(type(event), []))
+    # Verify db.commit was NOT called
+    mock_db.commit.assert_not_called()
+    set_current_tenant_id(None)
+
+
+@pytest.mark.asyncio
+async def test_finding_service_transaction_neutrality(mock_db):
+    """Verify that FindingService does not commit the transaction."""
+    from src.services.finding_service import FindingService
+    from src.infrastructure.database.models import Asset, Workflow
+    
+    tenant_id = uuid.uuid4()
+    set_current_tenant_id(tenant_id)
+    
+    asset = Asset(id=uuid.uuid4(), scope_id=uuid.uuid4(), host="example.com", tenant_id=tenant_id)
+    wf = Workflow(id=uuid.uuid4(), tenant_id=tenant_id)
+    mock_db._entities[Asset] = [asset]
+    mock_db._entities[Workflow] = [wf]
+    
+    findings_list = [{
+        "finding": {
+            "template_id": "cve-1234",
+            "title": "Vulnerability",
+            "description": "Desc",
+            "severity": "high",
+            "template_name": "Nuclei-CVE",
+            "source_plugin": "nuclei"
+        },
+        "evidence": {
+            "evidence_type": "http",
+            "raw_request": "GET",
+            "raw_response": "200",
+            "matched_at": "http://example.com/path",
+            "matcher_name": "matcher",
+            "matcher_value": "val",
+            "metadata_json": {"host": "example.com"}
+        }
+    }]
+    
+    processed = await FindingService.process_discovered_findings(
+        db=mock_db,
+        scope_id=asset.scope_id,
+        findings_list=findings_list,
+        scan_run_id=uuid.uuid4(),
+        workflow_id=wf.id,
+        actor_id=uuid.uuid4()
+    )
+    
+    assert len(processed) > 0
+    # Verify db.commit was NOT called
+    mock_db.commit.assert_not_called()
+    set_current_tenant_id(None)
+
+
+@pytest.mark.asyncio
+async def test_ioc_added_event_emission(mock_db):
+    """Verify that threat.ioc_added event is emitted on IOC creation."""
+    from src.services.ioc_service import IOCService
+    from src.domain.entities.threat_intelligence import IOCType, IOCSeverity, ThreatFeedType
+    from src.infrastructure.database.models import Workflow, WorkflowEvent
+    
+    tenant_id = uuid.uuid4()
+    set_current_tenant_id(tenant_id)
+    IOCService.clear_iocs()
+    
+    wf = Workflow(id=uuid.uuid4(), tenant_id=tenant_id)
+    mock_db._entities[Workflow] = [wf]
+    
+    record = IOCService.create_or_sync_ioc(
+        value="1.1.1.1",
+        ioc_type=IOCType.IP_ADDRESS,
+        severity=IOCSeverity.HIGH,
+        reputation=90,
+        feed_type=ThreatFeedType.INTERNAL,
+        db=mock_db
+    )
+    
+    assert record is not None
+    # Allow async task in loop to run
+    import asyncio
+    await asyncio.sleep(0.1)
+    
+    # Assert WorkflowEvent was staged
+    events = mock_db._entities.get(WorkflowEvent, [])
+    assert len(events) > 0
+    assert any(e.event_type == "threat.ioc_added" for e in events)
+    set_current_tenant_id(None)
+
+
+@pytest.mark.asyncio
+async def test_validation_failed_event_emission(mock_db):
+    """Verify that validation.failed event is emitted on validation failure."""
+    from src.services.control_validation_service import ControlValidationService
+    from src.domain.entities.control_validation import ControlType, ControlSeverity, ValidationStatus
+    from src.infrastructure.database.models import Workflow, WorkflowEvent
+    
+    tenant_id = uuid.uuid4()
+    set_current_tenant_id(tenant_id)
+    ControlValidationService.clear_controls()
+    
+    wf = Workflow(id=uuid.uuid4(), tenant_id=tenant_id)
+    mock_db._entities[Workflow] = [wf]
+    
+    control = await ControlValidationService.create_or_sync_control(
+        name="Firewall",
+        description="Prevent unauthorized access",
+        control_type=ControlType.PREVENTIVE,
+        severity=ControlSeverity.HIGH,
+        attack_techniques=["T1001"]
+    )
+    
+    # Run validation with status FAILED
+    await ControlValidationService.execute_validation(
+        db=mock_db,
+        control_id=control.control_id,
+        attack_technique="T1001",
+        status=ValidationStatus.FAILED,
+        evidence="Firewall block failed"
+    )
+    
+    # Assert WorkflowEvent was staged
+    events = mock_db._entities.get(WorkflowEvent, [])
+    assert len(events) > 0
+    assert any(e.event_type == "validation.failed" for e in events)
+    set_current_tenant_id(None)
+
+
+@pytest.mark.asyncio
+async def test_transaction_rollback_guarantees(mock_db):
+    """Verify that raising an exception rolls back staged outbox events."""
+    from src.infrastructure.database.unit_of_work import UnitOfWork
+    from src.services.workflow_event_service import WorkflowEventService
+    from src.infrastructure.database.models import Workflow
+    
+    tenant_id = uuid.uuid4()
+    set_current_tenant_id(tenant_id)
+    
+    wf = Workflow(id=uuid.uuid4(), tenant_id=tenant_id)
+    mock_db._entities[Workflow] = [wf]
+    
+    with pytest.raises(ValueError):
+        async with UnitOfWork() as uow:
+            # Stage outbox event
+            await WorkflowEventService.emit_event(
+                db=uow.session,
+                event_type="rollback.test",
+                payload={}
+            )
+            # Raise exception to trigger rollback
+            raise ValueError("Simulated failure")
+            
+    # Commit must not be called, rollback must be called
+    mock_db.rollback.assert_called_once()
+    mock_db.commit.assert_not_called()
+    set_current_tenant_id(None)

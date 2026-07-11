@@ -276,6 +276,7 @@ async def create_ioc(
             scope_id=request.scope_id,
             threat_actors=request.threat_actors,
             campaigns=request.campaigns,
+            db=db,
         )
         return to_ioc_response(record)
     except ValueError as e:

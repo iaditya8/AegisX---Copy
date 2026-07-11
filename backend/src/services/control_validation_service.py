@@ -315,6 +315,19 @@ class ControlValidationService:
             f"Validation run completed. status={status.value}, tech={attack_technique}",
         )
 
+        if status == ValidationStatus.FAILED:
+            from src.services.workflow_event_service import WorkflowEventService
+            await WorkflowEventService.emit_event(
+                db=db,
+                event_type="validation.failed",
+                payload={
+                    "validation_id": str(validation_id),
+                    "control_id": str(control_id),
+                    "status": status.value,
+                    "effectiveness_score": eff_score,
+                }
+            )
+
         if old_status != control.status:
             ControlHistoryService.record_event(
                 control_id,
