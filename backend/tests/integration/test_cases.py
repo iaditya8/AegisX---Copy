@@ -1109,7 +1109,8 @@ def test_case_service_clear() -> None:
     assert CaseService.get_all_cases() == []
 
 
-def test_case_evidence_correlation() -> None:
+@pytest.mark.asyncio
+async def test_case_evidence_correlation() -> None:
     """Verify correlation correctly maps case-specific and incident-specific evidence."""
     case_id = uuid.uuid4()
     inc_id = uuid.uuid4()
@@ -1125,9 +1126,9 @@ def test_case_evidence_correlation() -> None:
             self.alert_id = alert_id
 
     alert = DummyAlert(uuid.uuid4())
-    IncidentEvidenceService.add_evidence(inc_id, "alerts", alert)
+    await IncidentEvidenceService.add_evidence(inc_id, "alerts", alert)
 
-    correlated = CaseEvidenceCorrelationService.get_correlated_evidence(
+    correlated = await CaseEvidenceCorrelationService.get_correlated_evidence(
         case_id, [inc_id]
     )
     assert len(correlated["case_evidence"]) == 1

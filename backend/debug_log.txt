@@ -1,0 +1,16 @@
+
+[TEST WORKER] mock_db=<StatefulMockSession id='1865054893696'>, type=<class 'unittest.mock.StatefulMockSession'>, mock_db.add=<InterceptedAddMock name='mock.add' id='1865082127760'>
+
+[TEST WORKER] mock_db=<StatefulMockSession id='2502583817360'>, type=<class 'unittest.mock.StatefulMockSession'>, mock_db.add=<InterceptedAddMock name='mock.add' id='2502570975904'>
+
+[TEST WORKER] mock_db=<StatefulMockSession id='2517504601136'>, type=<class 'unittest.mock.StatefulMockSession'>, mock_db.add=<InterceptedAddMock name='mock.add' id='2517476194784'>
+
+[TEST WORKER] mock_db=<StatefulMockSession id='2212006039280'>, type=<class 'unittest.mock.StatefulMockSession'>, mock_db.add=<InterceptedAddMock name='mock.add' id='2212006124704'>
+
+[TEST WORKER] mock_db=<StatefulMockSession id='2681149288720'>, type=<class 'unittest.mock.StatefulMockSession'>, mock_db.add=<InterceptedAddMock name='mock.add' id='2681157401488'>
+
+[TEST WORKER] mock_db=<StatefulMockSession id='2086712141024'>, type=<class 'unittest.mock.StatefulMockSession'>, mock_db.add=<InterceptedAddMock name='mock.add' id='2086712204736'>
+
+[TEST WORKER] mock_db=<StatefulMockSession id='1886701007216'>, type=<class 'unittest.mock.StatefulMockSession'>, mock_db.add=<InterceptedAddMock name='mock.add' id='1886704309296'>
+
+[TEST WORKER] mock_db=<StatefulMockSession id='3090238385632'>, type=<class 'unittest.mock.StatefulMockSession'>, mock_db.add=<InterceptedAddMock name='mock.add' id='3090237975648'>

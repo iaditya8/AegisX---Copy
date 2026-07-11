@@ -928,7 +928,7 @@ class AIContextBuilder:
                 for h in CaseHistoryService.get_history(c.case_id)
             ]
 
-            correlated_evidence = CaseEvidenceCorrelationService.get_correlated_evidence(c.case_id, c.incident_ids)
+            correlated_evidence = await CaseEvidenceCorrelationService.get_correlated_evidence(c.case_id, c.incident_ids)
             case_evidence_details = []
             for ev in correlated_evidence["case_evidence"]:
                 custody_timeline = [
@@ -1043,7 +1043,7 @@ class AIContextBuilder:
             for h in CaseHistoryService.get_history(case_id)
         ]
 
-        correlated_evidence = CaseEvidenceCorrelationService.get_correlated_evidence(case_id, case.incident_ids)
+        correlated_evidence = await CaseEvidenceCorrelationService.get_correlated_evidence(case_id, case.incident_ids)
         case_evidence_details = []
         for ev in correlated_evidence["case_evidence"]:
             custody_timeline = [

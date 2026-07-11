@@ -19,7 +19,7 @@ from src.services.threat_severity_registry import ThreatSeverityRegistry
 
 from src.infrastructure.database.unit_of_work import UnitOfWork
 from src.infrastructure.database.models import ThreatIntelIOC, IntelligenceEvent
-from src.core.tenant import get_current_tenant_id
+from src.core.tenant import get_current_tenant_id, require_current_tenant_id
 from src.infrastructure.cache.cache_dict import CacheDict
 
 
@@ -50,7 +50,7 @@ class ThreatRecord:
         self.source = source
         self.tags = tags
         self.scope_id = scope_id
-        self.tenant_id = tenant_id or get_current_tenant_id() or uuid.UUID("00000000-0000-0000-0000-000000000000")
+        self.tenant_id = tenant_id or require_current_tenant_id()
         self.created_at = created_at or datetime.now(timezone.utc)
         self.updated_at = updated_at or datetime.now(timezone.utc)
 
@@ -83,13 +83,13 @@ class ThreatIntelligenceService:
     @classmethod
     def get_all_threats(cls) -> List[ThreatRecord]:
         """Retrieve all GRC threat intelligence records (L2 cache tenant filtered)."""
-        tenant_id = get_current_tenant_id() or uuid.UUID("00000000-0000-0000-0000-000000000000")
+        tenant_id = require_current_tenant_id()
         return [r for r in cls._threats.values() if r.tenant_id == tenant_id]
 
     @classmethod
     def get_threat(cls, threat_intel_id: uuid.UUID) -> Optional[ThreatRecord]:
         """Retrieve a GRC threat intelligence record by ID (L2 cache check)."""
-        tenant_id = get_current_tenant_id() or uuid.UUID("00000000-0000-0000-0000-000000000000")
+        tenant_id = require_current_tenant_id()
         cached = cls._threats.get(threat_intel_id)
         if cached and cached.tenant_id == tenant_id:
             return cached
@@ -98,7 +98,7 @@ class ThreatIntelligenceService:
     @classmethod
     def get_threat_by_fingerprint(cls, fingerprint: str) -> Optional[ThreatRecord]:
         """Retrieve a GRC threat intelligence record by fingerprint (L2 cache check)."""
-        tenant_id = get_current_tenant_id() or uuid.UUID("00000000-0000-0000-0000-000000000000")
+        tenant_id = require_current_tenant_id()
         threat_intel_id = cls._fingerprint_lookup.get(fingerprint)
         if threat_intel_id:
             cached = cls.get_threat(threat_intel_id)
@@ -135,7 +135,7 @@ class ThreatIntelligenceService:
         uow: Optional[UnitOfWork] = None,
     ) -> ThreatRecord:
         """Create or synchronize GRC threat intelligence record enforcing identity rules."""
-        tenant_id = get_current_tenant_id() or uuid.UUID("00000000-0000-0000-0000-000000000000")
+        tenant_id = require_current_tenant_id()
         fingerprint = ThreatIntelFingerprintService.generate_fingerprint(
             indicator_type.value if hasattr(indicator_type, "value") else indicator_type,
             value,
@@ -283,7 +283,7 @@ class ThreatIntelligenceService:
     @classmethod
     async def fuse_threat(cls, threat_intel_id: uuid.UUID, confidence: float) -> ThreatRecord:
         """Persist fused confidence score and transition status to FUSED."""
-        tenant_id = get_current_tenant_id() or uuid.UUID("00000000-0000-0000-0000-000000000000")
+        tenant_id = require_current_tenant_id()
         async with UnitOfWork() as uow:
             record = await uow.threat_repo.get(threat_intel_id)
             if not record:
@@ -340,7 +340,7 @@ class ThreatIntelligenceService:
         cls, threat_intel_id: uuid.UUID, new_status: ThreatIntelStatus
     ) -> ThreatRecord:
         """Safely transition GRC threat intelligence status enforcing forward-only rules."""
-        tenant_id = get_current_tenant_id() or uuid.UUID("00000000-0000-0000-0000-000000000000")
+        tenant_id = require_current_tenant_id()
         async with UnitOfWork() as uow:
             record = await uow.threat_repo.get(threat_intel_id)
             if not record:

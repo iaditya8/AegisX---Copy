@@ -10,6 +10,9 @@ class GraphCorrelationService:
     async def recalculate_cross_domain_links(cls) -> None:
         """Trace cross-domain alignments and generate edges deterministically (derived intelligence)."""
         from src.services.security_intelligence_graph_service import SecurityIntelligenceGraphService
+        from src.core.tenant import require_current_tenant_id
+        
+        tenant_id = require_current_tenant_id()
 
         # 1. Remove all active non-deprecated edges to rebuild cleanly
         active_edge_ids = [
@@ -33,7 +36,7 @@ class GraphCorrelationService:
 
         # A. Incidents to Cases (CONTAINED_IN)
         from src.services.case_service import CaseService
-        cases = CaseService.get_all_cases()
+        cases = [c for c in CaseService.get_all_cases() if getattr(c, "tenant_id", None) == tenant_id]
         for cs in cases:
             case_node = cls._find_node_by_entity(nodes_by_type.get(NodeType.CASE, []), cs.case_id)
             if not case_node:
@@ -48,7 +51,7 @@ class GraphCorrelationService:
 
         # B. Postures to Assets (AFFECTS)
         from src.services.security_posture_service import SecurityPostureService
-        postures = SecurityPostureService.get_all_postures()
+        postures = [p for p in SecurityPostureService.get_all_postures() if getattr(p, "tenant_id", None) == tenant_id]
         for p in postures:
             p_node = cls._find_node_by_entity(nodes_by_type.get(NodeType.POSTURE, []), p.posture_id)
             a_node = cls._find_node_by_entity(nodes_by_type.get(NodeType.ASSET, []), p.asset_id)
@@ -60,7 +63,11 @@ class GraphCorrelationService:
 
         # C. Investigations to Incidents (CONTAINED_IN)
         from src.services.investigation_service import InvestigationService
+        from src.services.incident_service import IncidentService
         for incident_id, entries in InvestigationService._investigations.items():
+            inc = IncidentService.get_incident(incident_id)
+            if not inc or getattr(inc, "tenant_id", None) != tenant_id:
+                continue
             inc_node = cls._find_node_by_entity(nodes_by_type.get(NodeType.INCIDENT, []), incident_id)
             if not inc_node:
                 continue
@@ -75,8 +82,8 @@ class GraphCorrelationService:
         # D. Threat Intel to GRC Knowledge (MITIGATES)
         from src.services.threat_intelligence_service import ThreatIntelligenceService
         from src.services.security_knowledge_service import SecurityKnowledgeService
-        threats = ThreatIntelligenceService.get_all_threats()
-        knows = await SecurityKnowledgeService.get_all_knowledge()
+        threats = [t for t in ThreatIntelligenceService.get_all_threats() if getattr(t, "tenant_id", None) == tenant_id]
+        knows = [k for k in await SecurityKnowledgeService.get_all_knowledge() if getattr(k, "tenant_id", None) == tenant_id]
         for t in threats:
             t_node = cls._find_node_by_entity(nodes_by_type.get(NodeType.THREAT_INTEL, []), t.threat_intel_id)
             if not t_node:

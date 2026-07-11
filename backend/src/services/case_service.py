@@ -42,6 +42,8 @@ class CaseRecord:
         self.incident_ids = incident_ids or []
         self.alert_ids = alert_ids or []
         self.asset_ids = asset_ids or []
+        from src.core.tenant import get_current_tenant_id
+        self.tenant_id = get_current_tenant_id()
 
 
 class CaseService:

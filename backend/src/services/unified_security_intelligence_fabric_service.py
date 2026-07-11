@@ -12,19 +12,19 @@ from src.services.intelligence_source_registry import IntelligenceSourceRegistry
 from src.services.fabric_fingerprint_service import FabricFingerprintService
 from src.services.fabric_history_service import FabricHistoryService
 from src.services.confidence_weight_registry import ConfidenceWeightRegistry
-from src.infrastructure.cache.cache_dict import CacheDict
+from src.infrastructure.cache.tenant_cache_dict import TenantCacheDict
 from src.infrastructure.database.unit_of_work import UnitOfWork
 from src.infrastructure.database.models import (
     SecurityIntelligenceFabricNode as DBNode,
     IntelligenceEvent,
 )
-from src.core.tenant import get_current_tenant_id
+from src.core.tenant import get_current_tenant_id, require_current_tenant_id
 
 
 class UnifiedSecurityIntelligenceFabricService:
     # L2 caches
-    _fabric_nodes = CacheDict("intelligence_fabric")
-    _fingerprint_lookup = CacheDict("intelligence_fabric_fingerprints")
+    _fabric_nodes = TenantCacheDict("intelligence_fabric")
+    _fingerprint_lookup = TenantCacheDict("intelligence_fabric_fingerprints")
 
     @classmethod
     def clear_fabric(cls) -> None:
@@ -35,13 +35,14 @@ class UnifiedSecurityIntelligenceFabricService:
 
     @classmethod
     async def bootstrap(cls, db: AsyncSession) -> None:
-        """Bootstrap L2 cache from PostgreSQL database."""
+        """Bootstrap L2 cache — loads ALL tenants but stores with tenant_id."""
         cls.clear_fabric()
-        async with UnitOfWork() as uow:
+        async with UnitOfWork(require_tenant=False) as uow:
             db_nodes = await uow.fabric_repo.list()
             for db_n in db_nodes:
                 node = FabricIntelligenceNodeResponse(
                     node_id=db_n.id,
+                    tenant_id=db_n.tenant_id,
                     node_fingerprint=db_n.node_fingerprint,
                     source_type=db_n.source_type,
                     status=FabricStatus(db_n.status),
@@ -52,25 +53,33 @@ class UnifiedSecurityIntelligenceFabricService:
                     confidence_weights=db_n.confidence_weights,
                     target_links=db_n.target_links,
                 )
-                cls._fabric_nodes[db_n.id] = node
-                cls._fingerprint_lookup[db_n.node_fingerprint] = db_n.id
+                cls._fabric_nodes.set_for_tenant(db_n.tenant_id, db_n.id, node)
+                cls._fingerprint_lookup.set_for_tenant(db_n.tenant_id, db_n.node_fingerprint, db_n.id)
 
     @classmethod
     def get_all_fabric_nodes(cls) -> List[FabricIntelligenceNodeResponse]:
-        """Retrieve all fabric intelligence nodes currently tracked."""
-        return list(cls._fabric_nodes.values())
+        """Retrieve fabric nodes for the current tenant only."""
+        tenant_id = require_current_tenant_id()
+        return [n for n in cls._fabric_nodes.values() if n.tenant_id == tenant_id]
 
     @classmethod
     def get_fabric_node(cls, node_id: uuid.UUID) -> Optional[FabricIntelligenceNodeResponse]:
-        """Retrieve a specific fabric node by ID."""
-        return cls._fabric_nodes.get(node_id)
+        """Retrieve a specific fabric node by ID with tenant validation."""
+        tenant_id = require_current_tenant_id()
+        node = cls._fabric_nodes.get(node_id)
+        if node and node.tenant_id == tenant_id:
+            return node
+        return None
 
     @classmethod
     def get_node_by_fingerprint(cls, fingerprint: str) -> Optional[FabricIntelligenceNodeResponse]:
-        """Retrieve a fabric node by fingerprint."""
+        """Retrieve a fabric node by fingerprint with tenant validation."""
+        tenant_id = require_current_tenant_id()
         nid = cls._fingerprint_lookup.get(fingerprint)
         if nid:
-            return cls.get_fabric_node(nid)
+            node = cls._fabric_nodes.get(nid)
+            if node and node.tenant_id == tenant_id:
+                return node
         return None
 
     @classmethod
@@ -101,7 +110,7 @@ class UnifiedSecurityIntelligenceFabricService:
         fingerprint = FabricFingerprintService.generate_fingerprint(source_type, val_scope_id, rules_hash)
 
         existing = cls.get_node_by_fingerprint(fingerprint)
-        tenant_id = get_current_tenant_id() or uuid.UUID("00000000-0000-0000-0000-000000000000")
+        tenant_id = require_current_tenant_id()
 
         if existing:
             if existing.status == FabricStatus.TERMINATED:
@@ -145,6 +154,7 @@ class UnifiedSecurityIntelligenceFabricService:
         node_id = uuid.uuid4()
         node = FabricIntelligenceNodeResponse(
             node_id=node_id,
+            tenant_id=tenant_id,
             node_fingerprint=fingerprint,
             source_type=source_type.strip().upper(),
             status=FabricStatus.ACTIVE,
@@ -206,7 +216,7 @@ class UnifiedSecurityIntelligenceFabricService:
         if node.status != FabricStatus.SUSPENDED:
             node.status = FabricStatus.SUSPENDED
             node.updated_at = datetime.now(timezone.utc)
-            tenant_id = get_current_tenant_id() or uuid.UUID("00000000-0000-0000-0000-000000000000")
+            tenant_id = require_current_tenant_id()
             async with UnitOfWork() as uow:
                 db_n = await uow.fabric_repo.get(node_id)
                 if db_n:
@@ -239,7 +249,7 @@ class UnifiedSecurityIntelligenceFabricService:
         if node.status != FabricStatus.TERMINATED:
             node.status = FabricStatus.TERMINATED
             node.updated_at = datetime.now(timezone.utc)
-            tenant_id = get_current_tenant_id() or uuid.UUID("00000000-0000-0000-0000-000000000000")
+            tenant_id = require_current_tenant_id()
             async with UnitOfWork() as uow:
                 db_n = await uow.fabric_repo.get(node_id)
                 if db_n:
@@ -265,10 +275,14 @@ class UnifiedSecurityIntelligenceFabricService:
     @classmethod
     async def sync_fabric_state(cls, db=None) -> None:
         """Sync fabric nodes and routes from plans, decisions, threat intelligence, and assets."""
+        tenant_id = require_current_tenant_id()
+
         # 1. Threat Intel
         from src.services.threat_intelligence_service import ThreatIntelligenceService
         threats = ThreatIntelligenceService.get_all_threats()
         for t in threats:
+            if getattr(t, "tenant_id", None) != tenant_id:
+                continue
             await cls.create_or_sync_fabric_node(
                 source_type="THREAT_INTEL",
                 scope_id=t.scope_id,
@@ -281,6 +295,8 @@ class UnifiedSecurityIntelligenceFabricService:
         from src.services.security_decision_service import SecurityDecisionService
         decisions = SecurityDecisionService.get_all_decisions()
         for d in decisions:
+            if getattr(d, "tenant_id", None) != tenant_id:
+                continue
             await cls.create_or_sync_fabric_node(
                 source_type="RISK",
                 scope_id=d.scope_id,
@@ -293,6 +309,8 @@ class UnifiedSecurityIntelligenceFabricService:
         from src.services.autonomous_security_planning_service import AutonomousSecurityPlanningService
         plans = AutonomousSecurityPlanningService.get_all_plans()
         for p in plans:
+            if getattr(p, "tenant_id", None) != tenant_id:
+                continue
             await cls.create_or_sync_fabric_node(
                 source_type="POSTURE",
                 scope_id=p.scope_id,

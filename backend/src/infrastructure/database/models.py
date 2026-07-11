@@ -30,6 +30,43 @@ class Base(DeclarativeBase):
     pass
 
 
+from sqlalchemy import event
+from src.core.tenant import get_current_tenant_id
+
+@event.listens_for(Base, "before_insert", propagate=True)
+def set_tenant_id_before_insert(mapper, connection, target):
+    """Automatically populate tenant_id on insert if present on target and not set."""
+    if hasattr(target, "tenant_id") and getattr(target, "tenant_id", None) is None:
+        tenant_id = get_current_tenant_id()
+        if tenant_id:
+            target.tenant_id = tenant_id
+        else:
+            from src.core.tenant import TenantContextError
+            raise TenantContextError(
+                f"Cannot insert {target.__class__.__name__} without active tenant context."
+            )
+
+    # Self-healing for IntelligenceEvent
+    if target.__class__.__name__ == "IntelligenceEvent":
+        if getattr(target, "domain", None) is None and getattr(target, "event_type", None):
+            target.domain = target.event_type.split(".")[0]
+        if getattr(target, "entity_id", None) is None and getattr(target, "payload", None):
+            payload = target.payload
+            if isinstance(payload, dict):
+                id_val = None
+                for k, v in payload.items():
+                    if k.endswith("_id") and v:
+                        id_val = v
+                        break
+                if id_val:
+                    import uuid
+                    try:
+                        target.entity_id = uuid.UUID(id_val) if isinstance(id_val, str) else id_val
+                    except ValueError:
+                        pass
+
+
+
 class Tenant(Base):
     __tablename__ = "tenants"
 

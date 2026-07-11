@@ -146,7 +146,9 @@ async def start_workflow(
     await db.refresh(scan_run)
 
     # Trigger Celery background task
-    execute_workflow_task.delay(str(workflow_id), str(scan_run.id), str(scope_id))
+    from src.core.tenant import require_current_tenant_id
+    tenant_id = require_current_tenant_id()
+    execute_workflow_task.delay(str(workflow_id), str(scan_run.id), str(scope_id), str(tenant_id))
 
     return scan_run
 

@@ -7,7 +7,7 @@ from src.services.incident_evidence_service import IncidentEvidenceService
 
 class CaseEvidenceCorrelationService:
     @classmethod
-    def get_correlated_evidence(
+    async def get_correlated_evidence(
         cls, case_id: uuid.UUID, incident_ids: List[uuid.UUID]
     ) -> Dict[str, Any]:
         """Correlate case-specific evidence with linked incident evidence."""
@@ -19,7 +19,7 @@ class CaseEvidenceCorrelationService:
         # Incident evidence references from linked incidents
         incident_evidences = {}
         for inc_id in incident_ids:
-            incident_evidences[str(inc_id)] = IncidentEvidenceService.get_evidence(inc_id)
+            incident_evidences[str(inc_id)] = await IncidentEvidenceService.get_evidence(inc_id)
 
         return {
             "case_evidence": case_evidences,

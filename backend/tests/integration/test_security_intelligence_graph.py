@@ -508,3 +508,31 @@ async def test_scope_isolation_for_graph_paths(mock_db):
         assert resp_admin.status_code == 200
     finally:
         app.dependency_overrides.clear()
+
+
+@pytest.mark.asyncio
+async def test_graph_cross_tenant_edge_prevention(mock_db):
+    """Verify that creating an edge between nodes of different tenants is prevented."""
+    from src.core.tenant import set_current_tenant_id, TenantMismatchError
+    
+    tenant_a = uuid.uuid4()
+    tenant_b = uuid.uuid4()
+    
+    set_current_tenant_id(tenant_a)
+    n1 = await SecurityIntelligenceGraphService.create_or_sync_node(NodeType.ASSET, uuid.uuid4(), SCOPE_ID)
+    
+    set_current_tenant_id(tenant_b)
+    n2 = await SecurityIntelligenceGraphService.create_or_sync_node(NodeType.RISK, uuid.uuid4(), SCOPE_ID)
+    
+    # Try to create edge under tenant_b context
+    with pytest.raises(TenantMismatchError):
+        await SecurityIntelligenceGraphService.create_or_sync_edge(
+            n1.node_id, n2.node_id, EdgeType.AFFECTS, 2.0, SCOPE_ID
+        )
+
+    # Try to create edge under tenant_a context
+    set_current_tenant_id(tenant_a)
+    with pytest.raises(TenantMismatchError):
+        await SecurityIntelligenceGraphService.create_or_sync_edge(
+            n1.node_id, n2.node_id, EdgeType.AFFECTS, 2.0, SCOPE_ID
+        )

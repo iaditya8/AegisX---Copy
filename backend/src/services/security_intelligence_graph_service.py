@@ -19,24 +19,22 @@ from src.services.graph_fingerprint_service import GraphFingerprintService
 from src.services.graph_history_service import GraphHistoryService
 
 
-from src.infrastructure.cache.cache_dict import CacheDict
-
-
+from src.infrastructure.cache.tenant_cache_dict import TenantCacheDict
 from src.infrastructure.database.unit_of_work import UnitOfWork
 from src.infrastructure.database.models import (
     SecurityIntelligenceNode,
     SecurityIntelligenceEdge,
     IntelligenceEvent,
 )
-from src.core.tenant import get_current_tenant_id
+from src.core.tenant import get_current_tenant_id, require_current_tenant_id
 
 
 class SecurityIntelligenceGraphService:
     # L2 caches
-    _nodes = CacheDict("graph_nodes")
-    _edges = CacheDict("graph_edges")
-    _node_fingerprint_lookup = CacheDict("graph_node_fingerprints")
-    _edge_fingerprint_lookup = CacheDict("graph_edge_fingerprints")
+    _nodes = TenantCacheDict("graph_nodes")
+    _edges = TenantCacheDict("graph_edges")
+    _node_fingerprint_lookup = TenantCacheDict("graph_node_fingerprints")
+    _edge_fingerprint_lookup = TenantCacheDict("graph_edge_fingerprints")
 
     @classmethod
     def clear_graph(cls) -> None:
@@ -61,7 +59,7 @@ class SecurityIntelligenceGraphService:
     @classmethod
     def get_node(cls, node_id: uuid.UUID) -> Optional[GraphNodeResponse]:
         """Retrieve a node by ID (L2 cache check)."""
-        tenant_id = get_current_tenant_id() or uuid.UUID("00000000-0000-0000-0000-000000000000")
+        tenant_id = require_current_tenant_id()
         cached = cls._nodes.get(node_id)
         if cached and cached.tenant_id == tenant_id:
             return cached
@@ -70,7 +68,7 @@ class SecurityIntelligenceGraphService:
     @classmethod
     def get_edge(cls, edge_id: uuid.UUID) -> Optional[GraphEdgeResponse]:
         """Retrieve an edge by ID (L2 cache check)."""
-        tenant_id = get_current_tenant_id() or uuid.UUID("00000000-0000-0000-0000-000000000000")
+        tenant_id = require_current_tenant_id()
         cached = cls._edges.get(edge_id)
         if cached and cached.tenant_id == tenant_id:
             return cached
@@ -79,13 +77,13 @@ class SecurityIntelligenceGraphService:
     @classmethod
     def get_all_nodes(cls) -> List[GraphNodeResponse]:
         """Retrieve all nodes in the graph (L2 cache tenant filtered)."""
-        tenant_id = get_current_tenant_id() or uuid.UUID("00000000-0000-0000-0000-000000000000")
+        tenant_id = require_current_tenant_id()
         return [r for r in cls._nodes.values() if r.tenant_id == tenant_id]
 
     @classmethod
     def get_all_edges(cls) -> List[GraphEdgeResponse]:
         """Retrieve all edges in the graph (L2 cache tenant filtered)."""
-        tenant_id = get_current_tenant_id() or uuid.UUID("00000000-0000-0000-0000-000000000000")
+        tenant_id = require_current_tenant_id()
         return [r for r in cls._edges.values() if r.tenant_id == tenant_id]
 
     @classmethod
@@ -123,7 +121,7 @@ class SecurityIntelligenceGraphService:
         if not GraphNodeTypeRegistry.validate(node_type_str):
             raise ValueError(f"Invalid Node Type: {node_type}")
 
-        tenant_id = get_current_tenant_id() or uuid.UUID("00000000-0000-0000-0000-000000000000")
+        tenant_id = require_current_tenant_id()
         fingerprint = GraphFingerprintService.generate_node_fingerprint(node_type_str, entity_id)
 
         async def _sync(uow_inst: UnitOfWork) -> SecurityIntelligenceNode:
@@ -189,7 +187,16 @@ class SecurityIntelligenceGraphService:
         if not GraphEdgeTypeRegistry.validate(edge_type_str):
             raise ValueError(f"Invalid Edge Type: {edge_type}")
 
-        tenant_id = get_current_tenant_id() or uuid.UUID("00000000-0000-0000-0000-000000000000")
+        tenant_id = require_current_tenant_id()
+        
+        source_node = cls.get_node(source_id)
+        target_node = cls.get_node(target_id)
+        if not source_node:
+            from src.core.tenant import TenantMismatchError
+            raise TenantMismatchError(f"Source node {source_id} not found in the current tenant context")
+        if not target_node:
+            from src.core.tenant import TenantMismatchError
+            raise TenantMismatchError(f"Target node {target_id} not found in the current tenant context")
         fingerprint = GraphFingerprintService.generate_edge_fingerprint(source_id, edge_type_str, target_id)
 
         async def _sync(uow_inst: UnitOfWork) -> SecurityIntelligenceEdge:
@@ -254,7 +261,7 @@ class SecurityIntelligenceGraphService:
     @classmethod
     async def deprecate_node(cls, node_id: uuid.UUID) -> GraphNodeResponse:
         """Transition a node to DEPRECATED (terminal state)."""
-        tenant_id = get_current_tenant_id() or uuid.UUID("00000000-0000-0000-0000-000000000000")
+        tenant_id = require_current_tenant_id()
         async with UnitOfWork() as uow:
             node = await uow.graph_repo.get_node(node_id)
             if not node:
@@ -288,7 +295,7 @@ class SecurityIntelligenceGraphService:
     @classmethod
     async def deprecate_edge(cls, edge_id: uuid.UUID) -> GraphEdgeResponse:
         """Transition an edge to DEPRECATED (terminal state)."""
-        tenant_id = get_current_tenant_id() or uuid.UUID("00000000-0000-0000-0000-000000000000")
+        tenant_id = require_current_tenant_id()
         async with UnitOfWork() as uow:
             edge = await uow.graph_repo.get_edge(edge_id)
             if not edge:
@@ -322,8 +329,13 @@ class SecurityIntelligenceGraphService:
     @classmethod
     async def rebuild_graph_topology(cls, db: AsyncSession) -> None:
         """Assemble node structures from across active database and in-memory domains."""
+        tenant_id = require_current_tenant_id()
+
         # 1. Assets from DB
-        q_assets = select(Asset).where(Asset.deleted_at.is_(None))
+        q_assets = select(Asset).where(
+            Asset.deleted_at.is_(None),
+            Asset.tenant_id == tenant_id
+        )
         res_assets = await db.execute(q_assets)
         assets = res_assets.scalars().all()
         for a in assets:
@@ -332,36 +344,50 @@ class SecurityIntelligenceGraphService:
         # 2. Risks from CyberRiskQuantificationService
         from src.services.cyber_risk_quantification_service import CyberRiskQuantificationService
         for r in await CyberRiskQuantificationService.get_all_risks():
+            if getattr(r, "tenant_id", None) != tenant_id:
+                continue
             await cls.create_or_sync_node(NodeType.RISK, r.risk_id, r.scope_id)
 
         # 3. GRC Compliance Assessments from GovernanceRiskComplianceService
         from src.services.governance_risk_compliance_service import GovernanceRiskComplianceService
         for c in await GovernanceRiskComplianceService.get_all_assessments():
+            if getattr(c, "tenant_id", None) != tenant_id:
+                continue
             await cls.create_or_sync_node(NodeType.COMPLIANCE, c.assessment_id, c.scope_id)
 
         # 4. Postures from SecurityPostureService
         from src.services.security_posture_service import SecurityPostureService
         for p in SecurityPostureService.get_all_postures():
+            if getattr(p, "tenant_id", None) != tenant_id:
+                continue
             await cls.create_or_sync_node(NodeType.POSTURE, p.posture_id, p.scope_id)
 
         # 5. Resilience records
         from src.services.cyber_resilience_service import CyberResilienceService
         for res in await CyberResilienceService.get_all_resilience():
+            if getattr(res, "tenant_id", None) != tenant_id:
+                continue
             await cls.create_or_sync_node(NodeType.RESILIENCE, res.resilience_id, res.scope_id)
 
         # 6. GRC Knowledge items
         from src.services.security_knowledge_service import SecurityKnowledgeService
         for k in await SecurityKnowledgeService.get_all_knowledge():
+            if getattr(k, "tenant_id", None) != tenant_id:
+                continue
             await cls.create_or_sync_node(NodeType.KNOWLEDGE, k.knowledge_id, k.scope_id)
 
         # 7. Threat intelligence records
         from src.services.threat_intelligence_service import ThreatIntelligenceService
         for t in ThreatIntelligenceService.get_all_threats():
+            if getattr(t, "tenant_id", None) != tenant_id:
+                continue
             await cls.create_or_sync_node(NodeType.THREAT_INTEL, t.threat_intel_id, t.scope_id)
 
         # 8. Incidents
         from src.services.incident_service import IncidentService
         for inc in IncidentService.get_all_incidents():
+            if getattr(inc, "tenant_id", None) != tenant_id:
+                continue
             scope_id = None
             if inc.asset_ids:
                 try:
@@ -375,6 +401,8 @@ class SecurityIntelligenceGraphService:
         # 9. Cases
         from src.services.case_service import CaseService
         for cs in CaseService.get_all_cases():
+            if getattr(cs, "tenant_id", None) != tenant_id:
+                continue
             scope_id = None
             if cs.asset_ids:
                 try:
@@ -389,8 +417,10 @@ class SecurityIntelligenceGraphService:
         from src.services.investigation_service import InvestigationService
         for incident_id, entries in InvestigationService._investigations.items():
             inc = IncidentService.get_incident(incident_id)
+            if not inc or getattr(inc, "tenant_id", None) != tenant_id:
+                continue
             scope_id = None
-            if inc and inc.asset_ids:
+            if inc.asset_ids:
                 try:
                     db_asset = await db.get(Asset, inc.asset_ids[0])
                     if db_asset and hasattr(db_asset, "scope_id"):

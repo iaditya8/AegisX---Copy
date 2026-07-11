@@ -59,6 +59,8 @@ class PostureRecord:
         self.scope_id = scope_id
         self.created_at = created_at or datetime.now(timezone.utc)
         self.updated_at = updated_at or datetime.now(timezone.utc)
+        from src.core.tenant import get_current_tenant_id
+        self.tenant_id = get_current_tenant_id()
 
 
 class SecurityPostureService:

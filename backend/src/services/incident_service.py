@@ -51,6 +51,8 @@ class IncidentRecord:
         self.finding_ids = finding_ids or []
         self.recommendation_ids = recommendation_ids or []
         self.remediation_ids = remediation_ids or []
+        from src.core.tenant import get_current_tenant_id
+        self.tenant_id = get_current_tenant_id()
 
 
 class IncidentService:

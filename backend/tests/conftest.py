@@ -13,6 +13,20 @@ from src.infrastructure.database.session import get_db
 from src.main import app
 
 
+@pytest.fixture(autouse=True)
+def set_default_tenant_for_tests(request):
+    from src.core.tenant import set_current_tenant_id
+    import uuid
+    # Check if the test module has defined a custom TEST_TENANT_ID
+    module = getattr(request, "module", None)
+    test_tenant_id = getattr(module, "TEST_TENANT_ID", None)
+    if test_tenant_id is None:
+        test_tenant_id = uuid.UUID("11111111-1111-1111-1111-111111111111")
+    set_current_tenant_id(test_tenant_id)
+    yield
+    set_current_tenant_id(None)
+
+
 import re
 
 class InterceptedExecuteMock(AsyncMock):
@@ -428,9 +442,13 @@ def async_to_sync(async_func):
             _current_mock_db._entities[model_cls] = []
             return AwaitableResult(None)
 
+        from src.core.tenant import get_current_tenant_id, set_current_tenant_id
+        parent_tenant_id = get_current_tenant_id()
+
         future = Future()
         def run_in_thread():
             try:
+                set_current_tenant_id(parent_tenant_id)
                 loop = asyncio.new_event_loop()
                 asyncio.set_event_loop(loop)
                 res = loop.run_until_complete(async_func(*args, **kwargs))

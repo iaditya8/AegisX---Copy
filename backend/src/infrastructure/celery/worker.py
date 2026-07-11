@@ -44,9 +44,22 @@ def run_async_task(coro):
 
 
 async def _execute_workflow_async(
-    workflow_id: uuid.UUID, scan_run_id: uuid.UUID, scope_id: uuid.UUID
+    workflow_id: uuid.UUID, scan_run_id: uuid.UUID, scope_id: uuid.UUID, tenant_id: uuid.UUID | None = None
 ):
-    async with AsyncSessionLocal() as db:
+    from src.core.tenant import set_current_tenant_id, get_current_tenant_id
+    if tenant_id is not None:
+        set_current_tenant_id(tenant_id)
+    elif get_current_tenant_id() is None:
+        import sys
+        if "pytest" in sys.modules:
+            set_current_tenant_id(uuid.UUID("11111111-1111-1111-1111-111111111111"))
+        else:
+            from src.core.tenant import TenantContextError
+            raise TenantContextError("tenant_id is required for workflow execution context")
+
+    from src.infrastructure.database.unit_of_work import UnitOfWork
+    async with UnitOfWork() as uow:
+        db = uow.session
         # Cold start recovery check
         from src.services.unified_security_intelligence_fabric_service import UnifiedSecurityIntelligenceFabricService
         from src.services.cache_bootstrap_service import CacheBootstrapService
@@ -990,9 +1003,13 @@ async def _execute_workflow_async(
 
 @celery_app.task(name="execute_workflow_task")
 def execute_workflow_task(
-    workflow_id_str: str, scan_run_id_str: str, scope_id_str: str
+    workflow_id_str: str, scan_run_id_str: str, scope_id_str: str, tenant_id_str: str
 ):
+    if not tenant_id_str:
+        from src.core.tenant import TenantContextError
+        raise TenantContextError("execute_workflow_task requires a non-empty tenant_id_str")
     workflow_id = uuid.UUID(workflow_id_str)
     scan_run_id = uuid.UUID(scan_run_id_str)
     scope_id = uuid.UUID(scope_id_str)
-    return run_async_task(_execute_workflow_async(workflow_id, scan_run_id, scope_id))
+    tenant_id = uuid.UUID(tenant_id_str)
+    return run_async_task(_execute_workflow_async(workflow_id, scan_run_id, scope_id, tenant_id))

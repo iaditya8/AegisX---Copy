@@ -392,9 +392,9 @@ async def test_start_workflow_service(mock_celery_delay, mock_db) -> None:
         assert run.status == "pending"
         assert run.type == "port-scan"
         assert mock_db.commit.call_count == 1
-        # Check Celery task delay was triggered
+        from src.core.tenant import get_current_tenant_id
         mock_celery_delay.assert_called_once_with(
-            str(WF_A_ID), str(run.id), str(SCOPE_A_ID)
+            str(WF_A_ID), str(run.id), str(SCOPE_A_ID), str(get_current_tenant_id())
         )
 
 

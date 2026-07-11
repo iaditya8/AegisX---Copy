@@ -308,7 +308,7 @@ async def list_case_evidence(
         )
     await check_case_ownership(db, case, current_user)
 
-    correlation = CaseEvidenceCorrelationService.get_correlated_evidence(id, case.incident_ids)
+    correlation = await CaseEvidenceCorrelationService.get_correlated_evidence(id, case.incident_ids)
     return [to_evidence_response(ev) for ev in correlation["case_evidence"]]
 
 
@@ -357,7 +357,7 @@ async def list_custody_timeline(
         )
     await check_case_ownership(db, case, current_user)
 
-    correlation = CaseEvidenceCorrelationService.get_correlated_evidence(id, case.incident_ids)
+    correlation = await CaseEvidenceCorrelationService.get_correlated_evidence(id, case.incident_ids)
     custody_entries = []
     for ev in correlation["case_evidence"]:
         custody_entries.extend(CustodyService.get_custody(ev.evidence_id))

@@ -15,7 +15,7 @@ class GraphBootstrapService:
     @classmethod
     async def bootstrap(cls) -> None:
         """Load nodes and edges from PostgreSQL persistence tables on startup to warm L2 cache."""
-        async with UnitOfWork() as uow:
+        async with UnitOfWork(require_tenant=False) as uow:
             db_nodes = await uow.graph_repo.list_nodes()
             db_edges = await uow.graph_repo.list_edges()
 
@@ -30,8 +30,8 @@ class GraphBootstrapService:
                     scope_id=node.scope_id,
                     tenant_id=node.tenant_id,
                 )
-                SecurityIntelligenceGraphService._nodes[node.node_id] = res
-                SecurityIntelligenceGraphService._node_fingerprint_lookup[node.node_fingerprint] = node.node_id
+                SecurityIntelligenceGraphService._nodes.set_for_tenant(node.tenant_id, node.node_id, res)
+                SecurityIntelligenceGraphService._node_fingerprint_lookup.set_for_tenant(node.tenant_id, node.node_fingerprint, node.node_id)
 
             # Warm edges cache
             for edge in db_edges:
@@ -46,5 +46,5 @@ class GraphBootstrapService:
                     scope_id=edge.scope_id,
                     tenant_id=edge.tenant_id,
                 )
-                SecurityIntelligenceGraphService._edges[edge.edge_id] = res
-                SecurityIntelligenceGraphService._edge_fingerprint_lookup[edge.edge_fingerprint] = edge.edge_id
+                SecurityIntelligenceGraphService._edges.set_for_tenant(edge.tenant_id, edge.edge_id, res)
+                SecurityIntelligenceGraphService._edge_fingerprint_lookup.set_for_tenant(edge.tenant_id, edge.edge_fingerprint, edge.edge_id)

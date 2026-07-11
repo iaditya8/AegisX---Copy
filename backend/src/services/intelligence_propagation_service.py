@@ -26,10 +26,13 @@ class IntelligencePropagationService:
         # Start with default confidence
         confidence = base_mod
 
+        from src.core.tenant import require_current_tenant_id
+        tenant_id = require_current_tenant_id()
+
         # Derived logic based on domain sources
         if node.source_type == "POSTURE":
             # Link to plans
-            plans = AutonomousSecurityPlanningService.get_all_plans()
+            plans = [p for p in AutonomousSecurityPlanningService.get_all_plans() if getattr(p, "tenant_id", None) == tenant_id]
             matching_plan = next((p for p in plans if p.plan_id in node.target_links), None)
             if matching_plan and matching_plan.milestones:
                 completed = sum(1 for m in matching_plan.milestones if m.status == "COMPLETED")
@@ -37,7 +40,7 @@ class IntelligencePropagationService:
                 confidence = base_mod * (0.8 + 0.2 * progress)
         elif node.source_type == "RISK":
             # Link to decisions
-            decisions = SecurityDecisionService.get_all_decisions()
+            decisions = [d for d in SecurityDecisionService.get_all_decisions() if getattr(d, "tenant_id", None) == tenant_id]
             matching_decision = next((d for d in decisions if d.decision_id in node.target_links), None)
             if matching_decision:
                 if matching_decision.status.value == "COMMITTED":
@@ -48,7 +51,7 @@ class IntelligencePropagationService:
                     confidence = base_mod * 0.8
         elif node.source_type == "THREAT_INTEL":
             # Link to threat records
-            threats = ThreatIntelligenceService.get_all_threats()
+            threats = [t for t in ThreatIntelligenceService.get_all_threats() if getattr(t, "tenant_id", None) == tenant_id]
             matching_threat = next((t for t in threats if t.threat_intel_id in node.target_links), None)
             if matching_threat:
                 # Use threat fusion score or weight

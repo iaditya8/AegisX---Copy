@@ -29,8 +29,10 @@ class WorkflowEventService:
     ) -> Optional['WorkflowEvent']:
         """Query the latest workflow and emit a workflow event attached to it."""
         from src.infrastructure.database.models import Workflow, WorkflowEvent
+        from src.core.tenant import require_current_tenant_id
         
-        q_wf = select(Workflow).order_by(Workflow.created_at.desc()).limit(1)
+        tenant_id = require_current_tenant_id()
+        q_wf = select(Workflow).filter(Workflow.tenant_id == tenant_id).order_by(Workflow.created_at.desc()).limit(1)
         res_wf = await db.execute(q_wf)
         wf = res_wf.scalar_one_or_none()
         
@@ -47,6 +49,7 @@ class WorkflowEventService:
         if wf:
             event = WorkflowEvent(
                 id=event_id,
+                tenant_id=tenant_id,
                 workflow_id=wf.id,
                 event_type=event_type,
                 correlation_id=correlation_id,

@@ -50,6 +50,7 @@ class FabricIntelligenceNodeResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     node_id: uuid.UUID
+    tenant_id: uuid.UUID
     node_fingerprint: str
     source_type: str
     status: FabricStatus

@@ -30,10 +30,25 @@ from src.services.finding_severity_rules import FindingSeverityRules
 from src.services.finding_snapshot_service import FindingSnapshotService
 from src.services.template_tracking_service import TemplateTrackingService
 
+import json
+from datetime import datetime
+
+def custom_json_serializer(obj):
+    if isinstance(obj, uuid.UUID):
+        return str(obj)
+    if isinstance(obj, datetime):
+        return obj.isoformat()
+    raise TypeError(f"Object of type {obj.__class__.__name__} is not JSON serializable")
+
+def custom_dumps(obj, **kwargs):
+    return json.dumps(obj, default=custom_json_serializer, **kwargs)
+
+
 # Mock SQLite Database
 engine = create_async_engine(
     "sqlite+aiosqlite:///:memory:",
     connect_args={"check_same_thread": False},
+    json_serializer=custom_dumps,
 )
 
 

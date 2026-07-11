@@ -25,9 +25,10 @@ from src.core.tenant import get_current_tenant_id
 
 
 class UnitOfWork:
-    def __init__(self):
+    def __init__(self, *, require_tenant: bool = True):
         self.session_factory = AsyncSessionLocal
         self.session: AsyncSession = None
+        self._require_tenant = require_tenant
         
         # Repositories
         self.event_repo: EventRepository = None
@@ -54,9 +55,16 @@ class UnitOfWork:
         # Apply current tenant RLS context to connection
         tenant_id = get_current_tenant_id()
         if tenant_id:
-            await self.session.execute(
-                sa.text("SELECT set_config('app.current_tenant', :tenant_id, true)"),
-                {"tenant_id": str(tenant_id)}
+            bind = self.session.bind
+            if bind and getattr(bind.dialect, "name", "") == "postgresql":
+                await self.session.execute(
+                    sa.text("SELECT set_config('app.current_tenant', :tenant_id, true)"),
+                    {"tenant_id": str(tenant_id)}
+                )
+        elif self._require_tenant:
+            from src.core.tenant import TenantContextError
+            raise TenantContextError(
+                "UnitOfWork requires tenant context. Use UnitOfWork(require_tenant=False) for system-level operations."
             )
             
         # Instantiate repositories
