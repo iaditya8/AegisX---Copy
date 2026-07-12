@@ -207,6 +207,7 @@ class RemediationService:
                 updated_at=now,
             )
             await uow.remediation_repo.save(db_rem)
+            await uow.session.flush()
 
             # Log history
             await RemediationHistoryService.record_event(

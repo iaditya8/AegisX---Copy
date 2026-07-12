@@ -14,3 +14,7 @@
 [TEST WORKER] mock_db=<StatefulMockSession id='1886701007216'>, type=<class 'unittest.mock.StatefulMockSession'>, mock_db.add=<InterceptedAddMock name='mock.add' id='1886704309296'>
 
 [TEST WORKER] mock_db=<StatefulMockSession id='3090238385632'>, type=<class 'unittest.mock.StatefulMockSession'>, mock_db.add=<InterceptedAddMock name='mock.add' id='3090237975648'>
+
+[TEST WORKER] mock_db=<StatefulMockSession id='2270973253952'>, type=<class 'unittest.mock.StatefulMockSession'>, mock_db.add=<InterceptedAddMock name='mock.add' id='2270932031952'>
+
+[TEST WORKER] mock_db=<StatefulMockSession id='1133264624800'>, type=<class 'unittest.mock.StatefulMockSession'>, mock_db.add=<InterceptedAddMock name='mock.add' id='1133264541584'>           

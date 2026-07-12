@@ -460,16 +460,34 @@ class FindingService:
         db.add(audit)
 
         # Event
+        from sqlalchemy import select
+        from src.infrastructure.database.models import Workflow
+        wf_res = await db.execute(select(Workflow.id))
+        valid_wf_id = wf_res.scalars().first()
+        if not valid_wf_id:
+            from src.infrastructure.database.models import Tenant
+            ten_res = await db.execute(select(Tenant.id))
+            first_tenant_id = ten_res.scalars().first() or uuid.UUID("00000000-0000-0000-0000-000000000000")
+            placeholder_wf = Workflow(
+                tenant_id=first_tenant_id,
+                id=uuid.uuid4(),
+                name="System Event Workflow Placeholder",
+                definition={"placeholder": True}
+            )
+            db.add(placeholder_wf)
+            await db.flush()
+            valid_wf_id = placeholder_wf.id
+
         event_id = uuid.uuid4()
         event = WorkflowEvent(
             id=event_id,
-            workflow_id=uuid.uuid4(),  # Mock or use default
+            workflow_id=valid_wf_id,
             event_type=event_type,
             correlation_id=None,
             payload={
                 "event_id": str(event_id),
                 "correlation_id": None,
-                "workflow_id": None,
+                "workflow_id": str(valid_wf_id),
                 "scan_run_id": None,
                 "timestamp": now.isoformat(),
                 "finding_id": str(finding.id),

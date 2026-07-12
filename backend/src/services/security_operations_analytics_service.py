@@ -92,6 +92,7 @@ class SecurityOperationsAnalyticsService:
             )
 
             await uow_inst.soc_repo.save(record)
+            await uow_inst.session.flush()
 
             await AnalyticsHistoryService.record_event(
                 analytics_id, "CREATED", f"SOC analytics record created: '{analytics_name}'", uow=uow_inst

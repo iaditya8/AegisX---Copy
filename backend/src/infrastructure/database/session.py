@@ -18,12 +18,15 @@ def custom_dumps(obj, **kwargs):
     return json.dumps(obj, default=custom_json_serializer, **kwargs)
 
 
+from sqlalchemy.pool import NullPool
+
 # Create async engine
 engine = create_async_engine(
     settings.DATABASE_URL,
     echo=False,
     future=True,
     json_serializer=custom_dumps,
+    poolclass=NullPool,
 )
 
 # Async session factory

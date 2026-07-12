@@ -47,7 +47,13 @@ ALL_TENANT_TABLES = [
 
 
 def upgrade() -> None:
+    bind = op.get_bind()
     for table in ALL_TENANT_TABLES:
+        # Check if table exists
+        res = bind.execute(sa.text(f"SELECT EXISTS (SELECT FROM pg_tables WHERE schemaname = 'public' AND tablename = '{table}')"))
+        if not res.scalar():
+            continue
+
         # Drop old policy
         op.execute(sa.text(f"DROP POLICY IF EXISTS tenant_isolation ON {table}"))
         
@@ -64,7 +70,13 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
+    bind = op.get_bind()
     for table in ALL_TENANT_TABLES:
+        # Check if table exists
+        res = bind.execute(sa.text(f"SELECT EXISTS (SELECT FROM pg_tables WHERE schemaname = 'public' AND tablename = '{table}')"))
+        if not res.scalar():
+            continue
+
         # Drop new policy
         op.execute(sa.text(f"DROP POLICY IF EXISTS tenant_isolation ON {table}"))
         

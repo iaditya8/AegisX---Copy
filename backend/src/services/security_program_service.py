@@ -280,6 +280,7 @@ class SecurityProgramService:
                 scope_id=scope_id,
             )
             await uow.program_repo.save(db_p)
+            await uow.session.flush()
 
             for o in objectives:
                 db_o = SecurityProgramObjective(

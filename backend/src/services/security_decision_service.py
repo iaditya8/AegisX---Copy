@@ -74,6 +74,36 @@ class SecurityDecisionService:
         return None
 
     @classmethod
+    async def get_decision_by_fingerprint_db(cls, fingerprint: str, uow: Optional[UnitOfWork] = None) -> Optional[DecisionResponse]:
+        """Retrieve a decision by fingerprint from database."""
+        from sqlalchemy import select
+        async def _get(uow_inst: UnitOfWork) -> Optional[DecisionResponse]:
+            stmt = select(DBDecision).filter_by(decision_fingerprint=fingerprint)
+            res = await uow_inst.session.execute(stmt)
+            db_d = res.scalar_one_or_none()
+            if db_d:
+                return DecisionResponse(
+                    decision_id=db_d.id,
+                    decision_fingerprint=db_d.decision_fingerprint,
+                    decision_type=DecisionType(db_d.decision_type),
+                    target_entity_id=db_d.target_entity_id,
+                    option_name=db_d.option_name,
+                    status=DecisionStatus(db_d.status),
+                    scope_id=db_d.scope_id,
+                    created_at=db_d.created_at,
+                    updated_at=db_d.updated_at,
+                    tradeoff_matrix=db_d.tradeoff_matrix,
+                    impact_metrics=db_d.impact_metrics,
+                )
+            return None
+
+        if uow:
+            return await _get(uow)
+        else:
+            async with UnitOfWork() as uow_new:
+                return await _get(uow_new)
+
+    @classmethod
     def _get_uuid(cls, val) -> Optional[uuid.UUID]:
         if isinstance(val, uuid.UUID):
             return val
@@ -103,6 +133,12 @@ class SecurityDecisionService:
         )
 
         existing = cls.get_decision_by_fingerprint(fingerprint)
+        if not existing:
+            existing = await cls.get_decision_by_fingerprint_db(fingerprint)
+            if existing:
+                cls._decisions[existing.decision_id] = existing
+                cls._fingerprint_lookup[fingerprint] = existing.decision_id
+
         tenant_id = get_current_tenant_id() or uuid.UUID("00000000-0000-0000-0000-000000000000")
 
         if existing:
@@ -142,6 +178,7 @@ class SecurityDecisionService:
                 impact_metrics=None,
             )
             await uow.decision_repo.save(db_d)
+            await uow.session.flush()
             await DecisionHistoryService.record_event(
                 decision_id, "CREATED", f"Created decision recommendation: {option_name}", uow=uow
             )

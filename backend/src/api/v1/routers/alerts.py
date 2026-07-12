@@ -6,7 +6,7 @@ from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from src.api.v1.dependencies.auth import RoleChecker
-from src.domain.entities.alert import AlertResponse, AlertStatus
+from src.domain.entities.alert import AlertResponse, AlertStatus, AlertType, AlertSeverity
 from src.domain.entities.user import StandardResponse
 from src.infrastructure.database.models import Asset, Scope, User
 from src.infrastructure.database.session import get_db
@@ -18,6 +18,15 @@ router = APIRouter(tags=["alerts"])
 
 class AssignAlertRequest(BaseModel):
     owner_id: Optional[uuid.UUID] = None
+
+
+class AlertCreate(BaseModel):
+    title: str
+    description: str
+    severity: str
+    alert_type: str
+    asset_id: Optional[uuid.UUID] = None
+    finding_id: Optional[uuid.UUID] = None
 
 
 # --- Helper Checks ---
@@ -349,3 +358,30 @@ async def assign_alert_owner(
         db, id, req.owner_id, actor_id=current_user.id
     )
     return StandardResponse(data=to_alert_response(updated))
+
+
+@router.post(
+    "/alerts",
+    response_model=StandardResponse[AlertResponse],
+    status_code=status.HTTP_201_CREATED,
+)
+async def create_alert(
+    alert_in: AlertCreate,
+    current_user: User = Depends(RoleChecker(["admin", "operator"])),
+) -> StandardResponse[AlertResponse]:
+    alert_id = uuid.uuid4()
+    fingerprint = str(uuid.uuid4())
+    new_alert = AlertRecord(
+        alert_id=alert_id,
+        alert_fingerprint=fingerprint,
+        alert_type=AlertType(alert_in.alert_type),
+        severity=AlertSeverity(alert_in.severity),
+        status=AlertStatus.OPEN,
+        title=alert_in.title,
+        description=alert_in.description,
+        asset_id=alert_in.asset_id,
+        finding_id=alert_in.finding_id,
+    )
+    AlertLifecycleService._alerts[alert_id] = new_alert
+    AlertLifecycleService._fingerprint_lookup[fingerprint] = alert_id
+    return StandardResponse(data=to_alert_response(new_alert))

@@ -2,7 +2,7 @@ import uuid
 from datetime import datetime
 from typing import Any, Dict, Optional
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
 class AssetBase(BaseModel):
@@ -41,6 +41,13 @@ class AssetResponse(BaseModel):
     deleted_by: Optional[uuid.UUID] = None
 
     model_config = ConfigDict(from_attributes=True, populate_by_name=True)
+
+    @field_validator('ip', mode='before')
+    @classmethod
+    def serialize_ip(cls, v):
+        if v is not None:
+            return str(v)
+        return v
 
 
 class AssetRelationshipCreate(BaseModel):

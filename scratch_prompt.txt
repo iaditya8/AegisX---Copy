@@ -1,0 +1,623 @@
+<USER_REQUEST>
+AegisX PROD-01 Full Runtime Validation & Production Certification Audit
+Role
+
+Act as:
+
+Principal QA Engineer
+Principal Platform Reliability Engineer
+Principal Security Architect
+Principal DevSecOps Engineer
+Principal Application Security Engineer
+Principal Product Acceptance Authority
+
+Your objective is to perform a complete end-to-end validation of the AegisX platform using the REAL backend infrastructure.
+
+This is NOT a frontend mock validation.
+
+This is NOT an MSW test.
+
+This is NOT a code review.
+
+This is a live runtime certification audit.
+
+Mandatory Rules
+
+Read the entire codebase first.
+
+Read all implemented sprint artifacts.
+
+Read all migrations.
+
+Read all API routes.
+
+Read all services.
+
+Read all Celery tasks.
+
+Read all event consumers.
+
+Read all correlation services.
+
+Read all workflow services.
+
+Read all security middleware.
+
+Read all RBAC implementations.
+
+Read all tenant isolation implementations.
+
+Read all RLS migrations.
+
+Understand the architecture before testing.
+
+Do not assume functionality.
+
+Verify functionality through execution.
+
+Evidence is mandatory.
+
+Every pass must include evidence.
+
+Every failure must include root cause analysis.
+
+Environment Validation
+
+Verify the following services are running successfully:
+
+Frontend
+Backend API
+PostgreSQL
+Redis
+Celery Worker
+Celery Beat
+Event Processing Services
+
+Capture evidence:
+
+docker ps
+docker compose ps
+curl health endpoints
+Phase 1 — Infrastructure Certification
+
+Validate:
+
+Docker stack startup
+Database connectivity
+Redis connectivity
+Celery connectivity
+API startup
+Alembic migrations
+
+Verify:
+
+No migration failures
+No startup exceptions
+No dependency failures
+
+Evidence required.
+
+Phase 2 — Authentication Certification
+
+Validate:
+
+Login
+
+Logout
+
+Refresh Token
+
+JWT Validation
+
+Session Expiry
+
+Invalid Token Handling
+
+Permission Enforcement
+
+Evidence required:
+
+Request
+
+Response
+
+Database records
+
+Screenshots
+
+Phase 3 — RBAC Certification
+
+Create:
+
+Admin
+
+Operator
+
+Reader
+
+Verify:
+
+Admin permissions
+
+Operator permissions
+
+Reader permissions
+
+Attempt unauthorized actions.
+
+Verify access denial.
+
+Evidence required.
+
+Phase 4 — Multi-Tenant Isolation Certification
+
+Create:
+
+Tenant A
+
+Tenant B
+
+Create assets in both.
+
+Verify:
+
+Tenant A cannot view Tenant B assets.
+
+Tenant B cannot view Tenant A assets.
+
+Verify:
+
+API isolation
+
+Database isolation
+
+Worker isolation
+
+Event isolation
+
+Evidence required.
+
+Phase 5 — Scope Management Certification
+
+Create:
+
+Domain scopes
+
+CIDR scopes
+
+Hostname scopes
+
+Verify:
+
+CRUD operations
+
+Audit logging
+
+History generation
+
+Scope ownership
+
+Evidence required.
+
+Phase 6 — Asset Management Certification
+
+Create assets.
+
+Update assets.
+
+Delete assets.
+
+Verify:
+
+Deduplication
+
+History tracking
+
+Relationship tracking
+
+Ownership tracking
+
+Evidence required.
+
+Phase 7 — Workflow Engine Certification
+
+Execute a REAL workflow.
+
+Verify:
+
+pending
+
+running
+
+completed
+
+failed
+
+cancelled
+
+Verify state machine correctness.
+
+Evidence required.
+
+Phase 8 — Plugin Framework Certification
+
+Execute real plugins:
+
+Subfinder
+
+Assetfinder
+
+Amass
+
+TheHarvester
+
+Verify:
+
+Execution
+
+Normalization
+
+Storage
+
+History
+
+Events
+
+Evidence required.
+
+Phase 9 — Reconnaissance Framework Certification
+
+Run discovery against a safe test target.
+
+Verify:
+
+Asset discovery
+
+Deduplication
+
+Normalization
+
+Relationship generation
+
+History generation
+
+Evidence required.
+
+Phase 10 — Event Store Certification
+
+Generate events.
+
+Verify:
+
+workflow_events records
+
+event persistence
+
+event replay capability
+
+event integrity
+
+Evidence required.
+
+Phase 11 — Security Intelligence Graph Certification
+
+Create:
+
+Assets
+
+Findings
+
+Relationships
+
+Verify:
+
+Node persistence
+
+Edge persistence
+
+Relationship retrieval
+
+Graph integrity
+
+Evidence required.
+
+Phase 12 — Intelligence Fabric Certification
+
+Generate:
+
+Findings
+
+Controls
+
+Assets
+
+Threats
+
+Verify:
+
+Propagation
+
+Confidence calculations
+
+Relationship updates
+
+Evidence required.
+
+Phase 13 — Findings Certification
+
+Create findings.
+
+Update findings.
+
+Acknowledge findings.
+
+Resolve findings.
+
+Verify:
+
+History generation
+
+Audit generation
+
+Evidence required.
+
+Phase 14 — Alerting Certification
+
+Create alerts.
+
+Escalate alerts.
+
+Assign alerts.
+
+Close alerts.
+
+Verify lifecycle correctness.
+
+Evidence required.
+
+Phase 15 — Incident Management Certification
+
+Create incident.
+
+Assign incident.
+
+Update incident.
+
+Close incident.
+
+Verify:
+
+History
+
+Audit
+
+State transitions
+
+Evidence required.
+
+Phase 16 — Unified Correlation Engine Certification
+
+Generate:
+
+finding.created
+
+alert.created
+
+threat.ioc_added
+
+validation.failed
+
+Verify:
+
+Rule matching
+
+Cluster generation
+
+Signal linking
+
+Correlation history
+
+Correlation events
+
+Evidence required.
+
+Phase 17 — Incident Automation Certification
+
+Trigger correlation escalation.
+
+Verify:
+
+Automatic incident creation
+
+Incident linkage
+
+Event generation
+
+Evidence required.
+
+Phase 18 — Outbox Pattern Certification
+
+Generate events.
+
+Verify:
+
+workflow_events staging
+
+transaction safety
+
+event delivery
+
+no lost events
+
+Evidence required.
+
+Phase 19 — Celery Certification
+
+Verify:
+
+Task execution
+
+Retry handling
+
+Failure handling
+
+Queue processing
+
+Worker recovery
+
+Evidence required.
+
+Phase 20 — Security Certification
+
+Attempt:
+
+Cross-tenant access
+
+Unauthorized actions
+
+IDOR attempts
+
+Privilege escalation
+
+Direct API abuse
+
+Invalid JWT usage
+
+Verify rejection.
+
+Evidence required.
+
+Phase 21 — End-to-End Analyst Journey
+
+Execute complete flow:
+
+Login
+
+Create Scope
+
+Run Discovery
+
+Create Assets
+
+Generate Findings
+
+Create Alerts
+
+Run Correlation
+
+Create Incident
+
+Resolve Incident
+
+Generate Report
+
+Logout
+
+No mocks allowed.
+
+Real backend only.
+
+Evidence required.
+
+Performance Validation
+
+Measure:
+
+API latency
+
+Workflow latency
+
+Correlation latency
+
+Database query performance
+
+Worker execution times
+
+Identify bottlenecks.
+
+Deliverables
+
+Generate:
+
+1. prod-runtime-validation-report.md
+
+Complete runtime validation report.
+
+2. security-certification-report.md
+
+Security findings.
+
+3. performance-benchmark-report.md
+
+Performance metrics.
+
+4. defects-found.md
+
+All defects.
+
+Severity:
+
+Critical
+
+High
+
+Medium
+
+Low
+
+Root cause required.
+
+5. production-certification-decision.md
+
+Final authority decision.
+
+One of:
+
+APPROVED FOR PRODUCTION
+
+APPROVED WITH CONDITIONS
+
+REJECTED
+
+Certification Rules
+
+Do not mark a capability as passed unless verified through execution.
+
+Mocked functionality does not count.
+
+Code inspection does not count.
+
+Screenshots alone do not count.
+
+Database evidence is required.
+
+API evidence is required.
+
+Runtime evidence is required.
+
+Worker evidence is required.
+
+If a capability cannot be executed, mark it:
+
+NOT VERIFIED
+
+not PASS.
+
+The final decision must be based only on runtime evidence.
+</USER_REQUEST>
+<ADDITIONAL_METADATA>
+The current local time is: 2026-07-11T19:46:57+05:30.
+
+The user's current state is as follows:
+Active Document: c:\Users\Aditya\Desktop\AegisX - Copy\final-demo-walkthrough.md (LANGUAGE_MARKDOWN)
+Cursor is on line: 97
+Other open documents:
+- c:\Users\Aditya\Desktop\AegisX - Copy\frontend\src\test\msw\handlers.ts (LANGUAGE_TYPESCRIPT)
+- c:\Users\Aditya\Desktop\AegisX - Copy\final-demo-walkthrough.md (LANGUAGE_MARKDOWN)
+- c:\Users\Aditya\Desktop\AegisX - Copy\defects-found.md (LANGUAGE_MARKDOWN)
+- c:\Users\Aditya\Desktop\AegisX - Copy\playwright-execution-report.md (LANGUAGE_MARKDOWN)
+- c:\Users\Aditya\Desktop\AegisX - Copy\uat-execution-report.md (LANGUAGE_MARKDOWN)
+Browser State:
+  Page 22742040456449AC420540DC1C1B2D57 (AegisX Decision Support Platform) - http://localhost:3000/login [ACTIVE]
+    Viewport: 1536x776, Page Height: 776
+</ADDITIONAL_METADATA>

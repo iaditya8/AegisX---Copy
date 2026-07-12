@@ -225,6 +225,7 @@ class PurpleTeamService:
                 scope_id=scope_id,
             )
             await uow.purple_team_repo.save(db_e)
+            await uow.session.flush()
 
             await PurpleTeamHistoryService.record_event(
                 exercise_id,

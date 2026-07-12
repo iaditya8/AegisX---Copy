@@ -76,6 +76,8 @@ class CacheBootstrapService:
         await SecurityPostureService.bootstrap(db)
         await SecurityProgramService.bootstrap(db)
         await PurpleTeamService.bootstrap(db)
+        await SecurityDecisionService.bootstrap(db)
+        await UnifiedSecurityIntelligenceFabricService.bootstrap(db)
 
         # 4. Recalculate derived scores (Calculations and playbooks)
         from src.services.analyst_performance_service import AnalystPerformanceService

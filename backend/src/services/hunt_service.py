@@ -197,6 +197,7 @@ class HuntService:
                 related_entities=entities,
             )
             await uow.hunt_repo.save(db_h)
+            await uow.session.flush()
 
             await HuntHistoryService.record_event(
                 hunt_id,

@@ -29,6 +29,15 @@ class AssignIncidentRequest(BaseModel):
     owner_id: Optional[uuid.UUID] = None
 
 
+class IncidentCreate(BaseModel):
+    title: str
+    description: str
+    severity: str
+    alert_ids: List[uuid.UUID] = []
+    asset_ids: List[uuid.UUID] = []
+    finding_ids: List[uuid.UUID] = []
+
+
 class StartInvestigationRequest(BaseModel):
     notes: str
 
@@ -561,3 +570,55 @@ async def escalate_incident_management(
         return to_incident_response(incident)
     except ValueError as exc:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc))
+
+
+@router.post(
+    "",
+    response_model=IncidentResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+async def create_incident(
+    inc_in: IncidentCreate,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(RoleChecker(["admin", "operator"])),
+) -> IncidentResponse:
+    from datetime import datetime, timezone
+    incident_id = uuid.uuid4()
+    fingerprint = str(uuid.uuid4())
+    now = datetime.now(timezone.utc)
+    
+    # Save to database
+    from src.infrastructure.database.models import Incident
+    db_inc = Incident(
+        tenant_id=current_user.tenant_id or uuid.UUID("00000000-0000-0000-0000-000000000000"),
+        id=incident_id,
+        title=inc_in.title,
+        description=inc_in.description,
+        severity=IncidentSeverity(inc_in.severity.upper()),
+        status=IncidentStatus.OPEN,
+        incident_fingerprint=fingerprint,
+        alert_ids=inc_in.alert_ids,
+        asset_ids=inc_in.asset_ids,
+        finding_ids=inc_in.finding_ids,
+        created_at=now,
+        updated_at=now,
+    )
+    db.add(db_inc)
+    await db.commit()
+    
+    # Save to in-memory cache
+    new_inc = IncidentRecord(
+        incident_id=incident_id,
+        incident_fingerprint=fingerprint,
+        title=inc_in.title,
+        description=inc_in.description,
+        severity=IncidentSeverity(inc_in.severity.upper()),
+        status=IncidentStatus.OPEN,
+        alert_ids=inc_in.alert_ids,
+        asset_ids=inc_in.asset_ids,
+        finding_ids=inc_in.finding_ids,
+    )
+    IncidentService._incidents[incident_id] = new_inc
+    IncidentService._fingerprint_lookup[fingerprint] = incident_id
+    
+    return to_incident_response(new_inc)

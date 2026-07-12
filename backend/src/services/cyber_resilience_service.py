@@ -127,11 +127,8 @@ class CyberResilienceService:
             # Create new record
             resilience_id = uuid.uuid4()
             
-            # Seed standard recovery objectives
-            await RecoveryObjectiveService.set_objective(resilience_id, RecoveryObjectiveType.RTO, 4.0, 4.0, uow=uow_inst)
-            await RecoveryObjectiveService.set_objective(resilience_id, RecoveryObjectiveType.RPO, 1.0, 1.0, uow=uow_inst)
-
-            obj_comp = await RecoveryObjectiveService.get_resilience_objective_compliance(resilience_id, uow=uow_inst)
+            # Pre-calculate scores based on default compliance
+            obj_comp = 100.0
             readiness = ResilienceScoringService.calculate_readiness_score(resilience_id, ResilienceStatus.PLANNED)
             confidence = ResilienceScoringService.calculate_recovery_confidence_score(
                 resilience_id, ResilienceStatus.PLANNED, obj_comp, readiness
@@ -156,6 +153,11 @@ class CyberResilienceService:
             )
 
             await uow_inst.resilience_repo.save(record)
+            await uow_inst.session.flush()
+
+            # Seed standard recovery objectives
+            await RecoveryObjectiveService.set_objective(resilience_id, RecoveryObjectiveType.RTO, 4.0, 4.0, uow=uow_inst)
+            await RecoveryObjectiveService.set_objective(resilience_id, RecoveryObjectiveType.RPO, 1.0, 1.0, uow=uow_inst)
 
             await ResilienceHistoryService.record_event(
                 resilience_id, "CREATED", f"Cyber resilience record created: '{title}'", uow=uow_inst

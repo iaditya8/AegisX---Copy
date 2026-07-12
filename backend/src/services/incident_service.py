@@ -195,6 +195,7 @@ class IncidentService:
                     remediation_ids=incident.remediation_ids,
                 )
                 await uow.incident_repo.save(db_inc)
+                await uow.session.flush()
             
             db_inc.status = new_status.value
             db_inc.updated_at = incident.updated_at
@@ -293,6 +294,7 @@ class IncidentService:
                     remediation_ids=incident.remediation_ids,
                 )
                 await uow.incident_repo.save(db_inc)
+                await uow.session.flush()
             
             db_inc.owner = owner_id
             db_inc.updated_at = incident.updated_at
@@ -438,6 +440,7 @@ class IncidentService:
                     remediation_ids=remediation_ids,
                 )
                 await uow.incident_repo.save(db_inc)
+                await uow.session.flush()
 
                 # Append CREATED event to history in DB
                 await IncidentHistoryService.record_event(

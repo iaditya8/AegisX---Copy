@@ -1,6 +1,40 @@
 import { http, HttpResponse } from 'msw';
 
 export const handlers = [
+  // Auth mock endpoints for local dev / demo mode
+  http.post('/api/v1/auth/token', () => {
+    return HttpResponse.json({
+      success: true,
+      data: {
+        access_token: 'mock-access-token',
+        refresh_token: 'mock-refresh-token',
+      },
+    });
+  }),
+
+  http.get('/api/v1/users/me', () => {
+    return HttpResponse.json({
+      success: true,
+      data: {
+        id: 'user-123',
+        username: 'analyst_admin',
+        display_name: 'System Admin',
+        email: 'admin@aegisx.local',
+        role: 'admin',
+      },
+    });
+  }),
+
+  http.post('/api/v1/auth/refresh', () => {
+    return HttpResponse.json({
+      success: true,
+      data: {
+        access_token: 'mock-access-token-new',
+        refresh_token: 'mock-refresh-token-new',
+      },
+    });
+  }),
+
   // Scopes router
   http.get('/api/v1/scopes', () => {
     return HttpResponse.json({

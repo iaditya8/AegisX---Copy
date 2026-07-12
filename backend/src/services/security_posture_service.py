@@ -248,6 +248,7 @@ class SecurityPostureService:
                 scope_id=scope_id,
             )
             await uow.posture_repo.save(db_p)
+            await uow.session.flush()
 
             await PostureHistoryService.record_event(
                 posture_id,

@@ -1,4 +1,5 @@
 import ipaddress
+from typing import Any
 from enum import Enum
 
 from src.infrastructure.database.models import Asset
@@ -20,12 +21,14 @@ class AssetExposureService:
     """Service to classify assets into ExposureClassification levels."""
 
     @staticmethod
-    def is_public_ip(ip_str: str) -> bool:
+    def is_public_ip(ip_str: Any) -> bool:
         """Check if an IP address is public (not private, loopback, or link-local)."""
         if not ip_str:
             return False
         try:
-            ip = ipaddress.ip_address(ip_str.strip())
+            # Safely coerce to string in case it's an ipaddress object from SQLAlchemy INET type
+            val = str(ip_str).strip()
+            ip = ipaddress.ip_address(val)
             # Public if it's not private, loopback, or link-local
             return not (ip.is_private or ip.is_loopback or ip.is_link_local)
         except ValueError:

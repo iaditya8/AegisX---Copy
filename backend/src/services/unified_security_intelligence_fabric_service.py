@@ -186,6 +186,7 @@ class UnifiedSecurityIntelligenceFabricService:
                 target_links=node.target_links,
             )
             await uow.fabric_repo.save(db_n)
+            await uow.session.flush()
             await FabricHistoryService.record_event(
                 node_id, "FABRIC_CREATED", f"Created fabric node for source: {source_type}", uow=uow
             )
