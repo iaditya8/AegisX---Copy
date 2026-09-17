@@ -3,7 +3,8 @@ version: '3.8'
 services:
   api:
     build:
-      context: ./backend
+      context: .
+      dockerfile: backend/Dockerfile
     container_name: aegisx_api
     ports:
       - "8000:8000"
@@ -21,7 +22,8 @@ services:
 
   worker:
     build:
-      context: ./backend
+      context: .
+      dockerfile: backend/Dockerfile
     container_name: aegisx_worker
     volumes:
       - ./backend:/app

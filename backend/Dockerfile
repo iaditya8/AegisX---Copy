@@ -10,11 +10,14 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 
 RUN pip install --no-cache-dir "poetry==$POETRY_VERSION"
 
+# Copy root dependency definition files
 COPY pyproject.toml poetry.lock* ./
 
+# Install project runtime dependencies
 RUN poetry install --no-root --without dev
 
-COPY . .
+# Copy backend application source
+COPY backend/ ./
 
 EXPOSE 8000
 
