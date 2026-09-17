@@ -1235,8 +1235,8 @@
     "semantic_hash": "4bf89711372fb4ccc0ebb6e46c93ff44"
   },
   "pyproject.toml": {
-    "mtime": 1789669724.498785,
-    "ast_hash": "fb69ec22d162bb5d9407561ea5901a2d",
+    "mtime": 1789670032.4035172,
+    "ast_hash": "b998f91313890e93a20adf02a28dc0fc",
     "semantic_hash": ""
   },
   ".agents/rules/graphify.md": {
@@ -1250,8 +1250,8 @@
     "semantic_hash": "637776aa6f7496d069afe7520c845c8a"
   },
   ".github/workflows/ci.yml": {
-    "mtime": 1789669641.3869007,
-    "ast_hash": "057d8b832b6739f44713b7febfbaa064",
+    "mtime": 1789670086.5261815,
+    "ast_hash": "c03f7bbe93b76aba169acf03ce7e69e8",
     "semantic_hash": ""
   },
   "ADR/ADR-001.md": {

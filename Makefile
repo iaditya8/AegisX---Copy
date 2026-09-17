@@ -1,4 +1,4 @@
-.PHONY: up down lint lint-backend lint-frontend format test test-backend test-frontend test-all build build-frontend build-backend ci shell db-upgrade
+.PHONY: up down install lint lint-backend lint-frontend format test test-backend test-frontend test-all build build-frontend build-backend ci shell db-upgrade
 
 up:
 	docker compose up -d --build
@@ -6,10 +6,14 @@ up:
 down:
 	docker compose down
 
+install:
+	poetry install
+	cd frontend && npm install
+
 lint-backend:
-	ruff check backend/
-	black --check backend/
-	isort --check-only backend/
+	poetry run ruff check backend/
+	poetry run black --check backend/
+	poetry run isort --check-only backend/
 
 lint-frontend:
 	cd frontend && npm run lint
@@ -17,12 +21,12 @@ lint-frontend:
 lint: lint-backend lint-frontend
 
 format:
-	ruff format backend/
-	black backend/
-	isort backend/
+	poetry run ruff format backend/
+	poetry run black backend/
+	poetry run isort backend/
 
 test-backend:
-	docker compose exec api pytest
+	poetry run pytest
 
 test-frontend:
 	cd frontend && npm run test
@@ -33,7 +37,7 @@ build-frontend:
 	docker build -t aegisx-frontend:latest ./frontend
 
 build-backend:
-	docker build -t aegisx-backend:latest ./backend
+	docker build -t aegisx-backend:latest -f backend/Dockerfile .
 
 build-all: build-backend build-frontend
 
@@ -43,4 +47,4 @@ shell:
 	docker compose exec api bash
 
 db-upgrade:
-	docker compose exec api alembic upgrade head
+	poetry run alembic upgrade head
