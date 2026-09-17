@@ -22,6 +22,7 @@ from src.services.control_history_service import ControlHistoryService
 from src.services.control_correlation_service import ControlCorrelationService
 from src.services.control_drift_service import ControlDriftService
 from src.services.control_validation_snapshot_service import ControlValidationSnapshotService
+from src.services.control_coverage_service import ControlCoverageService
 from src.services.scope_service import get_scope_by_id
 
 router = APIRouter(prefix="/control-validation", tags=["control-validation"])

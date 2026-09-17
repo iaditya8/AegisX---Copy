@@ -83,4 +83,3 @@ class GraphDriftService:
                 event_type="graph.structure_changed",
                 payload=drift_entry,
             )
-Definition: "Process structural and weight changes in security graph topology."

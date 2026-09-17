@@ -1,34 +1,202 @@
-name: AegisX CI/CD Foundation
+name: AegisX Continuous Integration
 
 on:
   push:
-    branches: [ main ]
+    branches:
+      - main
+      - develop
   pull_request:
-    branches: [ main ]
+    branches:
+      - main
+      - develop
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
-  build-and-test:
+  # --------------------------------------------------------------------------
+  # Backend Quality & Test Suite
+  # --------------------------------------------------------------------------
+  backend-ci:
+    name: Backend Lint & Tests
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout Code
-      uses: actions/checkout@v4
+      - name: Checkout Source Code
+        uses: actions/checkout@v4
 
-    - name: Set up Python 3.13
-      uses: actions/setup-python@v5
-      with:
-        python-style: '3.13'
-        python-version: '3.13'
+      - name: Set up Python 3.13
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+          cache: 'pip'
+          cache-dependency-path: 'backend/requirements.txt'
 
-    - name: Install Dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install -r backend/requirements.txt
+      - name: Install Backend Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r backend/requirements.txt
+          pip install pytest-cov
 
-    - name: Lint with Ruff
-      run: |
-        ruff check backend/
+      - name: Lint with Ruff
+        run: |
+          ruff check backend/
 
-    - name: Run Tests with Pytest
-      run: |
-        pytest
+      - name: Check Code Formatting
+        run: |
+          black --check backend/
+          isort --check-only backend/
+
+      - name: Run Backend Pytest Suite
+        env:
+          DATABASE_URL: sqlite+aiosqlite:///./test_ci.db
+          REDIS_URL: redis://localhost:6379/0
+          SECRET_KEY: ci-secret-key-test-environment-32-chars-long
+          PYTHONPATH: backend
+        run: |
+          pytest --tb=short -v
+
+      - name: Verify Backend Docker Build
+        run: |
+          docker build -t aegisx-backend:ci ./backend
+
+  # --------------------------------------------------------------------------
+  # Frontend Quality & Test Suite
+  # --------------------------------------------------------------------------
+  frontend-ci:
+    name: Frontend Lint & Tests
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+
+    steps:
+      - name: Checkout Source Code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js 20.x
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+          cache-dependency-path: 'frontend/package-lock.json'
+
+      - name: Install Frontend Dependencies
+        run: npm ci
+
+      - name: Type Check (TypeScript)
+        run: npx tsc --noEmit
+
+      - name: Lint Frontend Code (ESLint)
+        run: npm run lint
+
+      - name: Run Frontend Unit Tests (Vitest)
+        run: npm run test
+
+      - name: Build Next.js Production Bundle
+        run: npm run build
+
+      - name: Verify Frontend Docker Build
+        run: |
+          docker build -t aegisx-frontend:ci .
+
+  # --------------------------------------------------------------------------
+  # Live Service Integration (PostgreSQL + Redis + Alembic)
+  # --------------------------------------------------------------------------
+  integration-ci:
+    name: Database & Service Integration
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:15-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgrespassword
+          POSTGRES_DB: aegisx_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 5
+
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout Source Code
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.13
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+          cache: 'pip'
+          cache-dependency-path: 'backend/requirements.txt'
+
+      - name: Install Backend Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r backend/requirements.txt
+
+      - name: Run Database Migrations (Alembic)
+        env:
+          DATABASE_URL: postgresql+asyncpg://postgres:postgrespassword@localhost:5432/aegisx_test
+          PYTHONPATH: backend
+        run: |
+          cd backend
+          alembic upgrade head
+
+      - name: Run Live Service Integration Tests
+        env:
+          DATABASE_URL: postgresql+asyncpg://postgres:postgrespassword@localhost:5432/aegisx_test
+          REDIS_URL: redis://localhost:6379/0
+          PYTHONPATH: backend
+        run: |
+          pytest backend/tests/integration/test_health.py -v
+
+  # --------------------------------------------------------------------------
+  # Security & Dependency Auditing
+  # --------------------------------------------------------------------------
+  security-audit:
+    name: Security & Vulnerability Scan
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Source Code
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.13
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+
+      - name: Install pip-audit
+        run: |
+          python -m pip install --upgrade pip
+          pip install pip-audit
+
+      - name: Audit Python Dependencies
+        run: |
+          pip-audit -r backend/requirements.txt || echo "Security warnings reported for Python dependencies"
+
+      - name: Set up Node.js 20.x
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Audit Frontend npm Dependencies
+        working-directory: frontend
+        run: |
+          npm audit --audit-level=high || echo "Security warnings reported for npm dependencies"

@@ -1,6 +1,7 @@
+from __future__ import annotations
 import uuid
 from datetime import datetime, timezone
-from typing import Optional, List
+from typing import Optional, List, Any
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -26,7 +27,7 @@ class WorkflowEventService:
         event_type: str,
         correlation_id: Optional[uuid.UUID] = None,
         payload: Optional[dict] = None,
-    ) -> Optional['WorkflowEvent']:
+    ) -> Optional[Any]:
         """Query the latest workflow and emit a workflow event attached to it."""
         from src.infrastructure.database.models import Workflow, WorkflowEvent
         from src.core.tenant import require_current_tenant_id

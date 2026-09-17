@@ -315,7 +315,7 @@ function GraphExplorerContent() {
                   <div className="border-t border-zinc-900 pt-3 space-y-3">
                     <div className="flex items-center justify-between text-[10px] text-zinc-500 font-mono">
                       <span>Path Cost:</span>
-                      <span className="text-rose-400 font-semibold">{pathData.metrics?.cost || 0}</span>
+                      <span className="text-rose-400 font-semibold">{(pathData as any)?.metrics?.cost || 0}</span>
                     </div>
 
                     <div className="space-y-1">
