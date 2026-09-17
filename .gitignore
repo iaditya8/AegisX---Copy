@@ -1,17 +1,52 @@
+# Virtual Environments
 .venv/
+venv/
+ENV/
+env/
+
+# Python bytecode & cache
 __pycache__/
 *.py[cod]
 *$py.class
+*.egg-info/
+dist/
+build/
+
+# Testing & Linting
 .pytest_cache/
 .ruff_cache/
 .mypy_cache/
 .coverage
 htmlcov/
+
+# Logs & Debug
 *.log
+debug_log.txt
+scratch/
+
+# Environment Secrets
 .env
+.env.*
+!.env.example
+
+# Databases & Persisted data
 .database.db
-dist/
-build/
-*.egg-info/
+*.sqlite3
 pgdata/
+
+# Frontend (Node / Next.js)
+frontend/node_modules/
+frontend/.next/
+frontend/out/
+frontend/build/
+frontend/test-results/
+frontend/tsconfig.tsbuildinfo
+
+# IDE & OS
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+
+# Knowledge Graph (optional local artifacts)
 graphify-out/

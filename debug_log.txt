@@ -1,2 +1,0 @@
-
-[TEST WORKER] mock_db=<StatefulMockSession id='2386275757968'>, type=<class 'unittest.mock.StatefulMockSession'>, mock_db.add=<InterceptedAddMock name='mock.add' id='2386275527344'>
